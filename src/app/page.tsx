@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { PERSONAJES, urlPersonaje, getPersonaje } from "@/data/jugadores";
+import { urlPersonaje, getPersonaje } from "@/data/jugadores";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
@@ -73,33 +73,6 @@ export default function HomePage() {
         />
       </section>
 
-      <DivisorCriollo azul className="my-5" />
-
-      <details className="card p-3 mb-3">
-        <summary className="cursor-pointer text-text-dim text-sm flex items-center justify-between">
-          <span className="label-slim">Los primos ({PERSONAJES.length})</span>
-          <span className="text-dorado">▾</span>
-        </summary>
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mt-3">
-          {PERSONAJES.map((p) => (
-            <div key={p.slug} className="text-center">
-              <div className="aspect-[3/4] overflow-hidden rounded border border-border">
-                <img
-                  src={urlPersonaje(p.slug)}
-                  alt={p.nombre}
-                  className="w-full h-full object-cover object-top"
-                />
-              </div>
-              <div className="text-xs mt-1 font-semibold">{p.nombre}</div>
-            </div>
-          ))}
-        </div>
-        <p className="text-text-dim text-[11px] mt-3">
-          Para reemplazar un primo: pisá la imagen en{" "}
-          <code className="text-dorado">/public/jugadores/&lt;slug&gt;.png</code>.
-        </p>
-      </details>
-
       <footer className="text-center mt-8 space-y-2">
         <Link
           href="/reglas"
@@ -162,7 +135,8 @@ function OpcionMenu({
 }
 
 function ElegirPrimero({ onElegir }: { onElegir: (slug: string) => void }) {
-  const [seleccionado, setSeleccionado] = useState("hugui");
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  const yo = seleccionado ? getPersonaje(seleccionado) : null;
   return (
     <main className="min-h-[100dvh] px-4 py-6 max-w-xl mx-auto">
       <HeaderMarca variante="compacto" conClaim href={null} />
@@ -175,10 +149,11 @@ function ElegirPrimero({ onElegir }: { onElegir: (slug: string) => void }) {
           onSeleccionar={setSeleccionado}
         />
         <button
-          onClick={() => onElegir(seleccionado)}
+          onClick={() => seleccionado && onElegir(seleccionado)}
+          disabled={!seleccionado}
           className="btn btn-primary w-full mt-4"
         >
-          Soy {getPersonaje(seleccionado)?.nombre}
+          {yo ? `Soy ${yo.nombre}` : "Elegí un primo"}
         </button>
       </div>
     </main>

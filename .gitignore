@@ -2,3 +2,13 @@ node_modules
 .next
 .agents
 .DS_Store
+
+# Variables de entorno (Supabase keys, etc.)
+.env
+.env.local
+.env*.local
+!.env.example
+
+# Supabase CLI
+supabase/.temp/
+supabase/.branches/

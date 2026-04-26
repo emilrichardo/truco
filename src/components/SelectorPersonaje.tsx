@@ -7,12 +7,12 @@ export function SelectorPersonaje({
   ocupados,
   onSeleccionar
 }: {
-  seleccionado: string;
+  seleccionado: string | null;
   ocupados?: string[];
   onSeleccionar: (slug: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+    <div className="grid grid-cols-4 gap-2">
       {PERSONAJES.map((p) => {
         const tomado = ocupados?.includes(p.slug) && p.slug !== seleccionado;
         const elegido = seleccionado === p.slug;

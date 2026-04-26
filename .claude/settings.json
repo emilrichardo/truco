@@ -85,7 +85,11 @@
       "Bash(curl -s -i http://localhost:3010/jugar/solo)",
       "Bash(curl -s http://localhost:3010/_next/static/css/app/layout.css\\\\?v=1777242623754 -o /tmp/layout.css)",
       "Bash(curl -s -i \"http://localhost:3010/_next/static/css/app/layout.css?v=1777242623754\")",
-      "Bash(npx tailwindcss *)"
+      "Bash(npx tailwindcss *)",
+      "Bash(supabase --version)",
+      "Bash(supabase projects *)",
+      "Bash(supabase link *)",
+      "Bash(supabase db *)"
     ],
     "additionalDirectories": [
       "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"

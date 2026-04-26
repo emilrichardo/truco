@@ -1,0 +1,3 @@
+# Configuración mínima del proyecto Supabase para correr migraciones
+# contra la instancia hosted (linkeada con `supabase link`).
+project_id = "truco-entre-primos"
