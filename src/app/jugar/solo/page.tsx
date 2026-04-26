@@ -1,27 +1,36 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSocket, guardarSesion } from "@/lib/socket";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
+import { getPersonaje, urlPersonaje } from "@/data/jugadores";
+import { usePersonajeLocal } from "@/lib/personaje";
+import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
 
 export default function SoloPage() {
   const router = useRouter();
-  const [nombre, setNombre] = useState("");
-  const [personaje, setPersonaje] = useState("hugui");
+  const [miSlug, setMiSlug, listo] = usePersonajeLocal();
+  const [cambiar, setCambiar] = useState(false);
   const [tamanio, setTamanio] = useState<2 | 4>(2);
   const [puntos, setPuntos] = useState<15 | 30>(15);
   const [creando, setCreando] = useState(false);
 
+  useEffect(() => {
+    if (listo && !miSlug) router.replace("/");
+  }, [listo, miSlug, router]);
+
+  if (!listo || !miSlug) return <main className="min-h-[100dvh]" />;
+  const yo = getPersonaje(miSlug)!;
+
   const empezar = () => {
     if (creando) return;
     setCreando(true);
-    const sock = getSocket();
-    sock.emit(
+    getSocket().emit(
       "crear_sala",
       {
-        nombre: nombre || "Primo",
-        personaje,
+        nombre: yo.nombre,
+        personaje: miSlug,
         modo: "solo",
         tamanio,
         puntosObjetivo: puntos
@@ -34,67 +43,103 @@ export default function SoloPage() {
   };
 
   return (
-    <main className="min-h-screen px-4 py-8 max-w-2xl mx-auto">
-      <Link href="/" className="label-slim hover:text-truco-gold">
-        ← Volver
+    <main className="min-h-[100dvh] px-4 py-5 max-w-xl mx-auto">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-1 text-text-dim text-xs hover:text-dorado transition mb-3"
+      >
+        <span>←</span> Volver
       </Link>
-      <h1 className="font-display text-4xl text-truco-gold mt-2 mb-6">
-        Truco contra la máquina
+
+      <HeaderMarca variante="compacto" />
+
+      <DivisorCriollo className="my-5" />
+
+      <h1 className="titulo-marca text-2xl text-center mb-4">
+        Contra la <span className="acento">máquina</span>
       </h1>
-      <div className="parchment rounded-xl p-5">
-        <label className="block label-slim text-truco-red mb-1">Tu nombre</label>
-        <input
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          placeholder="Ej: Hugui"
-          className="w-full bg-cream border border-truco-dark/30 rounded px-3 py-2 text-truco-dark mb-4"
-          maxLength={24}
-        />
 
-        <div className="label-slim text-truco-red mb-1">Tu primo</div>
-        <SelectorPersonaje seleccionado={personaje} onSeleccionar={setPersonaje} />
-
-        <div className="grid grid-cols-2 gap-4 mt-5">
-          <div>
-            <div className="label-slim text-truco-red mb-1">Modo</div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setTamanio(2)}
-                className={`btn ${tamanio === 2 ? "btn-primary" : ""}`}
-              >
-                1 vs 1
-              </button>
-              <button
-                onClick={() => setTamanio(4)}
-                className={`btn ${tamanio === 4 ? "btn-primary" : ""}`}
-              >
-                2 vs 2
-              </button>
-            </div>
+      <div className="card p-4">
+        <div className="flex items-center gap-3 mb-4 pb-4 border-b border-border">
+          <img
+            src={urlPersonaje(miSlug)}
+            alt={yo.nombre}
+            className="w-14 h-14 rounded-full object-cover object-top border-2 border-dorado shadow-md"
+          />
+          <div className="flex-1">
+            <div className="label-slim acento-azul">Jugás como</div>
+            <div className="font-display text-xl leading-tight">{yo.nombre}</div>
           </div>
-          <div>
-            <div className="label-slim text-truco-red mb-1">A cuántos</div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPuntos(15)}
-                className={`btn ${puntos === 15 ? "btn-primary" : ""}`}
-              >
-                15 (corto)
-              </button>
-              <button
-                onClick={() => setPuntos(30)}
-                className={`btn ${puntos === 30 ? "btn-primary" : ""}`}
-              >
-                30 (largo)
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={() => setCambiar((v) => !v)}
+            className="btn btn-ghost !px-3 !py-2 text-xs"
+          >
+            Cambiar
+          </button>
         </div>
 
-        <button onClick={empezar} disabled={creando} className="btn btn-primary w-full mt-6">
+        {cambiar && (
+          <div className="mb-4">
+            <SelectorPersonaje
+              seleccionado={miSlug}
+              onSeleccionar={(s) => {
+                setMiSlug(s);
+                setCambiar(false);
+              }}
+            />
+          </div>
+        )}
+
+        <Opcion label="Modo">
+          <Choice activo={tamanio === 2} onClick={() => setTamanio(2)}>
+            1 vs 1
+          </Choice>
+          <Choice activo={tamanio === 4} onClick={() => setTamanio(4)}>
+            2 vs 2
+          </Choice>
+        </Opcion>
+        <Opcion label="A cuántos">
+          <Choice activo={puntos === 15} onClick={() => setPuntos(15)}>
+            15 corto
+          </Choice>
+          <Choice activo={puntos === 30} onClick={() => setPuntos(30)}>
+            30 largo
+          </Choice>
+        </Opcion>
+
+        <button
+          onClick={empezar}
+          disabled={creando}
+          className="btn btn-primary w-full mt-2"
+        >
           {creando ? "Repartiendo…" : "Empezar partida"}
         </button>
       </div>
     </main>
+  );
+}
+
+function Opcion({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-4">
+      <div className="label-slim mb-1.5">{label}</div>
+      <div className="grid grid-cols-2 gap-2">{children}</div>
+    </div>
+  );
+}
+
+function Choice({
+  activo,
+  children,
+  onClick
+}: {
+  activo: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button onClick={onClick} className={`btn ${activo ? "btn-primary" : ""}`}>
+      {children}
+    </button>
   );
 }

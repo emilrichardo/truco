@@ -1,12 +1,22 @@
 "use client";
 import clsx from "clsx";
-import type { EstadoJuego, Jugador } from "@/lib/truco/types";
+import type { EstadoJuego, Jugador, Carta } from "@/lib/truco/types";
 import { CartaEspanola } from "./CartaEspanola";
 import { JugadorPanel } from "./JugadorPanel";
 
+type Posicion = "arriba" | "abajo" | "izquierda" | "derecha";
+
+type JugadaEnMesa = {
+  jugadorId: string;
+  carta: Carta;
+  bazaIdx: number;
+  jugIdx: number;
+};
+
 /**
- * Distribuye los jugadores alrededor del tapete. El "yo" siempre abajo.
- * Posiciones: bottom, top (1v1), o bottom/right/top/left (2v2).
+ * Mesa: cada jugador es un "puesto" (avatar + cartas que tiró), agrupado con
+ * flex y posicionado absoluto en uno de los cuatro costados. El avatar siempre
+ * pegado al borde, las cartas extendiéndose hacia el centro. Yo voy abajo.
  */
 export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   const me = estado.jugadores.find((j) => j.id === miId);
@@ -14,8 +24,7 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   const orden = ordenAlrededorDeMesa(estado.jugadores, me);
   const total = estado.jugadores.length;
 
-  // Mapeo de posiciones según total de jugadores. orden[0] = yo (abajo).
-  const posiciones: Record<number, string> = {};
+  const posiciones: Record<number, Posicion> = {};
   if (total === 2) {
     posiciones[0] = "abajo";
     posiciones[1] = "arriba";
@@ -26,84 +35,157 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
     posiciones[3] = "derecha";
   }
 
-  const baza = estado.manoActual?.bazas[estado.manoActual.bazas.length - 1];
   const numeroDeBaza = estado.manoActual?.bazas.length || 0;
+  const jugadasPorJugador = new Map<string, JugadaEnMesa[]>();
+  estado.manoActual?.bazas.forEach((b, bIdx) => {
+    b.jugadas.forEach((j, jIdx) => {
+      const arr = jugadasPorJugador.get(j.jugadorId) || [];
+      arr.push({ ...j, bazaIdx: bIdx, jugIdx: jIdx });
+      jugadasPorJugador.set(j.jugadorId, arr);
+    });
+  });
+
+  const totalJugadas = Array.from(jugadasPorJugador.values()).reduce(
+    (acc, l) => acc + l.length,
+    0
+  );
 
   return (
-    <div className="relative w-full max-w-5xl mx-auto" style={{ minHeight: 520 }}>
-      <div className="tapete-table absolute inset-4 md:inset-8 z-0" />
-      <div className="relative z-10 grid grid-rows-[auto_1fr_auto] grid-cols-[auto_1fr_auto] gap-2 h-[520px] p-6 md:p-10">
-        {/* Arriba */}
-        <div className="row-start-1 col-start-2 flex justify-center">
-          {renderJugador(orden, posiciones, "arriba", estado, miId, true)}
+    <div className="relative w-full h-full">
+      <div className="absolute inset-1 sm:inset-2 tapete" />
+
+      {/* Centro: sol criollo + meta info */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1 pointer-events-none">
+        <div className="text-dorado/15 text-6xl leading-none -mb-1 select-none">
+          ☀
         </div>
-        {/* Izquierda */}
-        <div className="row-start-2 col-start-1 flex items-center">
-          {renderJugador(orden, posiciones, "izquierda", estado, miId, true)}
+        <div className="text-crema/40 text-[10px] uppercase tracking-widest font-bold">
+          Mano {estado.manoActual?.numero ?? 0} · Baza {numeroDeBaza}
         </div>
-        {/* Centro: cartas jugadas */}
-        <div className="row-start-2 col-start-2 flex flex-col items-center justify-center gap-3">
-          <div className="text-cream/70 text-[10px] uppercase tracking-widest">
-            Mano {estado.manoActual?.numero ?? 0} · Baza {numeroDeBaza}
+        {estado.manoActual && estado.manoActual.valorMano > 1 && (
+          <div
+            className="bg-azul-criollo text-crema font-bold px-3 py-1 rounded uppercase text-[10px] tracking-widest border border-dorado shadow-lg subtitulo-claim mt-1"
+            style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+          >
+            Vale {estado.manoActual.valorMano}
           </div>
-          <div className="flex gap-3 flex-wrap justify-center max-w-md">
-            {baza?.jugadas.map((j, i) => {
-              const jugador = estado.jugadores.find((x) => x.id === j.jugadorId);
-              return (
-                <div key={i} className="flex flex-col items-center text-cream/80">
-                  <CartaEspanola carta={j.carta} pequena />
-                  <span className="text-[10px] mt-1">{jugador?.nombre}</span>
-                </div>
-              );
-            })}
-            {!baza?.jugadas.length && (
-              <span className="text-cream/40 italic text-sm">
-                Esperando que tiren la primera carta…
-              </span>
-            )}
-          </div>
-          {estado.manoActual && estado.manoActual.valorMano > 1 && (
-            <div className="bg-truco-red/80 text-cream font-display px-3 py-1 rounded uppercase text-xs tracking-wider">
-              Vale {estado.manoActual.valorMano}
-            </div>
-          )}
-        </div>
-        {/* Derecha */}
-        <div className="row-start-2 col-start-3 flex items-center">
-          {renderJugador(orden, posiciones, "derecha", estado, miId, true)}
-        </div>
-        {/* Abajo (yo): se renderiza en otro panel */}
-        <div className="row-start-3 col-start-2 flex justify-center">
-          {renderJugador(orden, posiciones, "abajo", estado, miId, false)}
-        </div>
+        )}
       </div>
+
+      {/* Puestos por jugador */}
+      {orden.map((j, idx) => {
+        const pos = posiciones[idx];
+        if (!pos) return null;
+        const esTurno = estado.manoActual?.turnoJugadorId === j.id;
+        return (
+          <PuestoJugador
+            key={j.id}
+            pos={pos}
+            jugador={j}
+            esTurno={!!esTurno}
+            esYo={j.id === miId}
+            jugadas={jugadasPorJugador.get(j.id) || []}
+            numeroDeBaza={numeroDeBaza}
+          />
+        );
+      })}
+
+      {totalJugadas === 0 && (
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-20 text-crema/40 italic text-xs subtitulo-claim z-10">
+          Esperando primera carta…
+        </div>
+      )}
     </div>
   );
 }
 
-function renderJugador(
-  orden: Jugador[],
-  pos: Record<number, string>,
-  posicion: string,
-  estado: EstadoJuego,
-  miId: string,
-  ocultas: boolean
-) {
-  const idx = Object.keys(pos).find((k) => pos[+k] === posicion);
-  if (idx === undefined) return null;
-  const jugador = orden[+idx];
-  if (!jugador) return null;
-  const esTurno = estado.manoActual?.turnoJugadorId === jugador.id;
-  const cantidad = estado.manoActual?.cartasPorJugador[jugador.id]?.length ?? 0;
+/** Puesto = avatar + cartas que ese jugador tiró, agrupados con flex.
+ *  Avatar contra el borde de la mesa, cartas extendiéndose hacia el centro. */
+function PuestoJugador({
+  pos,
+  jugador,
+  esTurno,
+  esYo,
+  jugadas,
+  numeroDeBaza
+}: {
+  pos: Posicion;
+  jugador: Jugador;
+  esTurno: boolean;
+  esYo: boolean;
+  jugadas: JugadaEnMesa[];
+  numeroDeBaza: number;
+}) {
   return (
-    <JugadorPanel
-      jugador={jugador}
-      esTurno={!!esTurno}
-      esYo={jugador.id === miId}
-      cartasOcultas={ocultas}
-      cantidadCartas={cantidad}
-    />
+    <div
+      className={clsx(
+        "absolute z-20 flex items-center gap-2 sm:gap-3",
+        clasePosicionPuesto(pos),
+        claseFlexPuesto(pos)
+      )}
+    >
+      <JugadorPanel
+        jugador={jugador}
+        esTurno={esTurno}
+        esYo={esYo}
+        compacto
+      />
+      {jugadas.length > 0 && (
+        <div className="flex flex-row -space-x-7 sm:-space-x-9">
+          {jugadas.map((j, i) => {
+            const offset = (i - (jugadas.length - 1) / 2) * 5;
+            return (
+              <div
+                key={`${j.bazaIdx}-${j.jugIdx}-${j.carta.id}`}
+                style={{
+                  zIndex: i + 1,
+                  transform: `rotate(${offset}deg)`
+                }}
+              >
+                <CartaEspanola
+                  carta={j.carta}
+                  tamanio="sm"
+                  resaltada={j.bazaIdx === numeroDeBaza - 1}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
+}
+
+function clasePosicionPuesto(pos: Posicion): string {
+  switch (pos) {
+    case "abajo":
+      return "left-1/2 -translate-x-1/2 bottom-2";
+    case "arriba":
+      return "left-1/2 -translate-x-1/2 top-2";
+    case "izquierda":
+      return "left-2 top-1/2 -translate-y-1/2";
+    case "derecha":
+      return "right-2 top-1/2 -translate-y-1/2";
+  }
+}
+
+/** Dirección del flex para que el avatar quede contra el borde y las cartas
+ * se extiendan hacia el centro de la mesa. */
+function claseFlexPuesto(pos: Posicion): string {
+  switch (pos) {
+    case "abajo":
+      // Avatar abajo, cartas arriba (hacia centro)
+      return "flex-col-reverse";
+    case "arriba":
+      // Avatar arriba, cartas abajo
+      return "flex-col";
+    case "izquierda":
+      // Avatar izquierda, cartas a la derecha
+      return "flex-row";
+    case "derecha":
+      // Avatar derecha, cartas a la izquierda
+      return "flex-row-reverse";
+  }
 }
 
 function ordenAlrededorDeMesa(jugadores: Jugador[], yo: Jugador): Jugador[] {

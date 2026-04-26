@@ -88,12 +88,22 @@ export interface Mano {
   puntosOtorgados: { equipo: Equipo; puntos: number; motivo: string }[];
 }
 
+export type CategoriaEvento =
+  | "carta" // tiró una carta
+  | "canto" // cantó envido / truco / etc
+  | "respuesta" // quiero / no quiero
+  | "puntos" // se otorgaron puntos
+  | "mano" // termina/empieza mano
+  | "sistema"; // info general
+
 export interface MensajeChat {
   id: string;
   jugadorId: string;
   texto: string;
   reaccion?: string;
   ts: number;
+  /** Si está presente, es un evento del juego (no un mensaje humano). */
+  evento?: CategoriaEvento;
 }
 
 export type AccionTipo =

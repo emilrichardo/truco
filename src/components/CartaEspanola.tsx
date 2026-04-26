@@ -3,35 +3,39 @@ import clsx from "clsx";
 import type { Carta } from "@/lib/truco/types";
 import { nombreCarta } from "@/lib/truco/cartas";
 
+type Tamanio = "xs" | "sm" | "md" | "lg";
+
+const ANCHOS: Record<Tamanio, string> = {
+  xs: "w-12",
+  sm: "w-20 sm:w-24",
+  md: "w-28 sm:w-36 md:w-40",
+  lg: "w-32 sm:w-44 md:w-52"
+};
+
 export function CartaEspanola({
   carta,
   oculta,
   onClick,
   jugable,
-  pequena,
+  tamanio = "md",
   resaltada
 }: {
   carta?: Carta;
   oculta?: boolean;
   onClick?: () => void;
   jugable?: boolean;
-  pequena?: boolean;
+  tamanio?: Tamanio;
   resaltada?: boolean;
 }) {
+  const ancho = ANCHOS[tamanio];
   if (oculta || !carta) {
     return (
       <div
-        className={clsx(
-          "es-card back",
-          pequena ? "w-12" : "w-20 md:w-24",
-          resaltada && "glow-mate"
-        )}
+        className={clsx("es-card back", ancho, resaltada && "halo")}
       />
     );
   }
-
-  const src = `/cartas/${carta.palo}/${carta.numero}.jpg`;
-
+  const src = `/cartas/${carta.palo}/${carta.numero}.png`;
   return (
     <button
       type="button"
@@ -40,20 +44,17 @@ export function CartaEspanola({
       disabled={!onClick || !jugable}
       className={clsx(
         "es-card transition relative p-0",
-        pequena ? "w-12" : "w-20 md:w-24",
-        jugable && "cursor-pointer hover:-translate-y-2 hover:shadow-2xl hover:ring-2 hover:ring-truco-gold",
-        !jugable && "cursor-default opacity-95"
+        ancho,
+        jugable && "active:scale-95 hover:-translate-y-1",
+        resaltada && "halo"
       )}
     >
       <img
         src={src}
         alt={nombreCarta(carta)}
         draggable={false}
-        className="absolute inset-0 w-full h-full object-cover rounded-[6px] select-none"
+        className="absolute inset-0 w-full h-full object-cover select-none"
       />
-      {resaltada && (
-        <span className="absolute inset-0 rounded-[6px] ring-2 ring-truco-gold pointer-events-none glow-mate" />
-      )}
     </button>
   );
 }

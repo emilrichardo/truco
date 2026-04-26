@@ -54,9 +54,18 @@ function equipoContrario(eq: Equipo): Equipo {
   return eq === 0 ? 1 : 0;
 }
 
-function anuncio(estado: EstadoJuego, jugadorId: string, texto: string) {
-  estado.anuncios.push({ id: nanoid(6), jugadorId, texto, ts: Date.now() });
+function anuncio(
+  estado: EstadoJuego,
+  jugadorId: string,
+  texto: string,
+  evento: import("./types").CategoriaEvento = "sistema"
+) {
+  const ts = Date.now();
+  estado.anuncios.push({ id: nanoid(6), jugadorId, texto, ts });
   if (estado.anuncios.length > 12) estado.anuncios.shift();
+  // Espejamos en el chat como historial permanente del juego.
+  estado.chat.push({ id: nanoid(6), jugadorId, texto, ts, evento });
+  if (estado.chat.length > 200) estado.chat.shift();
 }
 
 // ============== Repartir / Iniciar ==============
@@ -204,7 +213,7 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
 
   const baza = mano.bazas[mano.bazas.length - 1];
   baza.jugadas.push({ jugadorId: jugador.id, carta });
-  anuncio(estado, jugador.id, `Tira ${nombreCarta(carta)}`);
+  anuncio(estado, jugador.id, `Tira ${nombreCarta(carta)}`, "carta");
 
   // Si todos los jugadores tiraron en esta baza, resolverla.
   if (baza.jugadas.length === estado.jugadores.length) {
@@ -359,7 +368,8 @@ function cerrarMano(estado: EstadoJuego, equipoGanador: Equipo, motivo: string) 
   anuncio(
     estado,
     "",
-    `Equipo ${equipoGanador + 1} se lleva la mano (+${puntosTruco} pts).`
+    `Equipo ${equipoGanador + 1} se lleva la mano (+${puntosTruco} pts).`,
+    "mano"
   );
 
   if (chequearFinPartida(estado)) return;
@@ -452,7 +462,7 @@ function cantarEnvido(
   mano.envidoEstado = nivelNuevo as any;
   // Le pasamos el "turno de responder" a alguien del otro equipo.
   mano.turnoJugadorId = primerJugadorDeEquipo(estado, equipoContrario(jugador.equipo));
-  anuncio(estado, jugador.id, cantoTexto(nivelNuevo));
+  anuncio(estado, jugador.id, cantoTexto(nivelNuevo), "canto");
   estado.version++;
   return { ok: true, estado };
 }
@@ -509,7 +519,7 @@ function cantarTruco(
   };
   // Le pasamos el turno de responder al otro equipo.
   mano.turnoJugadorId = primerJugadorDeEquipo(estado, equipoContrario(jugador.equipo));
-  anuncio(estado, jugador.id, cantoTexto(subir));
+  anuncio(estado, jugador.id, cantoTexto(subir), "canto");
   estado.version++;
   return { ok: true, estado };
 }
@@ -570,7 +580,13 @@ function resolverEnvido(
       puntos: puntosOtorgados,
       motivo: `Envido no querido (+${puntosOtorgados})`
     });
-    anuncio(estado, jugador.id, "No quiero");
+    anuncio(estado, jugador.id, "No quiero", "respuesta");
+    anuncio(
+      estado,
+      "",
+      `Equipo ${eqGanador + 1} +${puntosOtorgados} (envido no querido)`,
+      "puntos"
+    );
     mano.envidoResuelto = true;
     mano.envidoEstado = "ninguno";
     mano.envidoCantoActivo = null;
@@ -623,8 +639,14 @@ function resolverEnvido(
     puntos: puntosOtorgados,
     motivo: `Envido querido (+${puntosOtorgados})`
   });
-  anuncio(estado, jugador.id, "¡Quiero!");
-  anuncio(estado, "", detalle);
+  anuncio(estado, jugador.id, "¡Quiero!", "respuesta");
+  anuncio(estado, "", detalle, "puntos");
+  anuncio(
+    estado,
+    "",
+    `Equipo ${eqGanador + 1} +${puntosOtorgados} pts`,
+    "puntos"
+  );
   mano.envidoEstado = "ninguno";
   mano.envidoCantoActivo = null;
   devolverTurnoAJugar(estado);
@@ -707,7 +729,7 @@ function resolverTrucoRespuesta(
       puntos: valorAnterior,
       motivo: `${cantoTexto(canto.nivel)} no querido (+${valorAnterior})`
     });
-    anuncio(estado, jugador.id, "No quiero");
+    anuncio(estado, jugador.id, "No quiero", "respuesta");
     cerrarMano(estado, canto.equipoQueCanto, "Truco no querido");
     mano.trucoCantoActivo = null;
     return { ok: true, estado };
@@ -717,7 +739,7 @@ function resolverTrucoRespuesta(
   mano.equipoConTruco = canto.equipoQueCanto;
   mano.valorMano =
     canto.nivel === "truco" ? 2 : canto.nivel === "retruco" ? 3 : 4;
-  anuncio(estado, jugador.id, "¡Quiero!");
+  anuncio(estado, jugador.id, "¡Quiero!", "respuesta");
   mano.trucoCantoActivo = null;
   devolverTurnoAJugar(estado);
   estado.version++;

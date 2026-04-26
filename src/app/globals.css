@@ -4,144 +4,381 @@
 
 :root {
   color-scheme: dark;
+  /* Paleta oficial Truco Entre Primos (manual de marca) — hex + tripletes RGB
+   * para soportar opacidad en utilidades Tailwind via rgb(var(--x) / alpha) */
+  --carbon: #1e1b18;       /* Negro Carbón */
+  --carbon-rgb: 30 27 24;
+  --crema: #f1e0b8;        /* Crema */
+  --crema-rgb: 241 224 184;
+  --crema-2: #e8d4a0;
+  --dorado: #d9a441;       /* Dorado */
+  --dorado-rgb: 217 164 65;
+  --dorado-claro: #e8b863;
+  --dorado-oscuro: #b88424;
+  --azul-criollo: #355c8a; /* Azul Criollo */
+  --azul-rgb: 53 92 138;
+  --azul-claro: #4a78ab;
+  --madera: #6b4328;       /* Marrón Madera */
+  --madera-rgb: 107 67 40;
+  --madera-clara: #8c5a36;
+  --madera-oscura: #3d2715;
+
+  /* Tokens semánticos del UI */
+  --bg: var(--carbon);
+  --surface: #2a2521;
+  --surface-rgb: 42 37 33;
+  --surface-2: #3a3026;
+  --surface-2-rgb: 58 48 38;
+  --border: #4a3d31;
+  --border-rgb: 74 61 49;
+  --border-fuerte: #6b5440;
+  --text: var(--crema);
+  --text-dim: #b3a486;
+  --text-dim-rgb: 179 164 134;
+  --gold: var(--dorado);
+  --azul: var(--azul-criollo);
+  --red: #993333;
+  --red-rgb: 153 51 51;
+  --rojo-fernet: #7a1f1f;
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  /* Leve textura de papel rugoso sobre el fondo carbón */
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(217, 164, 65, 0.04), transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(53, 92, 138, 0.05), transparent 40%);
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 body {
-  background:
-    radial-gradient(circle at 20% 0%, #2a1a10 0%, transparent 50%),
-    radial-gradient(circle at 80% 100%, #0e3b2e 0%, transparent 60%),
-    #0d0a06;
-  background-attachment: fixed;
+  font-feature-settings: "tnum" 1;
 }
 
+/* ============================================================
+ * TIPOGRAFÍA DE MARCA
+ * ============================================================ */
+
+.titulo-marca {
+  font-family: "Alfa Slab One", Georgia, serif;
+  color: var(--crema);
+  text-shadow:
+    2px 2px 0 var(--carbon),
+    3px 3px 0 rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+.titulo-marca .acento {
+  color: var(--dorado);
+}
+.subtitulo-claim {
+  font-family: "Rye", "Alfa Slab One", serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+ * BOTONES
+ * ============================================================ */
+
 .btn {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md
-    font-display tracking-wider text-sm uppercase transition
-    border-2 text-cream
-    hover:shadow-lg active:scale-95
+  @apply inline-flex items-center justify-center gap-2 px-4 py-3 rounded
+    text-sm font-semibold transition select-none
+    border-2 border-[var(--border)] bg-[var(--surface)] text-[var(--text)]
+    active:scale-[0.97] active:translate-y-[1px]
     disabled:opacity-40 disabled:cursor-not-allowed;
-  background:
-    linear-gradient(180deg, #4a2a14 0%, #2a1a0a 100%);
-  border-color: #c9a24a;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
-    0 4px 0 rgba(0, 0, 0, 0.4);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  min-height: 44px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 2px 0 0 rgba(0, 0, 0, 0.4);
 }
 .btn:hover:not(:disabled) {
-  background: linear-gradient(180deg, #5a3220 0%, #3a200e 100%);
-  border-color: #f4d488;
+  background: var(--surface-2);
+  border-color: var(--border-fuerte);
+}
+.btn:active:not(:disabled) {
+  box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.4);
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, #f4d488 0%, #c9a24a 100%);
-  color: #2a1a10;
-  border-color: #f4d488;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: linear-gradient(180deg, var(--dorado-claro) 0%, var(--dorado) 60%, var(--dorado-oscuro) 100%);
+  color: var(--carbon);
+  border-color: var(--dorado-oscuro);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #fff0c4 0%, #e0b558 100%);
-  color: #2a1a10;
+  background: linear-gradient(180deg, #f0c777 0%, var(--dorado-claro) 60%, var(--dorado) 100%);
+  border-color: var(--dorado-oscuro);
+  color: var(--carbon);
+}
+
+.btn-azul {
+  background: linear-gradient(180deg, var(--azul-claro) 0%, var(--azul-criollo) 100%);
+  color: var(--crema);
+  border-color: #243f60;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+.btn-azul:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5a8bc0 0%, var(--azul-claro) 100%);
+  border-color: #243f60;
+  color: var(--crema);
 }
 
 .btn-danger {
-  background: linear-gradient(180deg, #b13030 0%, #6a1010 100%);
-  border-color: #f4d488;
+  background: linear-gradient(180deg, #b04444 0%, var(--rojo-fernet) 100%);
+  color: var(--crema);
+  border-color: #4a0f0f;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
 }
 .btn-danger:hover:not(:disabled) {
-  background: linear-gradient(180deg, #d04040 0%, #8a1414 100%);
+  background: linear-gradient(180deg, #c45656 0%, #993333 100%);
+  border-color: #4a0f0f;
 }
 
-.card-frame {
-  background:
-    linear-gradient(180deg, rgba(243, 227, 182, 0.95), rgba(236, 217, 163, 0.92));
-  border: 2px solid #c9a24a;
+.btn-madera {
+  background: linear-gradient(180deg, var(--madera-clara) 0%, var(--madera) 100%);
+  color: var(--crema);
+  border-color: var(--madera-oscura);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+.btn-madera:hover:not(:disabled) {
+  background: linear-gradient(180deg, #a06a40 0%, var(--madera-clara) 100%);
+  border-color: var(--madera-oscura);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-dim);
+  box-shadow: none;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(241, 224, 184, 0.06);
+  color: var(--crema);
+}
+
+/* ============================================================
+ * CARDS / SUPERFICIES
+ * ============================================================ */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 4px rgba(139, 28, 28, 0.15);
-  border-radius: 14px;
+    inset 0 1px 0 rgba(241, 224, 184, 0.04),
+    0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.parchment {
-  background:
-    repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.02) 0 2px, transparent 2px 4px),
-    linear-gradient(180deg, #f6e6bd, #e9cf95);
-  border: 1px solid #b8893a;
-  color: #2a1a10;
+/* Tarjeta "papel vintage": fondo crema texturizado tipo manual de marca.
+ * Para reglas, modal de ganador, mensajes destacados. */
+.papel {
+  background-color: var(--crema);
+  background-image:
+    radial-gradient(ellipse at top left, rgba(217, 164, 65, 0.12), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(107, 67, 40, 0.1), transparent 50%),
+    repeating-linear-gradient(0deg,
+      rgba(107, 67, 40, 0.025) 0 1px,
+      transparent 1px 3px);
+  color: var(--carbon);
+  border: 1px solid #b89460;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 30px rgba(107, 67, 40, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.5);
 }
+.papel .text-text-dim,
+.papel.text-text-dim {
+  color: #6b5440;
+}
+
+/* Placa de madera para marcador o cabeceras especiales */
+.placa-madera {
+  background-color: var(--madera);
+  background-image:
+    repeating-linear-gradient(180deg,
+      rgba(0, 0, 0, 0.08) 0 1px,
+      transparent 1px 5px,
+      rgba(241, 224, 184, 0.03) 5px 6px,
+      transparent 6px 10px),
+    linear-gradient(180deg, var(--madera-clara) 0%, var(--madera) 50%, var(--madera-oscura) 100%);
+  color: var(--crema);
+  border: 2px solid var(--madera-oscura);
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 20px rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================
+ * ORNAMENTOS
+ * ============================================================ */
+
+/* Divisor estilo manual de marca: línea con sol/diamante en el centro */
+.divisor {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--dorado);
+}
+.divisor::before,
+.divisor::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--dorado) 50%, transparent);
+}
+.divisor-azul {
+  color: var(--azul);
+}
+.divisor-azul::before,
+.divisor-azul::after {
+  background: linear-gradient(90deg, transparent, var(--azul) 50%, transparent);
+}
+
+/* Banderín / cinta beige con el claim del logo */
+.cinta-claim {
+  background: linear-gradient(180deg, #f5e7c2 0%, var(--crema-2) 100%);
+  color: var(--carbon);
+  border: 1px solid #b89460;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+/* Sello redondo tipo isotipo "TP" */
+.sello {
+  background: linear-gradient(135deg, var(--azul-criollo) 0%, #2a4a70 100%);
+  color: var(--dorado);
+  border: 2px solid var(--dorado);
+  border-radius: 50%;
+  font-family: "Alfa Slab One", serif;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    inset 0 0 8px rgba(0, 0, 0, 0.4),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* ============================================================
+ * UTILIDADES MISC
+ * ============================================================ */
 
 .label-slim {
-  @apply uppercase tracking-[0.2em] text-[10px] text-truco-gold/80 font-display;
+  @apply uppercase tracking-wider text-[10px] font-semibold;
+  color: var(--text-dim);
 }
 
-/* Cara de la carta española, simulando papel envejecido tipo Fournier. */
-.es-card {
-  @apply relative aspect-[2/3] w-full rounded-md overflow-hidden select-none;
-  background:
-    radial-gradient(ellipse at center, #fbf1d0 0%, #efdda3 80%, #d8bf7a 100%);
-  color: #2a1a10;
-  border: 2px solid #4a2618;
-  box-shadow:
-    0 6px 14px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-}
-.es-card.back {
-  background:
-    radial-gradient(circle at center, #f3d486 0%, #c9a24a 50%, #6b4a16 100%);
-  background-image:
-    radial-gradient(circle at center, rgba(255, 255, 255, 0.2) 0 8px, transparent 9px),
-    repeating-linear-gradient(45deg, #8b1c1c 0 6px, #5a1010 6px 12px);
-  border: 2px solid #2a1a10;
-}
+.acento-azul { color: var(--azul); }
+.acento-dorado { color: var(--dorado); }
+.acento-crema { color: var(--crema); }
 
-.glow-mate {
-  box-shadow: 0 0 0 3px rgba(201, 162, 74, 0.6), 0 0 24px rgba(201, 162, 74, 0.5);
-}
-
-.fosforo {
-  display: inline-block;
-  width: 7px;
-  height: 36px;
-  background: linear-gradient(180deg, #f4c977 0%, #b8893a 80%, #6b4a16 100%);
-  border-radius: 1px;
-  position: relative;
-  margin-right: 3px;
-  transform: rotate(-2deg);
-}
-.fosforo::before {
-  content: "";
-  position: absolute;
-  top: -4px;
-  left: -2px;
-  width: 11px;
-  height: 8px;
-  background: radial-gradient(circle at 50% 30%, #ff6a2e, #8b1c1c 70%, #2a1a10 100%);
-  border-radius: 50% 50% 40% 40%;
-}
-.fosforo.cruzado {
-  transform: rotate(45deg);
-  margin-left: -10px;
-}
-
-.tapete-table {
-  background:
-    radial-gradient(ellipse at center, #1a6b4f 0%, #11503b 45%, #093225 100%);
-  border: 12px solid #3a1d10;
-  border-radius: 200px / 120px;
-  box-shadow:
-    inset 0 0 80px rgba(0, 0, 0, 0.45),
-    0 20px 50px rgba(0, 0, 0, 0.6);
-}
-
-@keyframes flotar {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
-}
-.flotar { animation: flotar 2.4s ease-in-out infinite; }
-
+.parpadeo { animation: parpadeo 1.6s ease-in-out infinite; }
 @keyframes parpadeo {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.55; }
 }
-.parpadeo { animation: parpadeo 1.4s ease-in-out infinite; }
+
+.halo {
+  box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(217, 164, 65, 0.55);
+}
+
+.sheet-bg {
+  background: rgba(20, 16, 12, 0.6);
+  backdrop-filter: blur(3px);
+}
+
+/* ============================================================
+ * MESA Y CARTAS ESPAÑOLAS
+ * ============================================================ */
+
+/* Mesa de madera vieja de campo: tablones desgastados, vetas y nudos */
+.tapete {
+  background-color: var(--madera);
+  background-image:
+    radial-gradient(ellipse 28px 5px at 18% 22%, rgba(20, 10, 4, 0.55), transparent 70%),
+    radial-gradient(ellipse 22px 4px at 72% 64%, rgba(20, 10, 4, 0.45), transparent 70%),
+    radial-gradient(ellipse 36px 6px at 42% 82%, rgba(20, 10, 4, 0.4), transparent 70%),
+    radial-gradient(ellipse 18px 3px at 88% 34%, rgba(20, 10, 4, 0.5), transparent 70%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 118px,
+      rgba(0, 0, 0, 0.6) 118px 121px,
+      rgba(255, 255, 255, 0.04) 121px 122px
+    ),
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.06) 0 1px,
+      transparent 1px 4px,
+      rgba(255, 255, 255, 0.025) 4px 5px,
+      transparent 5px 9px
+    ),
+    linear-gradient(180deg, var(--madera-clara) 0%, var(--madera) 45%, var(--madera-oscura) 100%);
+  border: 8px solid var(--madera-oscura);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 0 80px rgba(0, 0, 0, 0.55),
+    inset 0 0 4px rgba(0, 0, 0, 0.6),
+    0 6px 18px rgba(0, 0, 0, 0.6);
+}
+
+/* Carta española: la imagen del naipe ya trae su propio diseño.
+ * El contenedor solo aporta la forma redondeada y una sombra sutil.
+ * Reverso (back) sí dibuja su propio fondo en azul criollo. */
+.es-card {
+  @apply relative aspect-[2/3] rounded-lg overflow-hidden select-none;
+  background: transparent;
+  border: none;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 4px 10px rgba(0, 0, 0, 0.4);
+}
+/* Recorta un poco hacia adentro el blanco/borde sobrante de la imagen. */
+.es-card > img {
+  transform: scale(1.06);
+  transform-origin: center;
+}
+.es-card.back {
+  background:
+    radial-gradient(circle at center, rgba(241, 224, 184, 0.2) 0 8px, transparent 9px),
+    repeating-linear-gradient(45deg, var(--azul-criollo) 0 6px, #243f60 6px 12px);
+  border: 1.5px solid var(--carbon);
+}
+.es-card.back::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1.5px solid var(--dorado);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Cartas en abanico: rotación / offset por carta */
+.fan-card {
+  transform: translateY(var(--dy, 0px)) rotate(var(--r, 0deg));
+  transform-origin: bottom center;
+  transition: transform 180ms ease, z-index 0s linear 0s;
+  will-change: transform;
+}
+.fan-card:hover {
+  transform: translateY(-14px) rotate(0deg) scale(1.04);
+  z-index: 30;
+}
+
+/* Inputs con look acorde a la marca */
+.input-marca {
+  @apply rounded px-3 py-2 text-sm transition outline-none;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+.input-marca::placeholder {
+  color: rgba(179, 164, 134, 0.6);
+}
+.input-marca:focus {
+  border-color: var(--dorado);
+  box-shadow: 0 0 0 3px rgba(217, 164, 65, 0.18);
+}

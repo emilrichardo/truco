@@ -8,6 +8,7 @@ import {
 } from "../lib/truco/motor";
 import type { Accion, EstadoJuego, Jugador } from "../lib/truco/types";
 import { decidirAccionBot } from "../lib/truco/ia";
+import { PERSONAJES } from "../data/jugadores";
 
 interface SalaServer {
   id: string;
@@ -18,6 +19,13 @@ interface SalaServer {
 }
 
 const salas = new Map<string, SalaServer>();
+
+/** Devuelve el primer personaje libre (no usado por ningún jugador de la sala). */
+function elegirPersonajeLibre(jugadores: Jugador[]): string {
+  const usados = new Set(jugadores.map((j) => j.personaje));
+  const libre = PERSONAJES.find((p) => !usados.has(p.slug));
+  return libre?.slug || PERSONAJES[0].slug;
+}
 
 function broadcast(io: any, sala: SalaServer) {
   io.to(`sala:${sala.id}`).emit("estado", sala.estado);
@@ -81,13 +89,15 @@ export function registerSocket(io: any) {
 
         const jugadores: Jugador[] = [jugador];
         if (payload.modo === "solo") {
-          // Completar con bots según tamaño.
+          // Completar con bots según tamaño, con personajes que no choquen con el del usuario.
           const total = payload.tamanio;
           for (let i = 1; i < total; i++) {
+            const personajeBot = elegirPersonajeLibre(jugadores);
+            const meta = PERSONAJES.find((p) => p.slug === personajeBot);
             jugadores.push({
               id: nanoid(10),
-              nombre: `Bot ${i}`,
-              personaje: ["cholo", "marcos", "dani", "richi"][(i - 1) % 4],
+              nombre: meta?.nombre || `Bot ${i}`,
+              personaje: personajeBot,
               equipo: (i % 2) as 0 | 1,
               asiento: i,
               conectado: true,
@@ -186,14 +196,16 @@ export function registerSocket(io: any) {
       (payload: { salaId: string }, cb?: (r: { ok: boolean; error?: string }) => void) => {
         const sala = salas.get(payload.salaId);
         if (!sala) return cb?.({ ok: false, error: "Sala no encontrada." });
-        // Si faltan jugadores, completar con bots para no bloquear.
+        // Si faltan jugadores, completar con bots con personajes libres.
         const total = sala.estado.modo === "2v2" ? 4 : 2;
         while (sala.estado.jugadores.length < total) {
           const asiento = sala.estado.jugadores.length;
+          const personajeBot = elegirPersonajeLibre(sala.estado.jugadores);
+          const meta = PERSONAJES.find((p) => p.slug === personajeBot);
           sala.estado.jugadores.push({
             id: nanoid(10),
-            nombre: `Bot ${asiento}`,
-            personaje: ["cholo", "marcos", "dani", "richi"][asiento % 4],
+            nombre: meta?.nombre || `Bot ${asiento}`,
+            personaje: personajeBot,
             equipo: (asiento % 2) as 0 | 1,
             asiento,
             conectado: true,

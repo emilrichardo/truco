@@ -2,22 +2,32 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Truco entre Primos",
-  description: "Truco argentino online entre primos. Gratis, sin registro."
+  title: "Truco Entre Primos — Acá no hay suerte, hay picardía",
+  description:
+    "Truco argentino online entre primos. Gratis, sin registro. Picardía, fernet y cartas españolas."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
       <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"
+        />
+        <meta name="theme-color" content="#1E1B18" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;700&display=swap"
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Alfa+Slab+One&family=Rye&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-truco-dark text-cream font-body antialiased">
-        {children}
-      </body>
+      <body className="antialiased font-sans">{children}</body>
     </html>
   );
 }
