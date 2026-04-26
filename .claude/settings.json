@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Volumes/Emil/neuraz/projects/trucoprimos/**)",
+      "Bash(npx next *)",
+      "Bash(PORT=3700 npm run dev)",
+      "Bash(curl -s -o /dev/null -w \"home %{http_code}\\\\n\" http://localhost:3700/)",
+      "Bash(curl -s -o /dev/null -w \"reglas %{http_code}\\\\n\" http://localhost:3700/reglas)",
+      "Bash(curl -s -o /dev/null -w \"solo %{http_code}\\\\n\" http://localhost:3700/jugar/solo)",
+      "Bash(curl -s -o /dev/null -w \"crear %{http_code}\\\\n\" http://localhost:3700/jugar/crear)",
+      "WebSearch",
+      "WebFetch(domain:es.wikipedia.org)"
+    ],
+    "additionalDirectories": [
+      "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"
+    ]
+  }
+}
