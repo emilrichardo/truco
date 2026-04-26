@@ -9,7 +9,15 @@
       "Bash(curl -s -o /dev/null -w \"solo %{http_code}\\\\n\" http://localhost:3700/jugar/solo)",
       "Bash(curl -s -o /dev/null -w \"crear %{http_code}\\\\n\" http://localhost:3700/jugar/crear)",
       "WebSearch",
-      "WebFetch(domain:es.wikipedia.org)"
+      "WebFetch(domain:es.wikipedia.org)",
+      "Read(//private/tmp/TrucoAnalytics/**)",
+      "Bash(curl -s -o /dev/null -w \"home %{http_code}\\\\nsala %{http_code}\\\\ncarta %{http_code}\\\\n\" http://localhost:3700/ http://localhost:3700/jugar/solo http://localhost:3700/cartas/espada/1.jpg)",
+      "Bash(curl -s -o /dev/null -w \"sala/abc123 → %{http_code}\\\\n\" http://localhost:3700/jugar/sala/abc123)",
+      "Bash(ps -p 68790 -o pid,command)",
+      "Bash(curl -s -o /dev/null -w \"home %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(kill -9 68790)",
+      "Bash(PORT=3000 npm run dev)",
+      "Bash(curl -s -o /dev/null -w \"home %{http_code}\\\\nsala/abc %{http_code}\\\\n\" http://localhost:3000/ http://localhost:3000/jugar/sala/abc)"
     ],
     "additionalDirectories": [
       "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"

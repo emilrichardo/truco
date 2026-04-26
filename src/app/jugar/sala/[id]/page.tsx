@@ -5,7 +5,7 @@ import Link from "next/link";
 import { getSocket, guardarSesion, leerSesion } from "@/lib/socket";
 import type { Accion, EstadoJuego } from "@/lib/truco/types";
 import { Mesa } from "@/components/Mesa";
-import { Fosforos } from "@/components/Fosforos";
+import { Marcador } from "@/components/Marcador";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
 import { Anuncios } from "@/components/Anuncios";
@@ -168,18 +168,14 @@ export default function SalaPage() {
 
       {yaSoyJugador && (
         <>
-          <div className="flex flex-wrap justify-center gap-3 mb-3">
-            <Fosforos
-              puntos={estado.puntos[0]}
+          <div className="flex justify-center mb-3">
+            <Marcador
+              puntosNos={estado.puntos[0]}
+              puntosEllos={estado.puntos[1]}
               objetivo={estado.puntosObjetivo}
-              etiqueta="Equipo 1"
-              destacado={estado.jugadores.find((j) => j.id === miId)?.equipo === 0}
-            />
-            <Fosforos
-              puntos={estado.puntos[1]}
-              objetivo={estado.puntosObjetivo}
-              etiqueta="Equipo 2"
-              destacado={estado.jugadores.find((j) => j.id === miId)?.equipo === 1}
+              miEquipoEs0={
+                estado.jugadores.find((j) => j.id === miId)?.equipo === 0
+              }
             />
           </div>
 

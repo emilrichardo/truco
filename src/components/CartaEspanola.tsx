@@ -1,21 +1,7 @@
 "use client";
 import clsx from "clsx";
-import type { Carta, Palo } from "@/lib/truco/types";
+import type { Carta } from "@/lib/truco/types";
 import { nombreCarta } from "@/lib/truco/cartas";
-
-const SIMBOLO_PALO: Record<Palo, string> = {
-  espada: "⚔",
-  basto: "🌿",
-  oro: "☀",
-  copa: "🏆"
-};
-
-const COLOR_PALO: Record<Palo, string> = {
-  espada: "#1a3a8a",
-  basto: "#2f6b1f",
-  oro: "#a06814",
-  copa: "#8b1c1c"
-};
 
 export function CartaEspanola({
   carta,
@@ -43,11 +29,8 @@ export function CartaEspanola({
       />
     );
   }
-  const numero = carta.numero;
-  const display =
-    numero === 10 ? "10" : numero === 11 ? "11" : numero === 12 ? "12" : String(numero);
-  const sym = SIMBOLO_PALO[carta.palo];
-  const color = COLOR_PALO[carta.palo];
+
+  const src = `/cartas/${carta.palo}/${carta.numero}.jpg`;
 
   return (
     <button
@@ -56,23 +39,21 @@ export function CartaEspanola({
       onClick={onClick}
       disabled={!onClick || !jugable}
       className={clsx(
-        "es-card transition",
+        "es-card transition relative p-0",
         pequena ? "w-12" : "w-20 md:w-24",
-        jugable && "cursor-pointer hover:-translate-y-2 hover:shadow-2xl",
-        !jugable && "cursor-default opacity-95",
-        resaltada && "glow-mate"
+        jugable && "cursor-pointer hover:-translate-y-2 hover:shadow-2xl hover:ring-2 hover:ring-truco-gold",
+        !jugable && "cursor-default opacity-95"
       )}
-      style={{ borderColor: color }}
     >
-      <span className="es-num tl" style={{ color }}>
-        {display}
-      </span>
-      <span className="es-suit" style={{ color }}>
-        {sym}
-      </span>
-      <span className="es-num br" style={{ color }}>
-        {display}
-      </span>
+      <img
+        src={src}
+        alt={nombreCarta(carta)}
+        draggable={false}
+        className="absolute inset-0 w-full h-full object-cover rounded-[6px] select-none"
+      />
+      {resaltada && (
+        <span className="absolute inset-0 rounded-[6px] ring-2 ring-truco-gold pointer-events-none glow-mate" />
+      )}
     </button>
   );
 }

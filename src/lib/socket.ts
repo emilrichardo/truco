@@ -6,10 +6,13 @@ let socket: Socket | null = null;
 export function getSocket(): Socket {
   if (typeof window === "undefined") throw new Error("Socket solo en el cliente.");
   if (!socket) {
-    socket = io({
-      autoConnect: true,
-      transports: ["websocket", "polling"]
-    });
+    // Si NEXT_PUBLIC_SOCKET_URL está definido, conectamos a ese servidor externo.
+    // Caso típico: frontend en Vercel + servidor Socket.io en Railway/Render/Fly.
+    // Si no, usamos el host actual (server.ts integrado).
+    const url = process.env.NEXT_PUBLIC_SOCKET_URL;
+    socket = url
+      ? io(url, { autoConnect: true, transports: ["websocket", "polling"] })
+      : io({ autoConnect: true, transports: ["websocket", "polling"] });
   }
   return socket;
 }

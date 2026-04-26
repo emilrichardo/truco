@@ -15,19 +15,42 @@ body {
 }
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-md
-    font-display tracking-wide text-sm uppercase transition shadow-md
-    border border-truco-gold/40 bg-truco-gold/15 text-cream
-    hover:bg-truco-gold/30 hover:shadow-lg active:scale-95
-    disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-truco-gold/15;
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-md
+    font-display tracking-wider text-sm uppercase transition
+    border-2 text-cream
+    hover:shadow-lg active:scale-95
+    disabled:opacity-40 disabled:cursor-not-allowed;
+  background:
+    linear-gradient(180deg, #4a2a14 0%, #2a1a0a 100%);
+  border-color: #c9a24a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 0 rgba(0, 0, 0, 0.4);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #5a3220 0%, #3a200e 100%);
+  border-color: #f4d488;
 }
 
 .btn-primary {
-  @apply bg-truco-gold text-truco-dark border-truco-gold hover:bg-cream;
+  background: linear-gradient(180deg, #f4d488 0%, #c9a24a 100%);
+  color: #2a1a10;
+  border-color: #f4d488;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #fff0c4 0%, #e0b558 100%);
+  color: #2a1a10;
 }
 
 .btn-danger {
-  @apply bg-truco-red/80 text-cream border-truco-red hover:bg-truco-red;
+  background: linear-gradient(180deg, #b13030 0%, #6a1010 100%);
+  border-color: #f4d488;
+}
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(180deg, #d04040 0%, #8a1414 100%);
 }
 
 .card-frame {
@@ -52,13 +75,16 @@ body {
   @apply uppercase tracking-[0.2em] text-[10px] text-truco-gold/80 font-display;
 }
 
-/* Spanish playing card faces, drawn in CSS to avoid image dependencies. */
+/* Cara de la carta española, simulando papel envejecido tipo Fournier. */
 .es-card {
   @apply relative aspect-[2/3] w-full rounded-md overflow-hidden select-none;
-  background: #f8efd6;
+  background:
+    radial-gradient(ellipse at center, #fbf1d0 0%, #efdda3 80%, #d8bf7a 100%);
   color: #2a1a10;
-  border: 1.5px solid #4a2618;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+  border: 2px solid #4a2618;
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3);
 }
 .es-card.back {
   background:
@@ -67,22 +93,6 @@ body {
     radial-gradient(circle at center, rgba(255, 255, 255, 0.2) 0 8px, transparent 9px),
     repeating-linear-gradient(45deg, #8b1c1c 0 6px, #5a1010 6px 12px);
   border: 2px solid #2a1a10;
-}
-.es-card .es-num {
-  @apply absolute font-display font-bold leading-none;
-  font-size: 22px;
-  color: #2a1a10;
-}
-.es-card .es-num.tl { top: 6px; left: 8px; }
-.es-card .es-num.br { bottom: 6px; right: 8px; transform: rotate(180deg); }
-.es-suit {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 56px;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.15);
 }
 
 .glow-mate {
