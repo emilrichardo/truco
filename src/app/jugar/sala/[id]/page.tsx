@@ -102,6 +102,13 @@ export default function SalaPage() {
     setLinkCopiado(true);
     setTimeout(() => setLinkCopiado(false), 1500);
   }, [salaId]);
+  const compartirWhatsApp = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const url = `${window.location.origin}/jugar/sala/${salaId}`;
+    const texto = `🃏 ¡Sumate a la mesa de truco entre primos!\nSala: *${salaId}*\n${url}`;
+    const wa = `https://wa.me/?text=${encodeURIComponent(texto)}`;
+    window.open(wa, "_blank", "noopener,noreferrer");
+  }, [salaId]);
   const abrirChat = useCallback(() => {
     setChatAbierto(true);
     setChatNoVisto(0);
@@ -162,10 +169,24 @@ export default function SalaPage() {
         </div>
         <JugadoresRealesBadge jugadores={jugadoresReales} miId={miId} />
         <button
+          onClick={compartirWhatsApp}
+          className="btn !px-2 !py-1 !min-h-0 text-xs flex items-center gap-1"
+          title="Compartir por WhatsApp"
+          style={{
+            background: "#25d366",
+            borderColor: "#1ea952",
+            color: "#fff"
+          }}
+        >
+          <span aria-hidden>💬</span>
+          <span className="hidden sm:inline">WhatsApp</span>
+        </button>
+        <button
           onClick={compartirLink}
           className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
+          title="Copiar link"
         >
-          {linkCopiado ? "✓" : "Compartir"}
+          {linkCopiado ? "✓ Copiado" : "📋 Copiar"}
         </button>
         {!estado.iniciada && yaSoyJugador && (
           <button

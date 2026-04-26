@@ -9,6 +9,7 @@ import {
 import type { Accion, EstadoJuego, Jugador } from "../lib/truco/types";
 import { decidirAccionBot } from "../lib/truco/ia";
 import { PERSONAJES } from "../data/jugadores";
+import { generarAliasSala } from "./aliasSala";
 
 interface SalaServer {
   id: string;
@@ -75,7 +76,12 @@ export function registerSocket(io: any) {
         },
         cb: (data: { salaId: string; jugadorId: string }) => void
       ) => {
-        const salaId = nanoid(8);
+        // En modo "solo" usamos un id corto; las salas online usan alias
+        // truqueros para que sea simpático compartir por WhatsApp.
+        const salaId =
+          payload.modo === "solo"
+            ? `solo-${nanoid(6)}`
+            : generarAliasSala(new Set(salas.keys()));
         const jugadorId = nanoid(10);
         const jugador: Jugador = {
           id: jugadorId,
