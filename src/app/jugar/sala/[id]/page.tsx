@@ -233,9 +233,9 @@ export default function SalaPage() {
         <div className="flex-1 flex overflow-hidden relative">
           {/* Columna principal */}
           <div className="flex-1 flex flex-col overflow-hidden relative">
-            <UltimoCanto estado={estado} />
             <div className="flex-1 relative min-h-0">
               <Mesa estado={estado} miId={miId!} />
+              <UltimoCanto estado={estado} miId={miId!} />
             </div>
             {meEnCurso && (
               <PanelAcciones
