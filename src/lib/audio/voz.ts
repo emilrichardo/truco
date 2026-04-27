@@ -7,6 +7,44 @@
 
 const PRIORIDAD_LANG = ["es-AR", "es-MX", "es-CL", "es-CO", "es-VE", "es-US", "es-ES", "es"];
 
+// Heurística para filtrar a voces masculinas. Web Speech no expone género
+// como propiedad estándar, así que detectamos por nombre.
+const NOMBRES_MASCULINOS = [
+  // macOS / iOS
+  "diego", "jorge", "juan", "carlos", "francisco", "pablo", "javier",
+  "miguel", "ricardo", "luis", "andres", "fernando", "pedro", "raul",
+  "roberto", "hector", "mario", "alberto", "enrique", "victor",
+  // Windows / Microsoft
+  "pablo", "raul", "jorge",
+  // Google
+  "es-us-standard-b", "es-es-standard-b", "es-mx-standard-b"
+];
+
+const NOMBRES_FEMENINOS = [
+  "paulina", "helena", "sabina", "monica", "marisol", "ines", "laura",
+  "elena", "maria", "lucia", "sofia", "mariana", "camila", "esperanza",
+  "carmen", "isabel", "rosa", "lupe", "alejandra", "patricia", "dolores",
+  "gabriela", "valentina", "ana", "eva", "natalia", "veronica", "andrea",
+  "marta", "raquel"
+];
+
+function esVozMasculina(v: SpeechSynthesisVoice): boolean {
+  const nombre = v.name.toLowerCase();
+  // Rechazo explícito por keywords claros
+  if (/\bfemale\b|\bmujer\b|\bfemenina\b/.test(nombre)) return false;
+  if (NOMBRES_FEMENINOS.some((n) => nombre.includes(n))) return false;
+  // Aceptación explícita
+  if (/\bmale\b|\bhombre\b|\bmasculin/.test(nombre)) return true;
+  if (NOMBRES_MASCULINOS.some((n) => nombre.includes(n))) return true;
+  // Convención Google TTS: Standard-B y Wavenet-B suelen ser masculinas;
+  // Standard-A / Wavenet-A femeninas.
+  if (/standard-[bdf]|wavenet-[bdf]/i.test(v.name)) return true;
+  if (/standard-[ace]|wavenet-[ace]/i.test(v.name)) return false;
+  // Por defecto: descartar (preferimos quedarnos sin voz que con una voz
+  // femenina si no podemos decidir).
+  return false;
+}
+
 let cacheVoces: SpeechSynthesisVoice[] | null = null;
 
 function asegurarVocesCargadas(): SpeechSynthesisVoice[] {
@@ -29,14 +67,18 @@ export function precargarVoces() {
 function vocesEspanolas(): SpeechSynthesisVoice[] {
   const todas = asegurarVocesCargadas();
   if (todas.length === 0) return [];
-  // Ordenamos por prioridad de variante latinoamericana.
   const score = (v: SpeechSynthesisVoice) => {
     const i = PRIORIDAD_LANG.findIndex((p) => v.lang.toLowerCase().startsWith(p.toLowerCase()));
     return i === -1 ? 99 : i;
   };
-  return todas
+  const espanolas = todas
     .filter((v) => v.lang.toLowerCase().startsWith("es"))
     .sort((a, b) => score(a) - score(b));
+
+  // Preferimos masculinas. Si en el sistema no hay ninguna identificable
+  // como masculina, devolvemos todas (mejor que ninguna).
+  const masculinas = espanolas.filter(esVozMasculina);
+  return masculinas.length > 0 ? masculinas : espanolas;
 }
 
 function hashStr(s: string): number {
@@ -56,8 +98,8 @@ export function perfilVozParaJugador(jugadorId: string): PerfilVoz {
   if (espanolas.length === 0) return { voice: null, pitch: 1, rate: 1 };
   const h = hashStr(jugadorId);
   const voice = espanolas[h % espanolas.length];
-  // Variación tonal por jugador para que se distingan: pitch 0.85-1.25, rate 0.92-1.18
-  const pitch = 0.85 + ((h >> 3) % 40) / 100;
+  // Pitch en rango masculino: 0.72-1.04. Rate 0.92-1.18 (igual).
+  const pitch = 0.72 + ((h >> 3) % 32) / 100;
   const rate = 0.92 + ((h >> 7) % 26) / 100;
   return { voice, pitch, rate };
 }
