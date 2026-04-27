@@ -193,6 +193,18 @@ export default function SalaPage() {
         {estado.iniciada && (
           <>
             <button
+              onClick={abrirChat}
+              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs relative md:hidden"
+              title="Chat de la mesa"
+            >
+              💬
+              {chatNoVisto > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red text-text text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
+                  {chatNoVisto > 9 ? "9+" : chatNoVisto}
+                </span>
+              )}
+            </button>
+            <button
               onClick={() => setMenuCompartir(true)}
               className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
               title="Compartir"

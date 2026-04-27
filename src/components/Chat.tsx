@@ -28,7 +28,9 @@ export function Chat({
   enviar: (m: { texto?: string; reaccion?: string }) => void;
 }) {
   const [texto, setTexto] = useState("");
-  const [filtro, setFiltro] = useState<"todo" | "jugadas" | "charla">("jugadas");
+  // Default "todo" para que se vea la conversación completa de la partida
+  // actual: mensajes humanos + eventos del juego en orden cronológico.
+  const [filtro, setFiltro] = useState<"todo" | "jugadas" | "charla">("todo");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
