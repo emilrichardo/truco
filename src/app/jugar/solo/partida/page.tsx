@@ -40,6 +40,7 @@ function PartidaSoloInterno() {
   const [chatAbierto, setChatAbierto] = useState(false);
   const [chatNoVisto, setChatNoVisto] = useState(0);
   const [confirmSalir, setConfirmSalir] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
 
   const tamanio = (Number(params.get("tamanio")) === 4 ? 4 : 2) as 2 | 4;
   const puntos = (Number(params.get("puntos")) === 30 ? 30 : 15) as 15 | 30;
@@ -154,9 +155,27 @@ function PartidaSoloInterno() {
           <PanelAcciones estado={estado} miId={miId} enviar={enviarAccion} />
         </div>
 
-        <aside className="hidden md:flex w-80 lg:w-96 border-l border-border flex-col p-2 overflow-hidden">
-          <Chat estado={estado} miId={miId} enviar={enviarChat} />
-        </aside>
+        {sidebarVisible && (
+          <aside className="hidden md:flex w-80 lg:w-96 border-l border-border flex-col p-2 overflow-hidden relative">
+            <button
+              onClick={() => setSidebarVisible(false)}
+              className="absolute top-2 right-2 z-10 btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
+              title="Ocultar chat"
+            >
+              ✕
+            </button>
+            <Chat estado={estado} miId={miId} enviar={enviarChat} />
+          </aside>
+        )}
+        {!sidebarVisible && (
+          <button
+            onClick={() => setSidebarVisible(true)}
+            className="hidden md:flex absolute top-2 right-2 z-30 btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
+            title="Mostrar chat"
+          >
+            💬
+          </button>
+        )}
 
         {chatAbierto && (
           <div

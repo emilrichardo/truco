@@ -40,6 +40,7 @@ export default function SalaPage() {
   const [confirmSalir, setConfirmSalir] = useState(false);
   const [menuCompartir, setMenuCompartir] = useState(false);
   const [cerrando, setCerrando] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const lastChatLen = useRef(0);
 
   const { estado, salaMeta, error: errorSala } = useSalaOnline(salaId);
@@ -303,10 +304,28 @@ export default function SalaPage() {
             )}
           </div>
 
-          {/* Chat: panel lateral en desktop */}
-          <aside className="hidden md:flex w-80 lg:w-96 border-l border-border flex-col p-2 overflow-hidden">
-            <Chat estado={estado} miId={miId!} enviar={enviarChat} />
-          </aside>
+          {/* Chat: panel lateral en desktop (oculto si sidebarVisible=false) */}
+          {sidebarVisible && (
+            <aside className="hidden md:flex w-80 lg:w-96 border-l border-border flex-col p-2 overflow-hidden relative">
+              <button
+                onClick={() => setSidebarVisible(false)}
+                className="absolute top-2 right-2 z-10 btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
+                title="Ocultar chat"
+              >
+                ✕
+              </button>
+              <Chat estado={estado} miId={miId!} enviar={enviarChat} />
+            </aside>
+          )}
+          {!sidebarVisible && (
+            <button
+              onClick={() => setSidebarVisible(true)}
+              className="hidden md:flex absolute top-2 right-2 z-30 btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
+              title="Mostrar chat"
+            >
+              💬
+            </button>
+          )}
 
           {/* Chat: drawer en mobile */}
           {chatAbierto && (

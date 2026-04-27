@@ -8,6 +8,7 @@ import { usePersonajeLocal } from "@/lib/personaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
 import { IconoIndividual, IconoParejas } from "@/components/IconoModo";
 import { usePreloadCartas } from "@/lib/preload";
+import { borrarSnapshotLocal } from "@/lib/salaLocal";
 
 export default function SoloPage() {
   const router = useRouter();
@@ -31,7 +32,9 @@ export default function SoloPage() {
   const empezar = () => {
     if (creando) return;
     setCreando(true);
-    // Sin backend: la partida vive en el browser. Pasamos la config por URL.
+    // Forzar partida nueva: limpiar snapshot anterior (chat, cartas, etc.)
+    // así no arrastra estado de una partida previa.
+    borrarSnapshotLocal();
     router.push(`/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}`);
   };
 
