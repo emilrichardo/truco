@@ -3,8 +3,11 @@
 // del custom server. Usa Edge Functions para mutaciones y Realtime para
 // recibir el estado actualizado.
 import { useEffect, useRef, useState } from "react";
-import { getSupabase } from "@/lib/supabase/cliente";
+import { tryGetSupabase } from "@/lib/supabase/cliente";
 import type { Accion, EstadoJuego } from "@/lib/truco/types";
+
+const ERROR_CONFIG =
+  "Supabase no está configurado en este deploy. Pedile al admin que cargue NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY en Vercel.";
 
 const STORAGE_DEVICE = "truco_primos_device_id";
 const STORAGE_SESION = "truco_primos_sesion";
@@ -50,7 +53,8 @@ async function invocar<T = SalaResp>(
   fn: string,
   body: Record<string, unknown>
 ): Promise<T> {
-  const sb = getSupabase();
+  const sb = tryGetSupabase();
+  if (!sb) return { ok: false, error: ERROR_CONFIG } as unknown as T;
   const { data, error } = await sb.functions.invoke(fn, { body });
   if (error) {
     return { ok: false, error: error.message } as unknown as T;
@@ -130,7 +134,11 @@ export function useSalaOnline(salaId: string | null) {
 
   useEffect(() => {
     if (!salaId) return;
-    const sb = getSupabase();
+    const sb = tryGetSupabase();
+    if (!sb) {
+      setError(ERROR_CONFIG);
+      return;
+    }
     let activo = true;
 
     // Lectura inicial.
