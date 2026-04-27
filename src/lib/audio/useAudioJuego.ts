@@ -1,12 +1,13 @@
 "use client";
-// Hook que reacciona al estado del juego para disparar SFX. Las voces
-// fueron eliminadas; ahora sólo maneja:
-//  - sonido de carta al tirarse
-//  - tintineo cuando suman puntos
-//  - sonido sordo al irse al mazo
+// Hook que reacciona al estado del juego para disparar SFX y voces.
+//  - SFX: sonido de carta, tintineo de puntos, golpe sordo al irse al mazo.
+//  - Voces: clips MP3 generados con ElevenLabs (ver sonidos.ts) que se
+//    reproducen al detectar cantos / respuestas en el chat. Cada jugador
+//    tiene una voz estable asignada por hash.
 import { useEffect, useRef } from "react";
 import type { EstadoJuego, MensajeChat } from "@/lib/truco/types";
 import { despertarAudio, sonidoCarta, sonidoMazo, sonidoPuntos } from "./sfx";
+import { identificarCanto, reproducirCanto } from "./sonidos";
 
 export function useAudioJuego(
   estado: EstadoJuego | null,
@@ -29,7 +30,7 @@ export function useAudioJuego(
     };
   }, []);
 
-  // Procesar nuevos eventos del chat para SFX.
+  // Procesar nuevos eventos del chat para SFX + voces.
   useEffect(() => {
     if (!estado || !estado.chat.length) return;
     const idx = estado.chat.findIndex((m) => m.id === ultimoChatId.current);
@@ -47,9 +48,22 @@ function procesarMensaje(m: MensajeChat) {
     case "puntos":
       sonidoPuntos();
       break;
+    case "canto":
     case "respuesta":
-      // Se fue al mazo → "mazo" SFX sordo. Quiero/no-quiero sin SFX.
-      if (/mazo/i.test(m.texto)) sonidoMazo();
+    case "mano": {
+      // Voz: matcheamos el texto contra FRASES para reproducir EXACTAMENTE
+      // el variante que el motor pickeó (no uno random) — así el audio
+      // coincide con lo que aparece en el chat. Para "ir al mazo" sumamos
+      // el golpe sordo del SFX para reforzar el cierre.
+      const id = identificarCanto(m.texto);
+      if (id && m.jugadorId) {
+        reproducirCanto(id.canto, {
+          jugadorId: m.jugadorId,
+          variante: id.variante > 0 ? id.variante : undefined
+        });
+      }
+      if (id?.canto === "ir_al_mazo") sonidoMazo();
       break;
+    }
   }
 }

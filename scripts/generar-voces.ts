@@ -121,16 +121,19 @@ interface VoiceSettings {
   similarity_boost: number;
   style: number;
   use_speaker_boost: boolean;
+  speed?: number;
 }
 
 // Settings extremos para máxima expresividad / modulación tipo cantadito:
 // - stability 0.15: deja que la voz module fuerte (sing-songy)
-// - style 0.85: empuje emocional alto
+// - style 0.95: empuje emocional altísimo, "color" del acento
+// - speed 1.18: argentino habla más rápido que el español castizo
 const VOICE_SETTINGS: VoiceSettings = {
   stability: 0.15,
   similarity_boost: 0.7,
-  style: 0.85,
-  use_speaker_boost: true
+  style: 0.95,
+  use_speaker_boost: true,
+  speed: 1.18
 };
 
 async function generarTTS(text: string, voiceId: string): Promise<Buffer> {

@@ -354,11 +354,13 @@ function GrupoBotones({
   titulo?: string;
   children: React.ReactNode;
 }) {
-  // Sin título: la fila ocupa el 100% sin la columna del rótulo. Se usa
-  // para los grupos en turno propio (envido / truco) donde la diferencia
-  // ya la marca el color del botón.
+  // Sin título: la fila se centra horizontalmente debajo de las cartas.
+  // Se usa para los grupos en turno propio (envido / truco) donde la
+  // diferencia ya la marca el color del botón.
   if (!titulo) {
-    return <div className="flex flex-wrap gap-1.5">{children}</div>;
+    return (
+      <div className="flex flex-wrap gap-1.5 justify-center">{children}</div>
+    );
   }
   return (
     <div className="flex items-stretch gap-1.5">
@@ -368,7 +370,9 @@ function GrupoBotones({
       >
         {titulo}
       </div>
-      <div className="flex flex-wrap gap-1.5 flex-1">{children}</div>
+      <div className="flex flex-wrap gap-1.5 flex-1 justify-center">
+        {children}
+      </div>
     </div>
   );
 }
