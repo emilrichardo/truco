@@ -6,7 +6,6 @@ import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { getPersonaje, urlPersonaje } from "@/data/jugadores";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
-import { IconoIndividual, IconoParejas } from "@/components/IconoModo";
 import { usePreloadCartas } from "@/lib/preload";
 import { borrarSnapshotLocal } from "@/lib/salaLocal";
 
@@ -87,14 +86,18 @@ export default function SoloPage() {
         )}
 
         <Opcion label="Modo">
-          <Choice activo={tamanio === 4} onClick={() => setTamanio(4)}>
-            <IconoParejas size={22} />
-            <span>En parejas</span>
-          </Choice>
-          <Choice activo={tamanio === 2} onClick={() => setTamanio(2)}>
-            <IconoIndividual size={22} />
-            <span>Solo a solo</span>
-          </Choice>
+          <ChoiceModo
+            activo={tamanio === 2}
+            onClick={() => setTamanio(2)}
+            icono="/brand/iconos/1vs1.png"
+            label="Solo a solo"
+          />
+          <ChoiceModo
+            activo={tamanio === 4}
+            onClick={() => setTamanio(4)}
+            icono="/brand/iconos/2vs2.png"
+            label="En parejas"
+          />
         </Opcion>
         <Opcion label="A cuántos">
           <Choice activo={puntos === 15} onClick={() => setPuntos(15)}>
@@ -138,6 +141,47 @@ function Choice({
   return (
     <button onClick={onClick} className={`btn ${activo ? "btn-primary" : ""}`}>
       {children}
+    </button>
+  );
+}
+
+/** Botón grande para elegir modo: ícono PNG arriba, label abajo. */
+function ChoiceModo({
+  activo,
+  onClick,
+  icono,
+  label
+}: {
+  activo: boolean;
+  onClick: () => void;
+  icono: string;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition min-h-[150px] ${
+        activo
+          ? "border-dorado bg-gradient-to-br from-dorado/20 to-surface-2 shadow-marca"
+          : "border-border bg-surface hover:border-azul-criollo/60"
+      }`}
+    >
+      <img
+        src={icono}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className={`w-20 h-20 sm:w-24 sm:h-24 object-contain select-none transition-transform ${
+          activo ? "scale-110" : ""
+        }`}
+      />
+      <span
+        className={`font-display text-base sm:text-lg leading-tight ${
+          activo ? "text-dorado" : "text-crema"
+        }`}
+      >
+        {label}
+      </span>
     </button>
   );
 }

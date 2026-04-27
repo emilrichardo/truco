@@ -131,10 +131,10 @@ function PartidaSoloInterno() {
 
       <div className="flex-1 flex overflow-hidden relative">
         <div className="flex-1 flex flex-col overflow-hidden relative">
-          <MiAvatarBR estado={estado} miId={miId} />
           <div className="flex-1 relative min-h-0">
             <Mesa estado={estado} miId={miId} />
             <UltimoCanto estado={estado} miId={miId} />
+            <MiAvatarBR estado={estado} miId={miId} />
             <div
               className={
                 estado.modo === "2v2"

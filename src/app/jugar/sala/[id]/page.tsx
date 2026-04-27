@@ -272,12 +272,12 @@ export default function SalaPage() {
         <div className="flex-1 flex overflow-hidden relative">
           {/* Columna principal */}
           <div className="flex-1 flex flex-col overflow-hidden relative">
-            {/* Mi avatar flotante: BR de la columna de juego, no del viewport,
-             * para no chocar con el chat sidebar en desktop. */}
-            <MiAvatarBR estado={estado} miId={miId!} />
             <div className="flex-1 relative min-h-0">
               <Mesa estado={estado} miId={miId!} />
               <UltimoCanto estado={estado} miId={miId!} />
+              {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
+               * para que quede arriba de mi mano de cartas. */}
+              <MiAvatarBR estado={estado} miId={miId!} />
               {/* Marcador flotante: palitos compactos. En 2v2 va debajo del
                * avatar TR (que sí existe); en 1v1 va arriba del todo. */}
               <div

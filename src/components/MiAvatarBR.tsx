@@ -17,16 +17,15 @@ export function MiAvatarBR({
   const esTurno = estado.manoActual?.turnoJugadorId === me.id;
   const esMano = estado.manoActual?.manoJugadorId === me.id;
   return (
-    // absolute (no fixed) para que se apoye contra la columna del juego y
-    // no choque con el chat sidebar en desktop. El padre que lo contiene
-    // tiene position: relative.
+    // absolute (no fixed) para que se apoye contra el contenedor del mesa
+    // y quede ENCIMA del PanelAcciones (no chocando con el chat).
+    // compacto=false → más grande que el resto de los avatares.
     <div className="absolute bottom-2 right-2 z-30 pointer-events-none">
       <JugadorPanel
         jugador={me}
         esTurno={!!esTurno}
         esMano={!!esMano}
         esYo
-        compacto
       />
     </div>
   );
