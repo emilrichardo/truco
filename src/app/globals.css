@@ -334,30 +334,16 @@ body {
 /* Mesa de madera vieja, gastada por años de partidas: tablones desparejos,
  * nudos oscuros, manchas de fernet y rayones aleatorios. */
 .tapete {
-  background:
-    url("/texturas/textura-mesa.png") center / cover no-repeat,
-    var(--madera);
+  background-color: var(--madera);
+  background-image: url("/texturas/textura-mesa.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   border: 8px solid var(--madera-oscura);
   border-radius: 10px;
   box-shadow:
     inset 0 0 30px rgba(0, 0, 0, 0.35),
     0 6px 18px rgba(0, 0, 0, 0.6);
-  position: relative;
-}
-
-/* Perspectiva 3D sutil para toda la mesa: aplicada al wrapper que contiene
- * tapete + avatares + cartas. Rotamos el contenido X grados para que se
- * vea como mirando una mesa de campo desde el otro lado. */
-.mesa-3d {
-  perspective: 1500px;
-  perspective-origin: center 65%;
-}
-.mesa-3d > .mesa-tilt {
-  transform: rotateX(7deg);
-  transform-origin: center 60%;
-  transform-style: preserve-3d;
-  width: 100%;
-  height: 100%;
   position: relative;
 }
 

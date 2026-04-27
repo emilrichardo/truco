@@ -278,9 +278,15 @@ export default function SalaPage() {
             <div className="flex-1 relative min-h-0">
               <Mesa estado={estado} miId={miId!} />
               <UltimoCanto estado={estado} miId={miId!} />
-              {/* Marcador flotante: palitos compactos. Posicionado debajo del
-               * avatar del jugador top-right para que no se le superponga. */}
-              <div className="absolute top-48 right-2 z-20 sm:top-52">
+              {/* Marcador flotante: palitos compactos. En 2v2 va debajo del
+               * avatar TR (que sí existe); en 1v1 va arriba del todo. */}
+              <div
+                className={
+                  estado.modo === "2v2"
+                    ? "absolute top-48 right-2 z-20 sm:top-52"
+                    : "absolute top-3 right-2 z-20"
+                }
+              >
                 <Marcador
                   puntosNos={estado.puntos[0]}
                   puntosEllos={estado.puntos[1]}

@@ -135,7 +135,13 @@ function PartidaSoloInterno() {
           <div className="flex-1 relative min-h-0">
             <Mesa estado={estado} miId={miId} />
             <UltimoCanto estado={estado} miId={miId} />
-            <div className="absolute top-48 right-2 z-20 sm:top-52">
+            <div
+              className={
+                estado.modo === "2v2"
+                  ? "absolute top-48 right-2 z-20 sm:top-52"
+                  : "absolute top-3 right-2 z-20"
+              }
+            >
               <Marcador
                 puntosNos={estado.puntos[0]}
                 puntosEllos={estado.puntos[1]}

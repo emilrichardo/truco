@@ -67,8 +67,7 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   );
 
   return (
-    <div className="relative w-full h-full mesa-3d">
-      <div className="mesa-tilt">
+    <div className="relative w-full h-full">
       <div className="absolute inset-1 sm:inset-2 tapete" />
 
       {/* Centro: sol criollo + meta info */}
@@ -137,7 +136,6 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
           Esperando primera carta…
         </div>
       )}
-      </div>{/* mesa-tilt */}
     </div>
   );
 }
