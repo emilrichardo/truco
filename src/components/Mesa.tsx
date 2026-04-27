@@ -90,6 +90,7 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
         const pos = posiciones[idx];
         if (!pos) return null;
         const esTurno = estado.manoActual?.turnoJugadorId === j.id;
+        const esMano = estado.manoActual?.manoJugadorId === j.id;
         const esCompañero = total === 4 && j.equipo === me.equipo;
         const cartasEnMano =
           estado.manoActual?.cartasPorJugador[j.id] || [];
@@ -99,6 +100,7 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
             pos={pos}
             jugador={j}
             esTurno={!!esTurno}
+            esMano={!!esMano}
             esYo={false}
             esCompañero={esCompañero}
             cartasEnMano={cartasEnMano}
@@ -133,14 +135,14 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   );
 }
 
-/** Avatar + mini-hand de un jugador, posicionado en su lado del tablero.
- *  Para sides (izq/der): mini-hand arriba, avatar abajo (orden inverso).
- *  Para mine (BR): solo avatar, sin mini-hand (mi mano está en PanelAcciones).
- *  Para arriba: avatar arriba y mini-hand debajo. */
+/** Avatar + mini-hand de un jugador, en una esquina del tablero. Layout
+ *  vertical: avatar arriba, mini-hand horizontal debajo, más chiquita
+ *  que el avatar. */
 function PuestoJugador({
   pos,
   jugador,
   esTurno,
+  esMano,
   esYo,
   esCompañero,
   cartasEnMano,
@@ -150,6 +152,7 @@ function PuestoJugador({
   pos: Posicion;
   jugador: Jugador;
   esTurno: boolean;
+  esMano: boolean;
   esYo: boolean;
   esCompañero: boolean;
   cartasEnMano: Carta[];
@@ -157,20 +160,21 @@ function PuestoJugador({
   onToggleCompañero: () => void;
 }) {
   const cartasOcultas = !esCompañero || !mostrarCompañero;
-  const sideMode = pos === "izquierda" || pos === "derecha";
+  const alineacion =
+    pos === "arriba" || pos === "izquierda" ? "items-start" : "items-end";
 
   return (
     <div
       className={clsx(
-        "absolute z-20 flex flex-col items-center gap-1",
-        clasePosicionPuesto(pos),
-        // Para sides: mini-hand arriba, avatar abajo
-        sideMode && "flex-col-reverse"
+        "absolute z-20 flex flex-col gap-1",
+        alineacion,
+        clasePosicionPuesto(pos)
       )}
     >
       <JugadorPanel
         jugador={jugador}
         esTurno={esTurno}
+        esMano={esMano}
         esYo={esYo}
         compacto
       />
@@ -180,6 +184,7 @@ function PuestoJugador({
           ocultas={cartasOcultas}
           esCompañero={esCompañero}
           onTap={esCompañero ? onToggleCompañero : undefined}
+          posReparto={pos}
         />
       )}
     </div>
@@ -198,28 +203,24 @@ function CartasJugadas({
   jugadas: JugadaEnMesa[];
   numeroDeBaza: number;
 }) {
-  // Vector unitario del arm: hacia dónde se aleja del centro.
-  const dirX =
-    pos === "izquierda" ? -1 : pos === "derecha" ? 1 : 0;
-  const dirY = pos === "arriba" ? -1 : pos === "abajo" ? 1 : 0;
+  // Cada cuadrante apunta a la esquina del avatar correspondiente.
+  // arriba → TL, abajo → BR, izquierda → BL, derecha → TR.
+  const dirX = pos === "arriba" || pos === "izquierda" ? -1 : 1;
+  const dirY = pos === "arriba" || pos === "derecha" ? -1 : 1;
 
   return (
-    // Wrapper de 0×0 actúa como anchor en el centro del arm.
     <div className={clsx("absolute z-15", clasePosicionArm(pos))}>
       {jugadas.map((j, i) => {
-        // Cada baza se aleja del centro siguiendo la dirección del arm,
-        // con leve offset perpendicular para que no queden alineadas exactas.
-        const dx = dirX * (i * 14) + (dirY !== 0 ? i * 6 : 0);
-        const dy = dirY * (i * 14) + (dirX !== 0 ? i * 4 : 0);
-        const rot = (i - (jugadas.length - 1) / 2) * 6;
+        // Cartas sucesivas se desplazan un poco hacia la esquina del jugador.
+        const dx = dirX * i * 12;
+        const dy = dirY * i * 8;
+        const rot = (i - (jugadas.length - 1) / 2) * 5;
         return (
           <div
             key={`${j.bazaIdx}-${j.jugIdx}-${j.carta.id}`}
             className="absolute top-0 left-0 transition-transform"
             style={{
               zIndex: i + 1,
-              // -50% centra cada carta en el anchor; sumamos los offsets
-              // direccionales para alejarnos del centro hacia el borde.
               transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg)`
             }}
           >
@@ -236,18 +237,22 @@ function CartasJugadas({
 }
 
 /** Mini-hand de cartas en mano (no jugadas todavía), boca abajo por default.
- *  Si es la del compañero, tocando se da vuelta y se ven las cartas. */
+ *  Si es la del compañero, tocando se da vuelta y se ven las cartas.
+ *  Cada carta entra con animación de reparto desde el centro de la mesa. */
 function ManoOculta({
   cartas,
   ocultas,
   esCompañero,
-  onTap
+  onTap,
+  posReparto
 }: {
   cartas: Carta[];
   ocultas: boolean;
   esCompañero: boolean;
   onTap?: () => void;
+  posReparto?: Posicion;
 }) {
+  const offsets = repartoOffset(posReparto);
   return (
     <div
       role={onTap ? "button" : undefined}
@@ -260,7 +265,7 @@ function ManoOculta({
         }
       }}
       className={clsx(
-        "flex -space-x-2 transition-transform",
+        "flex -space-x-3 transition-transform",
         esCompañero && "cursor-pointer hover:scale-110",
         esCompañero && ocultas && "ring-2 ring-dorado/40 rounded p-0.5 parpadeo"
       )}
@@ -273,42 +278,68 @@ function ManoOculta({
       }
     >
       {cartas.map((c, i) => (
-        <div key={c.id} style={{ zIndex: i, transform: `rotate(${(i - 1) * 4}deg)` }}>
-          <CartaEspanola carta={c} oculta={ocultas} tamanio="xs" />
+        <div
+          key={c.id}
+          style={{ zIndex: i, transform: `rotate(${(i - 1) * 3}deg)` }}
+        >
+          <div
+            className="reparto-anim"
+            style={
+              {
+                "--reparto-from-x": offsets.x,
+                "--reparto-from-y": offsets.y,
+                "--reparto-delay": `${i * 90}ms`
+              } as React.CSSProperties
+            }
+          >
+            <CartaEspanola carta={c} oculta={ocultas} tamanio="xs" />
+          </div>
         </div>
       ))}
     </div>
   );
 }
 
-/** Posición de la "estación" de cada jugador (avatar + mini-hand).
- *  Yo voy fijo a BR; el resto a su lado cardinal del tablero. */
-function clasePosicionPuesto(pos: Posicion): string {
+/** Offset desde donde "vuela" cada carta hacia su destino, según en qué
+ *  esquina está el puesto. Como el centro está en el medio del tablero,
+ *  para un puesto en TL la carta viene desde abajo-derecha (offset +X +Y). */
+function repartoOffset(pos?: Posicion): { x: string; y: string } {
   switch (pos) {
-    case "abajo":
-      return "right-3 bottom-3";
-    case "arriba":
-      return "left-1/2 -translate-x-1/2 top-2";
-    case "izquierda":
-      return "left-2 top-1/2 -translate-y-1/2";
-    case "derecha":
-      return "right-2 top-1/2 -translate-y-1/2";
+    case "arriba":    return { x: "300%", y: "300%" };  // viene desde BR
+    case "abajo":     return { x: "-300%", y: "-300%" }; // viene desde TL
+    case "izquierda": return { x: "300%", y: "-300%" };  // viene desde TR
+    case "derecha":   return { x: "-300%", y: "300%" };  // viene desde BL
+    default:          return { x: "0", y: "300%" };
   }
 }
 
-/** Posición del arm de cartas jugadas — anclado al centro y desplazado un
- *  poco hacia el lado correspondiente. Ancho/alto reservado para evitar
- *  reflows cuando se acumulan bazas. */
+/** Posición del puesto en una de las 4 esquinas del tablero.
+ *  Yo voy a BR (manejado por MiAvatarBR); el resto a las otras tres. */
+function clasePosicionPuesto(pos: Posicion): string {
+  switch (pos) {
+    case "abajo":
+      return "right-3 bottom-3"; // (no se usa: yo voy por MiAvatarBR)
+    case "arriba":
+      return "left-3 top-3"; // top-left
+    case "izquierda":
+      return "left-3 bottom-3"; // bottom-left (rival 2v2)
+    case "derecha":
+      return "right-3 top-3"; // top-right (rival 2v2)
+  }
+}
+
+/** Anchor del pile de cartas jugadas — en el cuadrante correspondiente
+ *  al avatar del jugador, hacia el centro de la mesa. */
 function clasePosicionArm(pos: Posicion): string {
   switch (pos) {
     case "arriba":
-      return "top-[28%] left-1/2 -translate-x-1/2";
+      return "top-[32%] left-[32%]"; // upper-left quadrant
     case "abajo":
-      return "bottom-[28%] left-1/2 -translate-x-1/2";
+      return "bottom-[32%] right-[32%]"; // lower-right
     case "izquierda":
-      return "left-[28%] top-1/2 -translate-y-1/2";
+      return "bottom-[32%] left-[32%]"; // lower-left
     case "derecha":
-      return "right-[28%] top-1/2 -translate-y-1/2";
+      return "top-[32%] right-[32%]"; // upper-right
   }
 }
 

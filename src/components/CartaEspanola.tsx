@@ -7,7 +7,7 @@ import { nombreCarta } from "@/lib/truco/cartas";
 type Tamanio = "xs" | "sm" | "md" | "lg";
 
 const ANCHOS: Record<Tamanio, string> = {
-  xs: "w-12",
+  xs: "w-9 sm:w-10",
   sm: "w-20 sm:w-24",
   md: "w-28 sm:w-36 md:w-40",
   lg: "w-32 sm:w-44 md:w-52"

@@ -61,19 +61,30 @@ export function PanelAcciones({
                   } as React.CSSProperties
                 }
               >
-                <CartaEspanola
-                  carta={c}
-                  jugable={puedeJugarCarta}
-                  tamanio="sm"
-                  onClick={() =>
-                    puedeJugarCarta &&
-                    enviar({
-                      tipo: "jugar_carta",
-                      jugadorId: miId,
-                      cartaId: c.id
-                    })
+                <div
+                  className="reparto-anim"
+                  style={
+                    {
+                      "--reparto-from-x": "0",
+                      "--reparto-from-y": "-300%",
+                      "--reparto-delay": `${i * 90 + 200}ms`
+                    } as React.CSSProperties
                   }
-                />
+                >
+                  <CartaEspanola
+                    carta={c}
+                    jugable={puedeJugarCarta}
+                    tamanio="sm"
+                    onClick={() =>
+                      puedeJugarCarta &&
+                      enviar({
+                        tipo: "jugar_carta",
+                        jugadorId: miId,
+                        cartaId: c.id
+                      })
+                    }
+                  />
+                </div>
               </div>
             );
           })

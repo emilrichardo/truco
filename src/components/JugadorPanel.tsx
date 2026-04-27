@@ -7,11 +7,13 @@ export function JugadorPanel({
   jugador,
   esTurno,
   esYo,
+  esMano,
   compacto
 }: {
   jugador: Jugador;
   esTurno: boolean;
   esYo?: boolean;
+  esMano?: boolean;
   compacto?: boolean;
 }) {
   // Avatares rectangulares (aspect 3/4) para usar mejor el espacio en mobile.
@@ -42,6 +44,14 @@ export function JugadorPanel({
             title="Bot"
           >
             bot
+          </span>
+        )}
+        {esMano && (
+          <span
+            className="badge-mano absolute -top-1.5 -left-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider z-10"
+            title="Es mano de esta ronda"
+          >
+            Mano
           </span>
         )}
         {esTurno && (

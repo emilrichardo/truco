@@ -15,11 +15,13 @@ export function MiAvatarBR({
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
   const esTurno = estado.manoActual?.turnoJugadorId === me.id;
+  const esMano = estado.manoActual?.manoJugadorId === me.id;
   return (
     <div className="fixed bottom-2 right-2 z-30 pointer-events-none">
       <JugadorPanel
         jugador={me}
         esTurno={!!esTurno}
+        esMano={!!esMano}
         esYo
         compacto
       />
