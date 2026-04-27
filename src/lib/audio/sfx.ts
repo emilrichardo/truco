@@ -14,7 +14,9 @@ function ctx(): AudioContext | null {
   return _ctx;
 }
 
-/** Sonido de carta golpeando la mesa: noise burst + thump grave. */
+/** Sonido de carta deslizándose sobre la mesa: papel rozando el paño,
+ *  suave, sin thump grave. Ruido filtrado con sweep descendente y envolvente
+ *  larga (~180ms) que simula el barrido de la carta hasta detenerse. */
 export function sonidoCarta() {
   const c = ctx();
   if (!c) return;
@@ -23,42 +25,46 @@ export function sonidoCarta() {
   if (c.state === "suspended") c.resume().catch(() => {});
 
   const t0 = c.currentTime;
+  const dur = 0.18;
 
-  // 1) Click / palmazo: ruido blanco filtrado, 50ms con decay rápido.
-  const noiseLen = Math.floor(c.sampleRate * 0.06);
-  const noiseBuf = c.createBuffer(1, noiseLen, c.sampleRate);
-  const data = noiseBuf.getChannelData(0);
-  for (let i = 0; i < noiseLen; i++) {
-    data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (noiseLen * 0.18));
+  // Ruido base de papel: ruido blanco con pequeñas modulaciones para que
+  // suene a "fricción de fibra" en vez de plano.
+  const len = Math.floor(c.sampleRate * dur);
+  const buf = c.createBuffer(1, len, c.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) {
+    // Ruido con leve "grano" de papel: white noise + low-rate flutter.
+    const ph = i / c.sampleRate;
+    const flutter = 0.85 + 0.15 * Math.sin(ph * 130 + Math.random() * 0.5);
+    d[i] = (Math.random() * 2 - 1) * flutter;
   }
   const noise = c.createBufferSource();
-  noise.buffer = noiseBuf;
+  noise.buffer = buf;
 
-  const filt = c.createBiquadFilter();
-  filt.type = "lowpass";
-  filt.frequency.value = 2200 + Math.random() * 600;
-  filt.Q.value = 0.6;
+  // Bandpass alto que enfatiza el "shhh" del papel y sweep descendente para
+  // dar la sensación de que la carta arranca rápido y desacelera.
+  const bp = c.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.Q.value = 0.7;
+  bp.frequency.setValueAtTime(4200 + Math.random() * 600, t0);
+  bp.frequency.exponentialRampToValueAtTime(1600, t0 + dur);
 
-  const gN = c.createGain();
-  gN.gain.value = 0.22 + Math.random() * 0.05;
-  noise.connect(filt).connect(gN).connect(c.destination);
+  // Highpass para sacar bajos: que no haya thump.
+  const hp = c.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 900;
+
+  // Envolvente: ataque ~12ms, sostenido suave, salida exponencial.
+  const g = c.createGain();
+  const peak = 0.07 + Math.random() * 0.02;
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.linearRampToValueAtTime(peak, t0 + 0.012);
+  g.gain.linearRampToValueAtTime(peak * 0.55, t0 + 0.07);
+  g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+
+  noise.connect(bp).connect(hp).connect(g).connect(c.destination);
   noise.start(t0);
-
-  // 2) Thump grave: oscilador sinusoidal con sweep descendente.
-  const osc = c.createOscillator();
-  osc.type = "sine";
-  const f0 = 110 + Math.random() * 30;
-  osc.frequency.setValueAtTime(f0, t0);
-  osc.frequency.exponentialRampToValueAtTime(38, t0 + 0.12);
-
-  const gO = c.createGain();
-  gO.gain.setValueAtTime(0.0001, t0);
-  gO.gain.exponentialRampToValueAtTime(0.45, t0 + 0.005);
-  gO.gain.exponentialRampToValueAtTime(0.001, t0 + 0.18);
-
-  osc.connect(gO).connect(c.destination);
-  osc.start(t0);
-  osc.stop(t0 + 0.22);
+  noise.stop(t0 + dur + 0.02);
 }
 
 /** Tintineo corto para puntos / fósforos sumando. */

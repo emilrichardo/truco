@@ -7,7 +7,7 @@
 // que se eligen al azar para no repetir.
 
 import { Howl } from "howler";
-import { silenciarVoz } from "./voz";
+import { hablar, silenciarVoz } from "./voz";
 
 type CategoriaCanto =
   | "envido"
@@ -39,20 +39,28 @@ function vozParaJugador(jugadorId: string): Voz {
   return VOCES[hashStr(jugadorId) % VOCES.length];
 }
 
+// Marca por (voz, canto) si conocemos que no hay clips disponibles, para
+// poder caer al fallback de Web Speech sin esperar 5 timeouts de carga.
+const cantoSinClips: Record<string, Record<string, boolean>> = {};
+
 /** Carga las variaciones del canto para una voz dada. Idempotente. */
 function cargarHowlsVoz(voz: Voz, canto: CategoriaCanto): Howl[] {
   cacheHowls[voz] = cacheHowls[voz] || {};
   cacheLoaded[voz] = cacheLoaded[voz] || {};
+  cantoSinClips[voz] = cantoSinClips[voz] || {};
   if (cacheLoaded[voz][canto]) return cacheHowls[voz][canto] || [];
   cacheLoaded[voz][canto] = true;
 
   const howls: Howl[] = [];
+  let intentos = 0;
+  let fallidos = 0;
   for (let i = 1; i <= MAX_VARIACIONES; i++) {
     const n = String(i).padStart(2, "0");
     const src = `/audio/voces/${voz}/${canto}/${n}.mp3`;
+    intentos++;
     const h = new Howl({
       src: [src],
-      volume: 0.95,
+      volume: 1.0,
       preload: true,
       onloaderror: () => {
         const arr = cacheHowls[voz][canto];
@@ -60,6 +68,8 @@ function cargarHowlsVoz(voz: Voz, canto: CategoriaCanto): Howl[] {
           const idx = arr.indexOf(h);
           if (idx >= 0) arr.splice(idx, 1);
         }
+        fallidos++;
+        if (fallidos >= intentos) cantoSinClips[voz][canto] = true;
       }
     });
     howls.push(h);
@@ -90,28 +100,91 @@ interface OpcionesCanto {
   intensidad?: number;
 }
 
-/** Reproduce un canto con la voz asignada al jugador. Si no hay clips, mute. */
+/** Reproduce un canto con la voz asignada al jugador. Cae a Web Speech
+ *  cuando los clips MP3 no están disponibles para esa voz/canto. */
 export function reproducirCanto(canto: CategoriaCanto, opts: OpcionesCanto) {
   const voz = vozParaJugador(opts.jugadorId);
   const howls = cargarHowlsVoz(voz, canto);
   const listas = howls.filter((h) => h.state() === "loaded");
+
+  // Si todos los clips fallaron al cargar (404, etc.), usamos Web Speech con
+  // el texto original para que igual se escuche algo.
+  if (cantoSinClips[voz]?.[canto]) {
+    const texto = opts.texto || textoFallback(canto);
+    if (texto) hablar(texto, opts.jugadorId, { interrumpir: true });
+    return;
+  }
+
   if (listas.length === 0) {
-    // Aún cargando: probamos la primera (Howler espera al onload).
+    // Aún cargando o ninguno listo: intentamos el primero (Howler reproducirá
+    // cuando termine el onload). Si en 1.5s no arrancó, fallback a Web Speech.
     if (howls.length > 0) {
+      let arranco = false;
+      const h = howls[0];
+      const onPlay = () => {
+        arranco = true;
+        h.off("play", onPlay);
+      };
+      h.on("play", onPlay);
       try {
-        howls[0].play();
+        h.play();
       } catch {
         /* silencio */
       }
+      window.setTimeout(() => {
+        if (arranco) return;
+        const texto = opts.texto || textoFallback(canto);
+        if (texto) hablar(texto, opts.jugadorId, { interrumpir: true });
+      }, 1500);
+    } else {
+      const texto = opts.texto || textoFallback(canto);
+      if (texto) hablar(texto, opts.jugadorId, { interrumpir: true });
     }
     return;
   }
+
   const elegida = listas[Math.floor(Math.random() * listas.length)];
   try {
     elegida.stop();
     elegida.play();
   } catch {
     /* silencio */
+  }
+}
+
+// Texto por defecto si la app no nos pasó el texto del evento.
+function textoFallback(canto: CategoriaCanto): string {
+  switch (canto) {
+    case "envido": return "¡Envido!";
+    case "envido_envido": return "¡Envido envido!";
+    case "real_envido": return "¡Real envido!";
+    case "falta_envido": return "¡Falta envido!";
+    case "truco": return "¡Truco!";
+    case "retruco": return "¡Quiero retruco!";
+    case "vale_cuatro": return "¡Vale cuatro!";
+    case "quiero": return "¡Quiero!";
+    case "no_quiero": return "No quiero";
+    case "ir_al_mazo": return "Me voy al mazo";
+  }
+}
+
+/** Precarga TODOS los clips de TODAS las voces. Útil al arrancar la
+ *  partida para que el primer canto no tenga delay de red. Idempotente. */
+export function precargarTodosLosClips() {
+  const cantos: CategoriaCanto[] = [
+    "envido",
+    "envido_envido",
+    "real_envido",
+    "falta_envido",
+    "truco",
+    "retruco",
+    "vale_cuatro",
+    "quiero",
+    "no_quiero",
+    "ir_al_mazo"
+  ];
+  for (const v of VOCES) {
+    for (const c of cantos) cargarHowlsVoz(v, c);
   }
 }
 

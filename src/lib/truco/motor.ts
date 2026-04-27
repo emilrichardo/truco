@@ -387,6 +387,8 @@ function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
   // Si hay envido pendiente y se va al mazo, perdés envido (1) + truco (valor actual).
   const eq = jugador.equipo;
   const otro = equipoContrario(eq);
+  // Anunciamos el "Me voy al mazo" como respuesta para que dispare la voz.
+  anuncio(estado, jugador.id, "Me voy al mazo", "respuesta");
   if (mano.envidoCantoActivo) {
     estado.puntos[otro] += 1;
     mano.puntosOtorgados.push({

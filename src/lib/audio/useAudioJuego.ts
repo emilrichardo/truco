@@ -7,6 +7,7 @@ import type { EstadoJuego, MensajeChat } from "@/lib/truco/types";
 import { despertarAudio, sonidoCarta, sonidoMazo, sonidoPuntos } from "./sfx";
 import {
   identificarCanto,
+  precargarTodosLosClips,
   reaccionGanaMano,
   reaccionGanaPartida,
   reaccionPierdeMano,
@@ -31,6 +32,7 @@ export function useAudioJuego(
   // Precargar voces y desbloquear audio en el primer click.
   useEffect(() => {
     precargarVoces();
+    precargarTodosLosClips();
     const desbloquear = () => {
       despertarAudio();
       desbloquearVoz();
@@ -80,7 +82,7 @@ export function useAudioJuego(
   }, [estado, miId]);
 }
 
-function procesarMensaje(m: MensajeChat, estado: EstadoJuego) {
+function procesarMensaje(m: MensajeChat, _estado: EstadoJuego) {
   switch (m.evento) {
     case "carta": {
       sonidoCarta();
