@@ -96,6 +96,10 @@ export async function iniciarPartidaOnline(salaId: string): Promise<SalaResp> {
   return invocar("sala-iniciar", { sala_id: salaId });
 }
 
+export async function cerrarSalaOnline(salaId: string): Promise<SalaResp> {
+  return invocar("sala-cerrar", { sala_id: salaId });
+}
+
 export async function enviarAccionOnline(
   salaId: string,
   jugadorId: string,

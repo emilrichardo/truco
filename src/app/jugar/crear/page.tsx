@@ -108,7 +108,7 @@ export default function CrearSalaPage() {
           </Choice>
           <Choice activo={tamanio === 2} onClick={() => setTamanio(2)}>
             <IconoIndividual size={22} />
-            <span>Individual</span>
+            <span>Solo a solo</span>
           </Choice>
         </Opcion>
 
