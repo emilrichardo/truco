@@ -14,17 +14,17 @@ export function JugadorPanel({
   esYo?: boolean;
   compacto?: boolean;
 }) {
+  // Avatares rectangulares (aspect 3/4) para usar mejor el espacio en mobile.
   const tam = compacto
-    ? "w-14 h-14 sm:w-16 sm:h-16"
-    : "w-20 h-20 sm:w-24 sm:h-24";
-  // Color del marco según equipo: equipo 0 dorado, equipo 1 azul criollo
+    ? "w-12 sm:w-14"
+    : "w-20 sm:w-24";
   const borderEquipo = jugador.equipo === 0 ? "border-dorado" : "border-azul-criollo";
   return (
     <div className="flex flex-col items-center gap-0.5">
       <div className="relative">
         <div
           className={clsx(
-            "rounded-full overflow-hidden border-[2.5px] transition shadow-md",
+            "aspect-[3/4] rounded-md overflow-hidden border-2 transition shadow-md",
             tam,
             esTurno ? "border-dorado halo" : borderEquipo,
             !jugador.conectado && "grayscale opacity-60"

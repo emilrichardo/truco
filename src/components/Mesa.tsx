@@ -252,34 +252,36 @@ function ManoOculta({
   );
 }
 
+/** Layout en esquinas:
+ *   abajo    → bottom-right (yo)
+ *   arriba   → top-left     (en 1v1: oponente; en 2v2: compañero diagonal)
+ *   izquierda→ bottom-left  (rival, sólo 2v2)
+ *   derecha  → top-right    (rival, sólo 2v2)
+ * Las cartas tiradas se extienden hacia el centro de la mesa. */
 function clasePosicionPuesto(pos: Posicion): string {
   switch (pos) {
     case "abajo":
-      return "left-1/2 -translate-x-1/2 bottom-2";
+      return "right-3 bottom-3";
     case "arriba":
-      return "left-1/2 -translate-x-1/2 top-2";
+      return "left-3 top-3";
     case "izquierda":
-      return "left-2 top-1/2 -translate-y-1/2";
+      return "left-3 bottom-3";
     case "derecha":
-      return "right-2 top-1/2 -translate-y-1/2";
+      return "right-3 top-3";
   }
 }
 
-/** Dirección del flex para que el avatar quede contra el borde y las cartas
- * se extiendan hacia el centro de la mesa. */
+/** Dirección del flex para que el avatar quede contra la esquina y las cartas
+ * se extiendan en horizontal hacia el centro de la mesa. */
 function claseFlexPuesto(pos: Posicion): string {
   switch (pos) {
-    case "abajo":
-      // Avatar abajo, cartas arriba (hacia centro)
-      return "flex-col-reverse";
-    case "arriba":
-      // Avatar arriba, cartas abajo
-      return "flex-col";
-    case "izquierda":
-      // Avatar izquierda, cartas a la derecha
+    case "abajo": // br: avatar a la derecha, cartas a la izquierda
+      return "flex-row-reverse";
+    case "arriba": // tl: avatar a la izquierda, cartas a la derecha
       return "flex-row";
-    case "derecha":
-      // Avatar derecha, cartas a la izquierda
+    case "izquierda": // bl: avatar a la izquierda, cartas a la derecha
+      return "flex-row";
+    case "derecha": // tr: avatar a la derecha, cartas a la izquierda
       return "flex-row-reverse";
   }
 }

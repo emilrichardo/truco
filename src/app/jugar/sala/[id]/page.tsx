@@ -491,7 +491,7 @@ function SlotEspera({
             <img
               src={urlPersonaje(jugador.personaje)}
               alt={jugador.nombre}
-              className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover object-top border-[3px] shadow-md ${
+              className={`w-20 sm:w-24 aspect-[3/4] rounded-md object-cover object-top border-2 shadow-md ${
                 esYo ? "border-dorado halo" : colorEquipo
               }`}
             />
@@ -509,7 +509,7 @@ function SlotEspera({
         </>
       ) : (
         <>
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-dashed border-border/60 flex items-center justify-center text-text-dim/40 text-3xl">
+          <div className="w-20 sm:w-24 aspect-[3/4] rounded-md border-2 border-dashed border-border/60 flex items-center justify-center text-text-dim/40 text-3xl">
             ?
           </div>
           <div className="text-center text-text-dim/70 text-xs italic subtitulo-claim">

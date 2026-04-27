@@ -33,7 +33,7 @@ export function PanelAcciones({
   const centro = (total - 1) / 2;
 
   return (
-    <div className="bg-surface border-t border-border px-2 py-2 relative">
+    <div className="px-2 py-2 relative">
       {/* Sutil borde dorado superior */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-dorado/40 to-transparent" />
 
