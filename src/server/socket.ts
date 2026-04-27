@@ -21,11 +21,12 @@ interface SalaServer {
 
 const salas = new Map<string, SalaServer>();
 
-/** Devuelve el primer personaje libre (no usado por ningún jugador de la sala). */
+/** Devuelve un personaje libre al azar (no usado por ningún jugador de la sala). */
 function elegirPersonajeLibre(jugadores: Jugador[]): string {
   const usados = new Set(jugadores.map((j) => j.personaje));
-  const libre = PERSONAJES.find((p) => !usados.has(p.slug));
-  return libre?.slug || PERSONAJES[0].slug;
+  const libres = PERSONAJES.filter((p) => !usados.has(p.slug));
+  if (libres.length === 0) return PERSONAJES[0].slug;
+  return libres[Math.floor(Math.random() * libres.length)].slug;
 }
 
 function broadcast(io: any, sala: SalaServer) {

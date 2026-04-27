@@ -20,9 +20,12 @@ const RETARDO_BOT_MS = 700;
 const STORAGE_KEY = "truco_primos_solo_partida";
 
 function elegirPersonajeLibre(jugadores: Jugador[]): string {
+  // Elige al azar entre los personajes que todavía no están en uso, así
+  // los bots no son siempre los mismos en el mismo orden.
   const usados = new Set(jugadores.map((j) => j.personaje));
-  const libre = PERSONAJES.find((p) => !usados.has(p.slug));
-  return libre?.slug || PERSONAJES[0].slug;
+  const libres = PERSONAJES.filter((p) => !usados.has(p.slug));
+  if (libres.length === 0) return PERSONAJES[0].slug;
+  return libres[Math.floor(Math.random() * libres.length)].slug;
 }
 
 function nuevoIdLocal(): string {
