@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { MusicaAmbiental } from "@/components/MusicaAmbiental";
 
 export const metadata: Metadata = {
   title: "Truco Entre Primos — Acá no hay suerte, hay picardía",
@@ -27,7 +28,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased font-sans">{children}</body>
+      <body className="antialiased font-sans">
+        {children}
+        <MusicaAmbiental />
+      </body>
     </html>
   );
 }
