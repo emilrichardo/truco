@@ -1,109 +1,137 @@
 "use client";
-// Marcador estilo "tablilla de boliche": placa de madera con tiza para los
-// fósforos. Compacto, vive arriba del chat en mobile y desktop.
-import clsx from "clsx";
+// Marcador minimalista: sólo palitos formando un cuadrado con una diagonal
+// para representar cada grupo de 5 puntos. Dos columnas (Nos / Ellos)
+// apiladas verticalmente, compacto para vivir arriba a la derecha de la mesa.
+
+const TAM = 18; // px de cada cuadradito
 
 export function Marcador({
   puntosNos,
   puntosEllos,
-  objetivo,
   miEquipoEs0
 }: {
   puntosNos: number;
   puntosEllos: number;
-  objetivo: 15 | 30;
+  /** Mantenido por compatibilidad — ya no se muestra header. */
+  objetivo?: 15 | 30;
   miEquipoEs0: boolean;
 }) {
   const nos = miEquipoEs0 ? puntosNos : puntosEllos;
   const ellos = miEquipoEs0 ? puntosEllos : puntosNos;
   return (
-    <div className="placa-madera px-3 py-2">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="subtitulo-claim text-[10px] text-crema/80">Puntos</span>
-        <span className="text-crema/70 text-[10px] subtitulo-claim">
-          a {objetivo}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Columna titulo="Nos" puntos={nos} destacar />
-        <Columna titulo="Ellos" puntos={ellos} />
-      </div>
+    <div className="placa-madera p-1.5 flex gap-2 items-start">
+      <Columna puntos={nos} color="var(--dorado)" titulo="Nos" />
+      <div className="w-px self-stretch bg-crema/15" />
+      <Columna puntos={ellos} color="var(--crema)" titulo="Ellos" />
     </div>
   );
 }
 
 function Columna({
-  titulo,
   puntos,
-  destacar
+  color,
+  titulo
 }: {
-  titulo: string;
   puntos: number;
-  destacar?: boolean;
+  color: string;
+  titulo: string;
 }) {
-  const grupos = Math.floor(puntos / 5);
-  const restantes = puntos % 5;
-  const items: JSX.Element[] = [];
-  for (let g = 0; g < grupos; g++) items.push(<Grupo key={g} completo />);
-  if (restantes > 0) items.push(<Grupo key="parcial" parcial={restantes} />);
+  // Repartir puntos en grupos de 0..5
+  const grupos: number[] = [];
+  let restante = puntos;
+  while (restante > 0) {
+    grupos.push(Math.min(5, restante));
+    restante -= 5;
+  }
+  if (grupos.length === 0) grupos.push(0); // caja vacía cuando 0
   return (
-    <div>
-      <div className="flex items-baseline justify-between">
-        <span
-          className={clsx(
-            "text-[10px] uppercase tracking-wider font-bold",
-            destacar ? "text-dorado" : "text-crema/70"
-          )}
-        >
-          {titulo}
-        </span>
-        <span
-          className={clsx(
-            "font-display text-2xl leading-none",
-            destacar ? "text-dorado" : "text-crema"
-          )}
-          style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.6)" }}
-        >
-          {puntos}
-        </span>
-      </div>
-      <div className="flex gap-1.5 mt-1.5 min-h-[28px] items-end flex-wrap">
-        {items}
-      </div>
+    <div className="flex flex-col items-center gap-0.5">
+      <span
+        className="text-[9px] uppercase tracking-wider font-bold leading-none mb-0.5"
+        style={{ color }}
+        title={titulo}
+      >
+        {titulo}
+      </span>
+      {grupos.map((c, i) => (
+        <Grupo key={i} count={c} color={color} />
+      ))}
     </div>
   );
 }
 
-function Grupo({
-  completo,
-  parcial = 0
-}: {
-  completo?: boolean;
-  parcial?: number;
-}) {
-  const palitos = completo ? 4 : Math.min(parcial, 4);
+/** Cuadrado de 4 palitos (top, right, bottom, left) + diagonal al llegar a 5. */
+function Grupo({ count, color }: { count: number; color: string }) {
+  const sw = 1.6;
+  // Dibujamos los 4 lados según cuenta y agregamos la diagonal en 5.
+  const showTop = count >= 1;
+  const showRight = count >= 2;
+  const showBottom = count >= 3;
+  const showLeft = count >= 4;
+  const showDiag = count >= 5;
   return (
-    <div className="relative h-6 w-7">
-      {Array.from({ length: palitos }).map((_, i) => (
-        <span
-          key={i}
-          className="absolute bottom-0 w-[2px] h-6 rounded-sm bg-crema/90"
-          style={{
-            left: `${i * 5 + 2}px`,
-            transform: `rotate(${i % 2 === 0 ? -2 : 2}deg)`,
-            boxShadow: "0 0 2px rgba(241,224,184,0.5)"
-          }}
-        />
-      ))}
-      {completo && (
-        <span
-          className="absolute left-0 right-0 top-1/2 h-[2px] bg-dorado rounded-sm"
-          style={{
-            transform: "rotate(-30deg)",
-            boxShadow: "0 0 3px rgba(217,164,65,0.8)"
-          }}
+    <svg
+      width={TAM}
+      height={TAM}
+      viewBox="0 0 20 20"
+      className="block"
+      aria-label={`${count} de 5`}
+    >
+      {showTop && (
+        <line
+          x1={2}
+          y1={2}
+          x2={18}
+          y2={2}
+          stroke={color}
+          strokeWidth={sw}
+          strokeLinecap="round"
         />
       )}
-    </div>
+      {showRight && (
+        <line
+          x1={18}
+          y1={2}
+          x2={18}
+          y2={18}
+          stroke={color}
+          strokeWidth={sw}
+          strokeLinecap="round"
+        />
+      )}
+      {showBottom && (
+        <line
+          x1={18}
+          y1={18}
+          x2={2}
+          y2={18}
+          stroke={color}
+          strokeWidth={sw}
+          strokeLinecap="round"
+        />
+      )}
+      {showLeft && (
+        <line
+          x1={2}
+          y1={18}
+          x2={2}
+          y2={2}
+          stroke={color}
+          strokeWidth={sw}
+          strokeLinecap="round"
+        />
+      )}
+      {showDiag && (
+        <line
+          x1={2}
+          y1={18}
+          x2={18}
+          y2={2}
+          stroke={color}
+          strokeWidth={sw + 0.4}
+          strokeLinecap="round"
+        />
+      )}
+    </svg>
   );
 }

@@ -128,7 +128,7 @@ function PartidaSoloInterno() {
           <div className="flex-1 relative min-h-0">
             <Mesa estado={estado} miId={miId} />
             <UltimoCanto estado={estado} miId={miId} />
-            <div className="absolute top-2 right-2 z-20 w-44 sm:w-52">
+            <div className="absolute top-2 right-2 z-20">
               <Marcador
                 puntosNos={estado.puntos[0]}
                 puntosEllos={estado.puntos[1]}

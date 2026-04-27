@@ -29,17 +29,19 @@ export function ChatFlotante({
     <button
       type="button"
       onClick={onAbrir}
-      className="absolute z-20 bottom-2 left-2 max-w-[70%] sm:max-w-[280px] flex flex-col gap-1 items-start text-left"
+      className="absolute z-20 bottom-2 right-2 max-w-[70%] sm:max-w-[280px] flex flex-col gap-1 items-end text-left"
     >
       {ultimos.map((m) => {
         const j = estado.jugadores.find((x) => x.id === m.jugadorId);
         const esYo = m.jugadorId === miId;
+        // Bottom-right: alineamos todo a la derecha. Los míos van con el
+        // avatar a la derecha; los ajenos con el avatar a la izquierda.
         return (
           <div
             key={m.id}
             className={clsx(
               "flex items-center gap-1.5 max-w-full",
-              esYo && "self-end flex-row-reverse"
+              esYo ? "flex-row-reverse" : "flex-row"
             )}
           >
             {j && (
