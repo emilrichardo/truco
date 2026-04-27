@@ -252,36 +252,32 @@ function ManoOculta({
   );
 }
 
-/** Layout en esquinas:
- *   abajo    → bottom-right (yo)
- *   arriba   → top-left     (en 1v1: oponente; en 2v2: compañero diagonal)
- *   izquierda→ bottom-left  (rival, sólo 2v2)
- *   derecha  → top-right    (rival, sólo 2v2)
- * Las cartas tiradas se extienden hacia el centro de la mesa. */
+/** Layout cardinal (arriba / abajo / izquierda / derecha) salvo "yo" que va
+ *  fijo a la esquina inferior derecha — así mi avatar no choca con el panel
+ *  de mis cartas que ocupa el bottom centro. */
 function clasePosicionPuesto(pos: Posicion): string {
   switch (pos) {
     case "abajo":
       return "right-3 bottom-3";
     case "arriba":
-      return "left-3 top-3";
+      return "left-1/2 -translate-x-1/2 top-2";
     case "izquierda":
-      return "left-3 bottom-3";
+      return "left-2 top-1/2 -translate-y-1/2";
     case "derecha":
-      return "right-3 top-3";
+      return "right-2 top-1/2 -translate-y-1/2";
   }
 }
 
-/** Dirección del flex para que el avatar quede contra la esquina y las cartas
- * se extiendan en horizontal hacia el centro de la mesa. */
+/** Dirección del flex: avatar contra el borde, cartas hacia el centro. */
 function claseFlexPuesto(pos: Posicion): string {
   switch (pos) {
-    case "abajo": // br: avatar a la derecha, cartas a la izquierda
+    case "abajo": // BR: avatar a la derecha, cartas a la izquierda (al centro)
       return "flex-row-reverse";
-    case "arriba": // tl: avatar a la izquierda, cartas a la derecha
+    case "arriba": // top centro: avatar arriba, cartas abajo
+      return "flex-col";
+    case "izquierda": // izq centro: avatar izquierda, cartas a la derecha
       return "flex-row";
-    case "izquierda": // bl: avatar a la izquierda, cartas a la derecha
-      return "flex-row";
-    case "derecha": // tr: avatar a la derecha, cartas a la izquierda
+    case "derecha": // der centro: avatar derecha, cartas a la izquierda
       return "flex-row-reverse";
   }
 }

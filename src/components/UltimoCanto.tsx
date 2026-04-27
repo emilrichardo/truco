@@ -110,19 +110,18 @@ function posicionDesdeIdx(idx: number, total: number): Posicion {
   return "arriba";
 }
 
-/** Layout de esquinas: las burbujas aparecen al lado del puesto del que habla.
- *  abajo (br): justo arriba e izquierda del avatar; arriba (tl): debajo y a la
- *  derecha del avatar; izquierda (bl) y derecha (tr) idem. */
+/** Burbujas cerca del puesto del que habla. "abajo" (yo) en BR — el resto
+ *  en posición cardinal. */
 function claseBubble(pos?: Posicion): string {
   switch (pos) {
     case "abajo":
       return "right-3 bottom-28";
     case "arriba":
-      return "left-3 top-28";
+      return "left-1/2 -translate-x-1/2 top-24";
     case "izquierda":
-      return "left-3 bottom-28";
+      return "left-4 top-[58%]";
     case "derecha":
-      return "right-3 top-28";
+      return "right-4 top-[58%]";
     default:
       return "left-1/2 -translate-x-1/2 top-16";
   }
