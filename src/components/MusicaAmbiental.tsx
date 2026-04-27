@@ -1,22 +1,22 @@
 "use client";
 // Reproductor de música ambiental. Lee las pistas de /api/musica (un GET
-// que lista los MP3 de /public/audio/musica/) y las pasa una atrás de la
-// otra a volumen bajo. Vive en el layout root, así sobrevive a la
-// navegación entre páginas y el usuario lo controla desde una sola UI.
+// que lista los MP3 de /public/audio/musica/) y las pasa al azar, una
+// atrás de la otra, en bucle infinito a volumen bajo.
 //
 // UX:
-// - Botón flotante en bottom-left con 🎵 / 🔇.
-// - Click toggleá silenciar/reproducir.
-// - Slider de volumen al lado (0-50%).
-// - Estado persistido en localStorage para que el usuario no tenga que
-//   pulsar mute en cada partida.
+// - Pill flotante. En partidas (/jugar/solo/partida y /jugar/sala/*) va
+//   arriba a la derecha; en el resto, abajo a la izquierda.
+// - Botón 🎵 / 🔇 toggleá pausa.
+// - Botón ⏭ pasa a la próxima pista al azar.
+// - Slider de volumen 0-50%.
+// - Estado persistido en localStorage.
 //
-// Política de autoplay del browser: hasta que el usuario interactúe (un
-// click cualquiera), el AudioContext está suspendido y la música no arranca.
-// Escuchamos el primer click/touch para "desbloquear".
+// Política de autoplay: Howler intenta arrancar el Howl con autoplay; si
+// el browser lo bloquea, el primer click en cualquier botón del player
+// (o cualquier interacción de la página) lo desbloquea y arranca solo.
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Howl } from "howler";
+import { Howl, Howler } from "howler";
 
 const STORAGE_KEY = "truco:musica:v1";
 const VOLUMEN_DEFAULT = 0.15;
@@ -54,10 +54,15 @@ function guardarEstado(e: Estado) {
   }
 }
 
+function indiceRandom(cantidad: number, prev: number): number {
+  if (cantidad <= 1) return 0;
+  let n = Math.floor(Math.random() * cantidad);
+  if (n === prev) n = (n + 1) % cantidad;
+  return n;
+}
+
 export function MusicaAmbiental() {
   const pathname = usePathname();
-  // En partida (solo o sala) lo ponemos arriba a la derecha — donde antes
-  // estaba el botón de chat. En el resto de la app, abajo a la izquierda.
   const enPartida =
     !!pathname &&
     (pathname.startsWith("/jugar/solo/partida") ||
@@ -68,29 +73,19 @@ export function MusicaAmbiental() {
     volumen: VOLUMEN_DEFAULT
   });
   const [pistas, setPistas] = useState<string[]>([]);
-  const [arrancada, setArrancada] = useState(false);
-  // -1 = todavía no elegimos pista. Cuando llega la lista de /api/musica
-  // arrancamos con una al azar (ver effect más abajo).
   const [actualIdx, setActualIdx] = useState(-1);
   const howlRef = useRef<Howl | null>(null);
 
-  // Pica un índice random distinto del previo (a menos que haya una sola
-  // pista, en cuyo caso es la misma).
-  const proximoIndiceRandom = (cantidad: number, prev: number) => {
-    if (cantidad <= 1) return 0;
-    let n = Math.floor(Math.random() * cantidad);
-    if (n === prev) n = (n + 1) % cantidad;
-    return n;
-  };
-
-  // Cargar preferencias guardadas (cliente sólo).
+  // Cargar preferencias guardadas (cliente).
   useEffect(() => {
     setEstadoLocal(leerEstado());
     setHidratado(true);
+    // Howler: autoUnlock está activo por default, pero lo forzamos por las
+    // dudas — es la pieza que destraba el audio en el primer gesto.
+    Howler.autoUnlock = true;
   }, []);
 
-  // Cargar lista de pistas. Cuando llegan, elegimos una al azar para
-  // arrancar — el orden no es alfabético.
+  // Cargar lista de pistas. Cuando llegan, elegimos una al azar.
   useEffect(() => {
     let vivo = true;
     fetch("/api/musica")
@@ -110,36 +105,29 @@ export function MusicaAmbiental() {
     };
   }, []);
 
-  // Desbloquear audio en la primera interacción del usuario.
+  // Crear Howl para la pista actual. autoplay=true delega en Howler la
+  // espera del primer gesto del usuario para destrabar.
   useEffect(() => {
-    const desbloquear = () => {
-      setArrancada(true);
-      window.removeEventListener("click", desbloquear);
-      window.removeEventListener("touchstart", desbloquear);
-      window.removeEventListener("keydown", desbloquear);
-    };
-    window.addEventListener("click", desbloquear);
-    window.addEventListener("touchstart", desbloquear);
-    window.addEventListener("keydown", desbloquear);
-    return () => {
-      window.removeEventListener("click", desbloquear);
-      window.removeEventListener("touchstart", desbloquear);
-      window.removeEventListener("keydown", desbloquear);
-    };
-  }, []);
-
-  // Crear/reemplazar la pista actual.
-  useEffect(() => {
-    if (!arrancada || pistas.length === 0 || actualIdx < 0) return;
+    if (pistas.length === 0 || actualIdx < 0) return;
     const pista = pistas[actualIdx % pistas.length];
     const h = new Howl({
       src: [`/audio/musica/${encodeURIComponent(pista)}`],
-      volume: estado.silenciado ? 0 : estado.volumen,
-      html5: true, // streamea archivos largos en vez de bajarlos enteros
-      autoplay: true,
+      volume: estado.volumen,
+      html5: true, // streamea archivos largos
+      autoplay: !estado.silenciado,
       onend: () => {
         // Próxima pista al azar, distinta a la que acaba de sonar.
-        setActualIdx((a) => proximoIndiceRandom(pistas.length, a));
+        setActualIdx((a) => indiceRandom(pistas.length, a));
+      },
+      onplayerror: () => {
+        // Browser bloqueó el play. Reintentar cuando Howler destrabe.
+        h.once("unlock", () => {
+          if (!estado.silenciado) h.play();
+        });
+      },
+      onloaderror: () => {
+        // Si la pista no carga, saltamos a la siguiente automáticamente.
+        setActualIdx((a) => indiceRandom(pistas.length, a));
       }
     });
     howlRef.current = h;
@@ -149,19 +137,18 @@ export function MusicaAmbiental() {
       h.unload();
       if (howlRef.current === h) howlRef.current = null;
     };
-    // estado.silenciado / estado.volumen se aplican en otro useEffect para
-    // no recrear el Howl en cada cambio de volumen.
+    // No depende de silenciado/volumen — esos se aplican en otro effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [arrancada, pistas, actualIdx]);
+  }, [pistas, actualIdx]);
 
   // Aplicar cambios de silenciar/volumen sin recrear el Howl.
   useEffect(() => {
     const h = howlRef.current;
     if (!h) return;
+    h.volume(estado.volumen);
     if (estado.silenciado) {
-      h.pause();
+      if (h.playing()) h.pause();
     } else {
-      h.volume(estado.volumen);
       if (!h.playing()) h.play();
     }
   }, [estado.silenciado, estado.volumen]);
@@ -174,16 +161,22 @@ export function MusicaAmbiental() {
     });
   };
 
-  // Mientras no esté hidratado, no mostramos UI (evita mismatch SSR).
-  // Si no hay pistas en la carpeta, tampoco mostramos nada.
+  const cambiarPista = () => {
+    if (pistas.length <= 1) return;
+    setActualIdx((a) => indiceRandom(pistas.length, a));
+    // Si está silenciado y el usuario quiere cambiar de tema, asumimos
+    // que también quiere escuchar.
+    if (estado.silenciado) setEstado({ silenciado: false });
+  };
+
   if (!hidratado || pistas.length === 0) return null;
 
   return (
     <div
       className={
         enPartida
-          ? "fixed top-1.5 right-2 z-50 flex items-center gap-1.5 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-1 pr-2 py-0.5 shadow-lg"
-          : "fixed bottom-2 left-2 z-50 flex items-center gap-1.5 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-1 pr-2 py-0.5 shadow-lg"
+          ? "fixed top-1.5 right-2 z-50 flex items-center gap-1 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-0.5 pr-1.5 py-0.5 shadow-lg"
+          : "fixed bottom-2 left-2 z-50 flex items-center gap-1 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-0.5 pr-1.5 py-0.5 shadow-lg"
       }
       style={
         enPartida
@@ -194,12 +187,68 @@ export function MusicaAmbiental() {
       <button
         type="button"
         onClick={() => setEstado({ silenciado: !estado.silenciado })}
-        className="w-7 h-7 rounded-full hover:bg-surface-2 flex items-center justify-center text-base transition leading-none"
+        className="w-7 h-7 rounded-full hover:bg-surface-2 flex items-center justify-center transition leading-none text-text"
         title={estado.silenciado ? "Activar música" : "Silenciar música"}
         aria-label={estado.silenciado ? "Activar música" : "Silenciar música"}
       >
-        {estado.silenciado ? "🔇" : "🎵"}
+        {estado.silenciado ? (
+          // Speaker mute SVG
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4 text-text-dim"
+            aria-hidden
+          >
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+            <line x1="23" y1="9" x2="17" y2="15" />
+            <line x1="17" y1="9" x2="23" y2="15" />
+          </svg>
+        ) : (
+          // Music note SVG
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4 text-dorado"
+            aria-hidden
+          >
+            <path d="M9 18V5l12-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+        )}
       </button>
+
+      <button
+        type="button"
+        onClick={cambiarPista}
+        disabled={pistas.length <= 1}
+        className="w-7 h-7 rounded-full hover:bg-surface-2 flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Cambiar de tema"
+        aria-label="Cambiar de tema"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-4 h-4 text-text-dim"
+          aria-hidden
+        >
+          <polygon points="5 4 15 12 5 20 5 4" />
+          <line x1="19" y1="5" x2="19" y2="19" />
+        </svg>
+      </button>
+
       <input
         type="range"
         min={0}
@@ -209,13 +258,12 @@ export function MusicaAmbiental() {
         onChange={(e) =>
           setEstado({
             volumen: parseFloat(e.target.value),
-            // mover el slider implícitamente reactiva la música
             silenciado: false
           })
         }
-        className="w-16 accent-[var(--dorado)] cursor-pointer"
+        className="w-14 accent-[var(--dorado)] cursor-pointer"
         title={`Volumen: ${Math.round(estado.volumen * 100)}%`}
-        aria-label="Volumen de música ambiental"
+        aria-label="Volumen"
       />
     </div>
   );
