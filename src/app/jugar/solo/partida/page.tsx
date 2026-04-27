@@ -1,7 +1,7 @@
 "use client";
 // Partida en modo Solo: corre 100% en el browser. No toca Socket.io ni
 // Supabase. El motor del truco y la IA viven en src/lib/truco/.
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Mesa } from "@/components/Mesa";
@@ -13,6 +13,23 @@ import { usePersonajeLocal } from "@/lib/personaje";
 import { getPersonaje } from "@/data/jugadores";
 
 export default function PartidaSoloPage() {
+  // Suspense boundary requerido por Next 14 para useSearchParams() en build.
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-[100dvh] flex items-center justify-center">
+          <div className="text-dorado font-display text-xl parpadeo">
+            Repartiendo…
+          </div>
+        </main>
+      }
+    >
+      <PartidaSoloInterno />
+    </Suspense>
+  );
+}
+
+function PartidaSoloInterno() {
   const router = useRouter();
   const params = useSearchParams();
   const [miSlug, , listoSlug] = usePersonajeLocal();
