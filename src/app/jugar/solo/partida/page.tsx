@@ -44,7 +44,6 @@ function PartidaSoloInterno() {
   const params = useSearchParams();
   const [miSlug, , listoSlug] = usePersonajeLocal();
   const [chatAbierto, setChatAbierto] = useState(false);
-  const [chatNoVisto, setChatNoVisto] = useState(0);
   const [confirmSalir, setConfirmSalir] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
@@ -71,12 +70,6 @@ function PartidaSoloInterno() {
 
   // Audio del juego: cantos, cartas, reacciones.
   useAudioJuego(estado, miId);
-
-  // Contador de mensajes no vistos en chat (cuando está cerrado).
-  useEffect(() => {
-    if (chatAbierto) return;
-    setChatNoVisto((n) => n + 0); // noop; el contador se actualizaría con un ref si lo quisiéramos exacto
-  }, [estado?.chat.length, chatAbierto]);
 
   if (!estado || !miId) {
     return (
@@ -145,10 +138,7 @@ function PartidaSoloInterno() {
             <ChatFlotante
               estado={estado}
               miId={miId}
-              onAbrir={() => {
-                setChatAbierto(true);
-                setChatNoVisto(0);
-              }}
+              onAbrir={() => setChatAbierto(true)}
             />
           </div>
           <PanelAcciones estado={estado} miId={miId} enviar={enviarAccion} />

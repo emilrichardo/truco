@@ -15,6 +15,7 @@
 // click cualquiera), el AudioContext está suspendido y la música no arranca.
 // Escuchamos el primer click/touch para "desbloquear".
 import { useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Howl } from "howler";
 
 const STORAGE_KEY = "truco:musica:v1";
@@ -54,6 +55,13 @@ function guardarEstado(e: Estado) {
 }
 
 export function MusicaAmbiental() {
+  const pathname = usePathname();
+  // En partida (solo o sala) lo ponemos arriba a la derecha — donde antes
+  // estaba el botón de chat. En el resto de la app, abajo a la izquierda.
+  const enPartida =
+    !!pathname &&
+    (pathname.startsWith("/jugar/solo/partida") ||
+      pathname.startsWith("/jugar/sala/"));
   const [hidratado, setHidratado] = useState(false);
   const [estado, setEstadoLocal] = useState<Estado>({
     silenciado: false,
@@ -156,8 +164,16 @@ export function MusicaAmbiental() {
 
   return (
     <div
-      className="fixed bottom-2 left-2 z-50 flex items-center gap-1.5 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-1 pr-2 py-0.5 shadow-lg"
-      style={{ paddingBottom: "max(0.125rem, env(safe-area-inset-bottom))" }}
+      className={
+        enPartida
+          ? "fixed top-1.5 right-2 z-50 flex items-center gap-1.5 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-1 pr-2 py-0.5 shadow-lg"
+          : "fixed bottom-2 left-2 z-50 flex items-center gap-1.5 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-1 pr-2 py-0.5 shadow-lg"
+      }
+      style={
+        enPartida
+          ? undefined
+          : { paddingBottom: "max(0.125rem, env(safe-area-inset-bottom))" }
+      }
     >
       <button
         type="button"
