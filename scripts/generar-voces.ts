@@ -71,19 +71,21 @@ interface Voz {
 }
 
 // Voces argentinas (locale=es-AR) de la Voice Library de ElevenLabs.
+// Lalo es la principal — única voz del catálogo etiquetada explícitamente
+// "norte argentino". Las otras 4 son suplentes argentinas seleccionadas
+// por timbre (deep / casual / spirited / smooth) para variar entre jugadores.
 //
 // IMPORTANTE: las voces de la Voice Library requieren plan pago (Starter
 // o superior) para usarse vía API. En free tier el endpoint TTS responde
-// HTTP 402. Para regenerar, asegurate de tener un plan activo y luego:
+// HTTP 402. Para regenerar:
 //
 //   FORCE=1 npx tsx scripts/generar-voces.ts
-//
-// Lalo es la única voz del catálogo etiquetada explícitamente como
-// "norte argentino". Las otras 2 ranuras se eligen escuchando los
-// samples en /audio/voces-test/ y agregándolas acá.
 const VOCES: Voz[] = [
-  // Lalo — Pleasant, Paternal and Relaxed · accent: norte argentino.
-  { slug: "lalo", id: "XmoCtjPCefjeLDu0eMSl", nombre: "Lalo" }
+  { slug: "lalo",    id: "XmoCtjPCefjeLDu0eMSl", nombre: "Lalo"    },
+  { slug: "juan",    id: "dGjL92Li0y7ZUQ3MESQW", nombre: "Juan"    },
+  { slug: "manuel",  id: "L7pBVwjueW3IPcQt4Ej9", nombre: "Manuel"  },
+  { slug: "agustin", id: "D09EpJbk4um1HKSpeTSc", nombre: "Agustín" },
+  { slug: "niraj",   id: "zgqefOY5FPQ3bB7OZTVR", nombre: "Niraj"   }
 ];
 
 // Frases por canto: importadas directamente del módulo del juego para no

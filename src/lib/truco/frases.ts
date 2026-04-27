@@ -33,7 +33,12 @@ export type CategoriaFrase =
   | "no_quiero"
   | "ir_al_mazo"
   | "son_buenas"
-  | "son_mejores";
+  | "son_mejores"
+  // Reacciones a fin de mano / partida (con carcajadas y groserías NOA).
+  | "gane_mano"
+  | "perdio_mano"
+  | "gane_partida"
+  | "perdio_partida";
 
 // NOTA TTS: ElevenLabs (multilingual_v2) lee mejor con orto-grafía sobria.
 // Si abusamos de all-caps o triples vocales (TRUUUCOOO), rompe fonemas o
@@ -47,49 +52,49 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "Envido pué, a ver qué tenés guardao.",
     "¡Envido che, no te me achiqué'!",
     "¡Envidoo, primito! Vení nomá'.",
-    "¡Envidoo, changoo! Achalay la mano que tengo, vení a verla si te da el cuero."
+    "¡Envidoo, changoo! Achalay la mano que tengo, conchudo, vení a verla si te da el cuero."
   ],
   envido_envido: [
     "Envido envido, callandito...",
     "Envido envido pué, no me asustá'.",
     "¡Envido envido che, vamo' parejo, ckari!",
     "¡Envido envidoo, primito!",
-    "¡Envido envidoo, hermanazo! A ver quién canta más fuerte, acá no afloja nadie."
+    "¡Envido envidoo, hermanazo! A ver quién canta más fuerte, ura, acá no afloja nadie."
   ],
   real_envido: [
     "Real envido, despacito che...",
     "Real envido pué, ckari, vamo viendo.",
     "¡Real envido che, salí de abajo'l árbol!",
     "¡Real envidoo, primito! Tres puntito' pa' mi rancho.",
-    "¡Real envidoo, hermanazo! Achalay esta mano, ni rezándole a la Telesita me la ganá'."
+    "¡Real envidoo, hermanazo! Achalay esta mano, ni rezándole a la Telesita me la ganás, culiao."
   ],
   falta_envido: [
     "Falta envido, despacito nomá'.",
     "Falta envido pué, te la juego entera.",
     "¡Falta envido che, ahora o nunca, ckari!",
     "¡Falta envidoo, primito! La partida en una.",
-    "¡Falta envidoo, changoo! Si querés la partida, vení a buscarla, hermanazo, no te quedés con las ganas."
+    "¡Falta envidoo, changoo! Si querés la partida, vení a buscarla, qué lo parió, no te quedés con las ganas."
   ],
   truco: [
     "Truco, callandito che...",
     "Truco pué, vamo' viendo.",
     "¡Truco che, no te durmá', ckari!",
     "¡Trucoo, primito! A ver qué hacé'.",
-    "¡Trucoo, carajo! Achalay, hermanito, vení nomás a buscarla, changoo."
+    "¡Trucoo, carajo! Achalay, hermanito, vení nomás a buscarla, ura, hasta el aca de mi mano."
   ],
   retruco: [
     "Quiero retruco, despacito che...",
     "Retruco pué, no me asustá', ckari.",
     "¡Quiero retruco che, salí de la cocina!",
     "¡Retrucoo, primito! Subila si te da, vidita.",
-    "¡Quiero retrucoo, changoo! Atatay con vo', a ver si te aguantás ahora, ckari."
+    "¡Quiero retrucoo, changoo! Atatay con vo', a ver si te aguantás ahora, conchudo."
   ],
   vale_cuatro: [
     "Vale cuatro, callandito...",
     "Vale cuatro pué, ahí va, ckari.",
     "¡Vale cuatro che, todo o nada, primito!",
     "¡Vale cuatroo, hermanito! A duelo nos vamo'.",
-    "¡Vale cuatroo, hermanazo! Achalay, esta es la última, changoo, agarrate de la silla."
+    "¡Vale cuatroo, hermanazo! Esta es la última, qué lo parió, agarrate de la silla, culiao."
   ],
 
   quiero: [
@@ -97,21 +102,21 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "Quiero, ckari.",
     "¡Quieroo, primito! Vení nomá'.",
     "¡Quieroo, hermanazo! Acá te espero, no afloje'.",
-    "¡Quieroo, changoo! Atatay con vo', vení a buscarme si te da la nafta, ckari."
+    "¡Quieroo, changoo! Atatay con vo', vení a buscarme si te da la nafta, culiao."
   ],
   no_quiero: [
     "No quiero...",
     "No quiero, ckari. Otra vuelta será.",
     "No quieroo, primito. Hoy no e' mi día, vidita.",
     "¡No quiero, paisano! Me guardo pa' mejor mano.",
-    "¡No quiero nada, hermanazo! Pero ojo que la próxima te como crudo, changoo, te lo digo yo."
+    "¡No quiero nada, hermanazo! A la pucha, pero ojo que la próxima te como crudo, ura, te lo digo yo."
   ],
   ir_al_mazo: [
     "Me voy al mazo.",
     "Al mazo nomá', ckari.",
     "¡Me voy al mazo, primito! Esta' carta' son pa' jugar al solitario.",
     "¡Al mazo, hermanazo! Atatay con el reparto que me tocó.",
-    "¡Me voy al mazo, paisano! No me dieron ni una sota, changoo, esto es pa' agarrarse a las trompada' con el que mezcló."
+    "¡Me voy al mazo, paisano! No me dieron ni una sota, qué lo parió, esto es pa' agarrarse a las trompada' con el que mezcló."
   ],
   son_buenas: [
     "Son buenas.",
@@ -125,7 +130,41 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "Son mejores, ckari.",
     "¡Son mejores, primito!",
     "¡Son mejores, hermanazo! Treinta y tre'.",
-    "¡Son mejore', changoo! Treinta y tre' con la del cuatro de espada, achalay la mano, ckari."
+    "¡Son mejore', changoo! Treinta y tre' con la del cuatro de espada, achalay la mano, culiao."
+  ],
+
+  // Reacción cuando mi equipo ganó la mano (truco). De suave a chicaneo NOA.
+  gane_mano: [
+    "Esa.",
+    "Ahí está, ckari.",
+    "¡Tomá pa' vó, primito!",
+    "¡Ja, ja! La pucha digo, ahí están las mías.",
+    "¡Tomá pa' vó, conchudo! Ja, ja, te la metí doblada, hermanazo."
+  ],
+  // Reacción cuando mi equipo perdió la mano. Lamento con malas palabras.
+  perdio_mano: [
+    "Uy.",
+    "Bueno, otra será.",
+    "Atatay, qué lo parió.",
+    "¡A la pucha, qué garrón, ura!",
+    "¡Mierda, culiao, te la dejé servida! Pero la próxima me la cobro."
+  ],
+
+  // Reacción cuando gané la PARTIDA entera. Triunfalismo y carcajada.
+  gane_partida: [
+    "¡Listo el pollo!",
+    "¡La mesa es mía, primitos!",
+    "¡A pagar el fernet, hermano!",
+    "¡Ja, ja! Ganamos, qué lo parió. Achalay esta partida.",
+    "¡A la pucha digo, ckari! Esto fue una masacre, conchudo, andá a llorar a la chacarera."
+  ],
+  // Reacción cuando perdí la PARTIDA entera. Aceptación con dignidad.
+  perdio_partida: [
+    "Bueno...",
+    "Tuviste suerte, hermano.",
+    "Ahora pagás vó' el fernet, ura.",
+    "¡Mierda, qué lo parió, casi te ganaba!",
+    "¡A la pucha digo, culiao! Pero la próxima me tomo revancha, ckari, te lo juro."
   ]
 };
 

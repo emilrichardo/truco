@@ -25,13 +25,16 @@ export type CategoriaCanto =
   | "no_quiero"
   | "ir_al_mazo"
   | "son_buenas"
-  | "son_mejores";
+  | "son_mejores"
+  | "gane_mano"
+  | "perdio_mano"
+  | "gane_partida"
+  | "perdio_partida";
 
 // Voces disponibles: argentinas (locale=es-AR) generadas via ElevenLabs.
-// Cada jugador recibe una voz estable por hash — Lucas siempre suena igual.
-// Lalo es "norte argentino" en el catálogo. Las otras se eligen desde
-// los samples en /audio/voces-test/.
-const VOCES = ["lalo"] as const;
+// Cada jugador recibe una voz estable por hash(jugadorId) — Lucas siempre
+// suena igual entre partidas, pero distinto a Richi.
+const VOCES = ["lalo", "juan", "manuel", "agustin", "niraj"] as const;
 type Voz = (typeof VOCES)[number];
 const VARIANTES_POR_CANTO = 5;
 

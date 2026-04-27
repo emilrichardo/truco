@@ -363,12 +363,57 @@ function cerrarMano(estado: EstadoJuego, equipoGanador: Equipo, motivo: string) 
     "mano"
   );
 
+  // Reacciones humanas: un jugador del equipo ganador chicanea, uno del
+  // perdedor lamenta. Son evento "respuesta" para que el motor de audio
+  // los reproduzca como cualquier otro canto y la burbuja del avatar los
+  // muestre encima del que habla.
+  emitirReaccionMano(estado, equipoGanador);
+
   // Chequea fin de partida — si terminó, no hay próxima mano.
   // Si NO terminó, dejamos `manoActual` en fase "terminada" sin repartir.
   // El cliente despacha la accion `iniciar_prox_mano` tras el delay del
   // resumen para que se vea el banner antes de las cartas nuevas.
-  chequearFinPartida(estado);
+  if (chequearFinPartida(estado)) {
+    emitirReaccionPartida(estado, estado.ganadorPartida!);
+  }
   estado.version++;
+}
+
+function jugadorAleatorioDeEquipo(
+  estado: EstadoJuego,
+  equipo: Equipo
+): Jugador | null {
+  const jugadores = jugadoresEnEquipo(estado, equipo);
+  if (jugadores.length === 0) return null;
+  return jugadores[Math.floor(Math.random() * jugadores.length)];
+}
+
+function emitirReaccionMano(estado: EstadoJuego, equipoGanador: Equipo) {
+  const ganador = jugadorAleatorioDeEquipo(estado, equipoGanador);
+  const perdedor = jugadorAleatorioDeEquipo(
+    estado,
+    equipoContrario(equipoGanador)
+  );
+  if (ganador) {
+    anuncio(estado, ganador.id, fraseAleatoria("gane_mano"), "respuesta");
+  }
+  if (perdedor) {
+    anuncio(estado, perdedor.id, fraseAleatoria("perdio_mano"), "respuesta");
+  }
+}
+
+function emitirReaccionPartida(estado: EstadoJuego, equipoGanador: Equipo) {
+  const ganador = jugadorAleatorioDeEquipo(estado, equipoGanador);
+  const perdedor = jugadorAleatorioDeEquipo(
+    estado,
+    equipoContrario(equipoGanador)
+  );
+  if (ganador) {
+    anuncio(estado, ganador.id, fraseAleatoria("gane_partida"), "respuesta");
+  }
+  if (perdedor) {
+    anuncio(estado, perdedor.id, fraseAleatoria("perdio_partida"), "respuesta");
+  }
 }
 
 /**
@@ -626,7 +671,10 @@ function resolverEnvido(
     };
     // Devuelvo el turno al "mano" o a quien le tocaba jugar carta.
     devolverTurnoAJugar(estado);
-    if (chequearFinPartida(estado)) return { ok: true, estado };
+    if (chequearFinPartida(estado)) {
+      emitirReaccionPartida(estado, estado.ganadorPartida!);
+      return { ok: true, estado };
+    }
     estado.version++;
     return { ok: true, estado };
   }
