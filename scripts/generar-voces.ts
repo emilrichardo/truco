@@ -31,13 +31,14 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-// Voces masculinas del catálogo público de ElevenLabs que rinden bien en
-// español latino con eleven_multilingual_v2. Si las cambiás por voces de
-// la "Voice Library" con flag "argentino" el acento será más auténtico.
+// Voces premade gratuitas (no library voices) del catálogo de ElevenLabs.
+// Si querés un acento más fiel a Santiago del Estero, agregá voces de
+// https://elevenlabs.io/app/voice-library filtradas por argentino +
+// masculino y reemplazá los IDs (requiere plan pago).
 const VOCES = [
   { id: "ErXwobaYiN019PkySvjV", nombre: "Antoni" },     // calmo, cálido
   { id: "pNInz6obpgDQGcFmaJgB", nombre: "Adam" },       // grave, serio
-  { id: "TxGEqnHWrfWFTfGW9XjX", nombre: "Josh" },       // joven, directo
+  { id: "VR6AewLTigWG4xSOukaG", nombre: "Arnold" },     // crisp, narrador
   { id: "IKne3meq5aSn9XLyUdCD", nombre: "Charlie" },    // grave
   { id: "onwK4e9ZLuTAKqWW03F9", nombre: "Daniel" }      // narrador
 ];
