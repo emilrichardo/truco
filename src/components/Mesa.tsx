@@ -67,13 +67,7 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   );
 
   return (
-    // Rotación leve de toda la mesa (incluye tapete, avatares, cartas y
-    // centro). Hace que las cartas del cuadrante BR queden visualmente
-    // más cerca del PanelAcciones (donde está mi mano).
-    <div
-      className="relative w-full h-full"
-      style={{ transform: "rotate(10deg)", transformOrigin: "center" }}
-    >
+    <div className="relative w-full h-full">
       <div className="absolute inset-1 sm:inset-2 tapete" />
 
       {/* Centro: sol criollo + meta info */}
@@ -344,18 +338,24 @@ function clasePosicionPuesto(pos: Posicion): string {
   }
 }
 
-/** Anchor del pile de cartas jugadas — en el cuadrante correspondiente
- *  al avatar del jugador, hacia el centro de la mesa. */
+/** Anchor del pile de cartas jugadas en cruz cardinal. Cada arm tiene un
+ *  leve desplazamiento hacia la esquina del dueño:
+ *    - top arm  (arriba)    → desplazado a la izquierda (avatar TL)
+ *    - bottom arm (abajo)   → desplazado a la derecha (yo en BR)
+ *    - left arm (izquierda) → desplazado hacia abajo (avatar BL)
+ *    - right arm (derecha)  → desplazado hacia arriba (avatar TR)
+ *  Así cada pila queda visualmente más cerca de su jugador sin perder la
+ *  forma de cruz. */
 function clasePosicionArm(pos: Posicion): string {
   switch (pos) {
     case "arriba":
-      return "top-[32%] left-[32%]"; // upper-left quadrant
+      return "top-[28%] left-[38%]"; // arm vertical superior, sesgado a izq
     case "abajo":
-      return "bottom-[32%] right-[32%]"; // lower-right
+      return "bottom-[28%] right-[38%]"; // arm vertical inferior, sesgado a der
     case "izquierda":
-      return "bottom-[32%] left-[32%]"; // lower-left
+      return "left-[28%] bottom-[38%]"; // arm horizontal izq, sesgado abajo
     case "derecha":
-      return "top-[32%] right-[32%]"; // upper-right
+      return "right-[28%] top-[38%]"; // arm horizontal der, sesgado arriba
   }
 }
 
