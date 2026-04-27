@@ -71,21 +71,19 @@ interface Voz {
 }
 
 // Voces argentinas (locale=es-AR) de la Voice Library de ElevenLabs.
-// Elegidas para variar timbres entre jugadores: una rítmica/expresiva,
-// una grave/ruda, una urbana/casual.
 //
 // IMPORTANTE: las voces de la Voice Library requieren plan pago (Starter
 // o superior) para usarse vía API. En free tier el endpoint TTS responde
 // HTTP 402. Para regenerar, asegurate de tener un plan activo y luego:
 //
 //   FORCE=1 npx tsx scripts/generar-voces.ts
+//
+// Lalo es la única voz del catálogo etiquetada explícitamente como
+// "norte argentino". Las otras 2 ranuras se eligen escuchando los
+// samples en /audio/voces-test/ y agregándolas acá.
 const VOCES: Voz[] = [
-  // Facundo — rhythmic, expressive, excited. Buena para cantitos.
-  { slug: "facundo", id: "qnvusyIjzlSoWYJ0C2Nm", nombre: "Facundo" },
-  // Ramiro — rugged, deep, friendly. Voz de gaucho serio.
-  { slug: "ramiro",  id: "MiJJKGin5bH1BLsDszL2", nombre: "Ramiro"  },
-  // Renzo — bold, urban, casual. Joven cancherito.
-  { slug: "renzo",   id: "acHf5gp7AGOY30tJjvD4", nombre: "Renzo"   }
+  // Lalo — Pleasant, Paternal and Relaxed · accent: norte argentino.
+  { slug: "lalo", id: "XmoCtjPCefjeLDu0eMSl", nombre: "Lalo" }
 ];
 
 // Frases por canto: importadas directamente del módulo del juego para no

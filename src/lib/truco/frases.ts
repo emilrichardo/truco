@@ -75,7 +75,7 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "Truco pué, vamo' viendo.",
     "¡Truco che, no te durmá', ckari!",
     "¡Trucoo, primito! A ver qué hacé'.",
-    "¡Trucoo, carajo! Achalay, achalay, hermanito, vení nomás a buscarla, changoo."
+    "¡Trucoo, carajo! Achalay, hermanito, vení nomás a buscarla, changoo."
   ],
   retruco: [
     "Quiero retruco, despacito che...",
@@ -89,7 +89,7 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "Vale cuatro pué, ahí va, ckari.",
     "¡Vale cuatro che, todo o nada, primito!",
     "¡Vale cuatroo, hermanito! A duelo nos vamo'.",
-    "¡Vale cuatroo, hermanazo! Achalay, achalay, esta es la última, changoo, agarrate de la silla."
+    "¡Vale cuatroo, hermanazo! Achalay, esta es la última, changoo, agarrate de la silla."
   ],
 
   quiero: [

@@ -27,9 +27,11 @@ export type CategoriaCanto =
   | "son_buenas"
   | "son_mejores";
 
-// Voces disponibles: 3 argentinas (locale=es-AR) generadas via ElevenLabs.
+// Voces disponibles: argentinas (locale=es-AR) generadas via ElevenLabs.
 // Cada jugador recibe una voz estable por hash — Lucas siempre suena igual.
-const VOCES = ["facundo", "ramiro", "renzo"] as const;
+// Lalo es "norte argentino" en el catálogo. Las otras se eligen desde
+// los samples en /audio/voces-test/.
+const VOCES = ["lalo"] as const;
 type Voz = (typeof VOCES)[number];
 const VARIANTES_POR_CANTO = 5;
 
