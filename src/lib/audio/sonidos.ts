@@ -77,55 +77,66 @@ function identificarCanto(texto: string): CategoriaCanto | null {
   return null;
 }
 
-// Cache de Howl para no recrear instancias.
-const cacheHowl: Record<string, Howl | null> = {};
+// Cache de Howls por canto. Cada canto puede tener varias variaciones
+// (01.mp3, 02.mp3, 03.mp3, ...) — el sistema intenta cargar hasta MAX
+// y al reproducir elige una al azar.
+const MAX_VARIACIONES = 5;
+const cacheHowlsCanto: Record<string, Howl[]> = {};
+const cacheHowlsLoaded: Record<string, boolean> = {};
 
-/** Si existe un clip en /audio/<canto>/01.mp3 lo carga; si no, devuelve null. */
-function cargarHowl(canto: CategoriaCanto): Howl | null {
-  if (cacheHowl[canto] !== undefined) return cacheHowl[canto];
-  const sources = [
-    `/audio/${canto}/01.mp3`,
-    `/audio/${canto}/02.mp3`,
-    `/audio/${canto}/03.mp3`
-  ];
-  // Howler intenta cargar en orden; si todos fallan, onloaderror se dispara.
-  let cargado = false;
-  const h = new Howl({
-    src: sources,
-    volume: 0.95,
-    preload: true,
-    onload: () => {
-      cargado = true;
-    },
-    onloaderror: () => {
-      cacheHowl[canto] = null;
-    }
-  });
-  // Pequeño hack: si después de un tick no cargó, tratamos como inexistente.
-  setTimeout(() => {
-    if (!cargado) cacheHowl[canto] = null;
-  }, 1500);
-  cacheHowl[canto] = h;
-  return h;
+/** Carga las variaciones existentes de un canto. Idempotente. */
+function cargarHowls(canto: CategoriaCanto): Howl[] {
+  if (cacheHowlsLoaded[canto]) return cacheHowlsCanto[canto] || [];
+  cacheHowlsLoaded[canto] = true;
+  const howls: Howl[] = [];
+  for (let i = 1; i <= MAX_VARIACIONES; i++) {
+    const n = String(i).padStart(2, "0");
+    const src = `/audio/${canto}/${n}.mp3`;
+    const h = new Howl({
+      src: [src],
+      volume: 0.95,
+      preload: true,
+      onloaderror: () => {
+        // Si falla, lo removemos del array.
+        const idx = cacheHowlsCanto[canto]?.indexOf(h);
+        if (idx !== undefined && idx >= 0) cacheHowlsCanto[canto].splice(idx, 1);
+      }
+    });
+    howls.push(h);
+  }
+  cacheHowlsCanto[canto] = howls;
+  return howls;
 }
 
 interface OpcionesCanto {
   jugadorId: string;
-  /** Frase base si no hay clip. */
   texto?: string;
   intensidad?: number;
 }
 
-/** Reproduce un canto. Sólo si hay clip MP3 cargado en /audio/<canto>/.
- * Si no hay clip, se queda en silencio y el banner visual de UltimoCanto
- * cumple la función. (Web Speech API se descartó porque en Chrome/Android
- * la voz default es femenina y no se puede forzar una masculina confiable.) */
+/** Reproduce un canto eligiendo una variación al azar entre los clips
+ * cargados. Si ninguno cargó (no hay archivos), queda silencioso y el
+ * banner visual de UltimoCanto cumple la función. */
 export function reproducirCanto(canto: CategoriaCanto, _opts: OpcionesCanto) {
-  const h = cargarHowl(canto);
-  if (!h || cacheHowl[canto] === null) return;
+  const howls = cargarHowls(canto);
+  // Filtramos las que efectivamente cargaron (state="loaded")
+  const listas = howls.filter((h) => h.state() === "loaded");
+  if (listas.length === 0) {
+    // Aún no hay ninguna lista — intentamos con la primera por si está
+    // en proceso; play() esperará a onload.
+    if (howls.length > 0) {
+      try {
+        howls[0].play();
+      } catch {
+        /* silencio */
+      }
+    }
+    return;
+  }
+  const elegida = listas[Math.floor(Math.random() * listas.length)];
   try {
-    h.stop();
-    h.play();
+    elegida.stop();
+    elegida.play();
   } catch {
     /* silencio */
   }
@@ -140,7 +151,9 @@ export function reaccionPierdePartida(_jugadorId: string) { /* TODO: clip derrot
 
 export function silenciarTodo() {
   silenciarVoz();
-  Object.values(cacheHowl).forEach((h) => h?.stop());
+  Object.values(cacheHowlsCanto).forEach((howls) =>
+    howls.forEach((h) => h.stop())
+  );
 }
 
 export type { CategoriaCanto };
