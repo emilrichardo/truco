@@ -1,17 +1,23 @@
 "use client";
-// Banner efímero cuando alguien canta o responde — aparece pegado al jugador
-// que habla para que se entienda quién dijo qué. Estilo cinta dorada.
+// Burbuja de diálogo cuando alguien canta o responde — aparece pegada al
+// jugador que habla para que se entienda quién dijo qué. Usa una cola
+// (tail) que apunta al avatar del que habla.
 //
-// Implementación: usamos refs para el id ya mostrado y para el handle del
-// timeout de auto-hide. Así, cuando el chat cambia por otra razón (carta
-// jugada, nueva mano), no cancelamos el timeout que oculta la burbuja.
+// La duración es proporcional al largo del texto (mínimo 2s, máximo 5s)
+// para que las frases largas tipo "¡QUIEROOOOO, changooo!..." se alcancen
+// a leer.
 import { useEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import type { EstadoJuego } from "@/lib/truco/types";
 
 type Posicion = "arriba" | "abajo" | "izquierda" | "derecha";
 
 const DESTACAR = new Set(["canto", "respuesta"]);
-const DURACION_MS = 1800;
+
+function calcularDuracion(texto: string): number {
+  // ~70ms por carácter, mínimo 2s, máximo 5s.
+  return Math.max(2000, Math.min(5000, texto.length * 70));
+}
 
 export function UltimoCanto({
   estado,
@@ -45,7 +51,7 @@ export function UltimoCanto({
     }
   }, [manoNum]);
 
-  // Detectar nuevo canto/respuesta y mostrar burbuja por DURACION_MS.
+  // Detectar nuevo canto/respuesta y mostrar burbuja.
   useEffect(() => {
     const ultimo = [...estado.chat]
       .reverse()
@@ -70,7 +76,7 @@ export function UltimoCanto({
     timeoutRef.current = window.setTimeout(() => {
       setMostrar(null);
       timeoutRef.current = null;
-    }, DURACION_MS);
+    }, calcularDuracion(ultimo.texto));
   }, [estado.chat, estado.jugadores, miId]);
 
   // Cleanup al desmontar.
@@ -84,18 +90,50 @@ export function UltimoCanto({
 
   return (
     <div
-      className={`absolute z-30 pointer-events-none ${claseBubble(mostrar.pos)}`}
+      className={clsx(
+        "absolute z-30 pointer-events-none",
+        claseBubble(mostrar.pos)
+      )}
     >
       <div
-        className="cinta-claim subtitulo-claim text-sm flex items-center gap-2 px-5 py-2 rounded-md parpadeo whitespace-nowrap shadow-lg"
-        style={{ textShadow: "0 1px 0 rgba(255,255,255,0.4)" }}
+        className={clsx(
+          "relative rounded-2xl px-4 py-2.5 shadow-2xl envido-pop",
+          "bg-gradient-to-br from-crema via-crema to-crema-2",
+          "border-2 border-dorado-oscuro",
+          // Ancho razonable que deja respirar las frases largas pero no
+          // ocupa todo el viewport.
+          "max-w-[60vw] sm:max-w-[280px] min-w-[80px]"
+        )}
       >
         {mostrar.nombre && (
-          <span className="text-azul-criollo text-[10px] font-bold normal-case tracking-normal">
+          <div
+            className="text-[10px] font-bold uppercase tracking-widest mb-0.5"
+            style={{ color: "var(--azul-criollo)" }}
+          >
             {mostrar.nombre}
-          </span>
+          </div>
         )}
-        <span className="font-bold text-carbon">{mostrar.texto}</span>
+        <div
+          className="text-[15px] sm:text-base font-bold leading-snug break-words"
+          style={{
+            color: "var(--carbon)",
+            fontFamily: '"Alfa Slab One", Georgia, serif',
+            textShadow: "1px 1px 0 rgba(217,164,65,0.3)"
+          }}
+        >
+          {mostrar.texto}
+        </div>
+        {/* Cola de la burbuja apuntando al avatar */}
+        <div
+          aria-hidden
+          className={clsx("absolute w-3 h-3 rotate-45 bg-crema-2 border-dorado-oscuro", colaBubble(mostrar.pos))}
+          style={{
+            borderLeftWidth: colaBordes(mostrar.pos).left,
+            borderTopWidth: colaBordes(mostrar.pos).top,
+            borderRightWidth: colaBordes(mostrar.pos).right,
+            borderBottomWidth: colaBordes(mostrar.pos).bottom
+          }}
+        />
       </div>
     </div>
   );
@@ -110,19 +148,51 @@ function posicionDesdeIdx(idx: number, total: number): Posicion {
   return "arriba";
 }
 
-/** Burbujas cerca del puesto del que habla. "abajo" (yo) en BR — el resto
- *  en posición cardinal. */
+/** Burbujas cerca del puesto del que habla. */
 function claseBubble(pos?: Posicion): string {
   switch (pos) {
     case "abajo":
-      return "right-3 bottom-28";
+      return "right-3 bottom-32";
     case "arriba":
-      return "left-1/2 -translate-x-1/2 top-24";
+      return "left-1/2 -translate-x-1/2 top-20";
     case "izquierda":
-      return "left-4 top-[58%]";
+      return "left-4 top-[55%]";
     case "derecha":
-      return "right-4 top-[58%]";
+      return "right-4 top-[55%]";
     default:
       return "left-1/2 -translate-x-1/2 top-16";
+  }
+}
+
+/** Posición de la cola (apunta al avatar del que habla). */
+function colaBubble(pos?: Posicion): string {
+  switch (pos) {
+    case "abajo":
+      return "bottom-[-7px] right-6"; // cola hacia abajo-derecha (avatar BR)
+    case "arriba":
+      return "top-[-7px] left-1/2 -translate-x-1/2"; // cola hacia arriba
+    case "izquierda":
+      return "left-[-7px] top-1/2 -translate-y-1/2"; // cola hacia la izquierda
+    case "derecha":
+      return "right-[-7px] top-1/2 -translate-y-1/2"; // cola hacia la derecha
+    default:
+      return "top-[-7px] left-1/2 -translate-x-1/2";
+  }
+}
+
+/** Bordes a aplicar al diamante para que sólo dos lados queden visibles
+ *  (los que coinciden con el borde de la burbuja). */
+function colaBordes(pos?: Posicion) {
+  switch (pos) {
+    case "abajo":
+      return { left: 0, top: 0, right: 2, bottom: 2 };
+    case "arriba":
+      return { left: 2, top: 2, right: 0, bottom: 0 };
+    case "izquierda":
+      return { left: 2, top: 0, right: 0, bottom: 2 };
+    case "derecha":
+      return { left: 0, top: 2, right: 2, bottom: 0 };
+    default:
+      return { left: 2, top: 2, right: 0, bottom: 0 };
   }
 }

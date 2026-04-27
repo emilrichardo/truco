@@ -72,8 +72,12 @@ export function ChatFlotante({
 
   return (
     <div
-      className="absolute z-30 right-2 flex flex-col items-end gap-1.5 pointer-events-none"
-      style={{ bottom: "9.5rem" }}
+      className="fixed z-40 right-2 bottom-2 flex flex-col items-end gap-1.5 pointer-events-none"
+      style={{
+        // Respetar safe-area en mobiles con notch / barra inferior.
+        paddingBottom: "max(0px, env(safe-area-inset-bottom))",
+        paddingRight: "max(0px, env(safe-area-inset-right))"
+      }}
     >
       {previewVisible && ultimo && (
         <div
