@@ -98,7 +98,11 @@
       "Bash(xargs -I{} curl -sI \"https://truco-primos.vercel.app{}\")",
       "Bash(curl -s \"https://truco-primos.vercel.app/_next/static/css/d09f37def00af96b.css\")",
       "Bash(grep -oE \"\\\\.tapete[^}]{0,400}\\\\}\")",
-      "Bash(xxd /Volumes/Emil/neuraz/projects/trucoprimos/truco-appweb/public/texturas/textura-mesa.png)"
+      "Bash(xxd /Volumes/Emil/neuraz/projects/trucoprimos/truco-appweb/public/texturas/textura-mesa.png)",
+      "Bash(curl -s \"https://truco-primos.vercel.app/texturas/textura-mesa.png\" -o /tmp/textura.png)",
+      "Bash(sips -g all /tmp/textura.png)",
+      "Bash(md5 /Volumes/Emil/neuraz/projects/trucoprimos/truco-appweb/public/texturas/textura-mesa.png)",
+      "Bash(md5 /tmp/textura.png)"
     ],
     "additionalDirectories": [
       "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"

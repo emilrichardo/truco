@@ -6,19 +6,19 @@
   color-scheme: dark;
   /* Paleta oficial Truco Entre Primos (manual de marca) — hex + tripletes RGB
    * para soportar opacidad en utilidades Tailwind via rgb(var(--x) / alpha) */
-  --carbon: #1e1b18;       /* Negro Carbón */
+  --carbon: #1e1b18; /* Negro Carbón */
   --carbon-rgb: 30 27 24;
-  --crema: #f1e0b8;        /* Crema */
+  --crema: #f1e0b8; /* Crema */
   --crema-rgb: 241 224 184;
   --crema-2: #e8d4a0;
-  --dorado: #d9a441;       /* Dorado */
+  --dorado: #d9a441; /* Dorado */
   --dorado-rgb: 217 164 65;
   --dorado-claro: #e8b863;
   --dorado-oscuro: #b88424;
   --azul-criollo: #355c8a; /* Azul Criollo */
   --azul-rgb: 53 92 138;
   --azul-claro: #4a78ab;
-  --madera: #6b4328;       /* Marrón Madera */
+  --madera: #6b4328; /* Marrón Madera */
   --madera-rgb: 107 67 40;
   --madera-clara: #8c5a36;
   --madera-oscura: #3d2715;
@@ -42,12 +42,17 @@
   --rojo-fernet: #7a1f1f;
 }
 
-html, body {
+html,
+body {
   background: var(--bg);
   color: var(--text);
   /* Leve textura de papel rugoso sobre el fondo carbón */
   background-image:
-    radial-gradient(circle at 20% 10%, rgba(217, 164, 65, 0.04), transparent 40%),
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(217, 164, 65, 0.04),
+      transparent 40%
+    ),
     radial-gradient(circle at 80% 90%, rgba(53, 92, 138, 0.05), transparent 40%);
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
@@ -106,19 +111,33 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(180deg, var(--dorado-claro) 0%, var(--dorado) 60%, var(--dorado-oscuro) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--dorado-claro) 0%,
+    var(--dorado) 60%,
+    var(--dorado-oscuro) 100%
+  );
   color: var(--carbon);
   border-color: var(--dorado-oscuro);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #f0c777 0%, var(--dorado-claro) 60%, var(--dorado) 100%);
+  background: linear-gradient(
+    180deg,
+    #f0c777 0%,
+    var(--dorado-claro) 60%,
+    var(--dorado) 100%
+  );
   border-color: var(--dorado-oscuro);
   color: var(--carbon);
 }
 
 .btn-azul {
-  background: linear-gradient(180deg, var(--azul-claro) 0%, var(--azul-criollo) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--azul-claro) 0%,
+    var(--azul-criollo) 100%
+  );
   color: var(--crema);
   border-color: #243f60;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
@@ -141,7 +160,11 @@ body {
 }
 
 .btn-madera {
-  background: linear-gradient(180deg, var(--madera-clara) 0%, var(--madera) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--madera-clara) 0%,
+    var(--madera) 100%
+  );
   color: var(--crema);
   border-color: var(--madera-oscura);
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
@@ -180,11 +203,21 @@ body {
 .papel {
   background-color: var(--crema);
   background-image:
-    radial-gradient(ellipse at top left, rgba(217, 164, 65, 0.12), transparent 60%),
-    radial-gradient(ellipse at bottom right, rgba(107, 67, 40, 0.1), transparent 50%),
-    repeating-linear-gradient(0deg,
+    radial-gradient(
+      ellipse at top left,
+      rgba(217, 164, 65, 0.12),
+      transparent 60%
+    ),
+    radial-gradient(
+      ellipse at bottom right,
+      rgba(107, 67, 40, 0.1),
+      transparent 50%
+    ),
+    repeating-linear-gradient(
+      0deg,
       rgba(107, 67, 40, 0.025) 0 1px,
-      transparent 1px 3px);
+      transparent 1px 3px
+    );
   color: var(--carbon);
   border: 1px solid #b89460;
   border-radius: 6px;
@@ -201,12 +234,19 @@ body {
 .placa-madera {
   background-color: var(--madera);
   background-image:
-    repeating-linear-gradient(180deg,
+    repeating-linear-gradient(
+      180deg,
       rgba(0, 0, 0, 0.08) 0 1px,
       transparent 1px 5px,
       rgba(241, 224, 184, 0.03) 5px 6px,
-      transparent 6px 10px),
-    linear-gradient(180deg, var(--madera-clara) 0%, var(--madera) 50%, var(--madera-oscura) 100%);
+      transparent 6px 10px
+    ),
+    linear-gradient(
+      180deg,
+      var(--madera-clara) 0%,
+      var(--madera) 50%,
+      var(--madera-oscura) 100%
+    );
   color: var(--crema);
   border: 2px solid var(--madera-oscura);
   border-radius: 6px;
@@ -231,7 +271,12 @@ body {
   content: "";
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--dorado) 50%, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--dorado) 50%,
+    transparent
+  );
 }
 .divisor-azul {
   color: var(--azul);
@@ -276,14 +321,27 @@ body {
   color: var(--text-dim);
 }
 
-.acento-azul { color: var(--azul); }
-.acento-dorado { color: var(--dorado); }
-.acento-crema { color: var(--crema); }
+.acento-azul {
+  color: var(--azul);
+}
+.acento-dorado {
+  color: var(--dorado);
+}
+.acento-crema {
+  color: var(--crema);
+}
 
-.parpadeo { animation: parpadeo 1.6s ease-in-out infinite; }
+.parpadeo {
+  animation: parpadeo 1.6s ease-in-out infinite;
+}
 @keyframes parpadeo {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.55; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
 }
 
 /* Reparto de cartas: cada carta arranca apilada en el centro y vuela a su
@@ -293,7 +351,7 @@ body {
 @keyframes reparto-carta {
   0% {
     transform: translate(var(--reparto-from-x, 0px), var(--reparto-from-y, 0px))
-               rotate(-180deg) scale(0.6);
+      rotate(-180deg) scale(0.6);
     opacity: 0;
   }
   60% {
@@ -311,7 +369,11 @@ body {
 
 /* Badge "MANO" — para marcar quién es el mano de la ronda */
 .badge-mano {
-  background: linear-gradient(180deg, var(--dorado-claro) 0%, var(--dorado-oscuro) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--dorado-claro) 0%,
+    var(--dorado-oscuro) 100%
+  );
   color: var(--carbon);
   border: 1.5px solid var(--carbon);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
@@ -319,7 +381,9 @@ body {
 }
 
 .halo {
-  box-shadow: 0 0 0 2px var(--gold), 0 0 18px rgba(217, 164, 65, 0.55);
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 0 18px rgba(217, 164, 65, 0.55);
 }
 
 .sheet-bg {
@@ -333,18 +397,23 @@ body {
 
 /* Mesa de madera vieja, gastada por años de partidas: tablones desparejos,
  * nudos oscuros, manchas de fernet y rayones aleatorios. */
+/* IMPORTANT: NO setear position aquí — el JSX usa Tailwind `absolute` y si
+ * acá ponemos `position: relative` lo sobrescribe (mi rule viene después en
+ * el CSS), el elemento queda en flujo normal sin tamaño y la mesa no se ve. */
 .tapete {
   background-color: var(--madera);
   background-image: url("/texturas/textura-mesa.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  border: 8px solid var(--madera-oscura);
   border-radius: 10px;
   box-shadow:
     inset 0 0 30px rgba(0, 0, 0, 0.35),
     0 6px 18px rgba(0, 0, 0, 0.6);
-  position: relative;
+  /* Perspectiva sutil. Solo el tapete se inclina; cards y avatares quedan
+   * planos (son hermanos, no hijos). */
+  transform: perspective(2000px) rotateX(4deg);
+  transform-origin: center 75%;
 }
 
 /* Vignette muy sutil sobre la textura. Dejamos que el PNG sea protagonista. */
@@ -354,8 +423,11 @@ body {
   inset: 0;
   pointer-events: none;
   border-radius: 4px;
-  background-image:
-    radial-gradient(ellipse at center, transparent 65%, rgba(0, 0, 0, 0.25) 100%);
+  background-image: radial-gradient(
+    ellipse at center,
+    transparent 65%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
 }
 
 /* Carta española: la imagen del naipe ya trae su propio diseño.
@@ -396,7 +468,9 @@ body {
 .fan-card {
   transform: translateY(var(--dy, 0px)) rotate(var(--r, 0deg));
   transform-origin: bottom center;
-  transition: transform 180ms ease, z-index 0s linear 0s;
+  transition:
+    transform 180ms ease,
+    z-index 0s linear 0s;
   will-change: transform;
 }
 .fan-card:hover {
