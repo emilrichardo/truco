@@ -70,13 +70,22 @@ interface Voz {
   nombre: string;
 }
 
-// Por ahora dejamos sólo charlie y daniel — antoni / adam / arnold sonaban
-// mal con los settings y los clips se borraron. Para volver a agregarlos,
-// poné de nuevo el objeto y borrá el directorio public/audio/voces/<slug>
-// para forzar regeneración.
+// Voces argentinas (locale=es-AR) de la Voice Library de ElevenLabs.
+// Elegidas para variar timbres entre jugadores: una rítmica/expresiva,
+// una grave/ruda, una urbana/casual.
+//
+// IMPORTANTE: las voces de la Voice Library requieren plan pago (Starter
+// o superior) para usarse vía API. En free tier el endpoint TTS responde
+// HTTP 402. Para regenerar, asegurate de tener un plan activo y luego:
+//
+//   FORCE=1 npx tsx scripts/generar-voces.ts
 const VOCES: Voz[] = [
-  { slug: "charlie", id: "IKne3meq5aSn9XLyUdCD", nombre: "Charlie" }, // grave
-  { slug: "daniel",  id: "onwK4e9ZLuTAKqWW03F9", nombre: "Daniel"  }  // narrador
+  // Facundo — rhythmic, expressive, excited. Buena para cantitos.
+  { slug: "facundo", id: "qnvusyIjzlSoWYJ0C2Nm", nombre: "Facundo" },
+  // Ramiro — rugged, deep, friendly. Voz de gaucho serio.
+  { slug: "ramiro",  id: "MiJJKGin5bH1BLsDszL2", nombre: "Ramiro"  },
+  // Renzo — bold, urban, casual. Joven cancherito.
+  { slug: "renzo",   id: "acHf5gp7AGOY30tJjvD4", nombre: "Renzo"   }
 ];
 
 // Frases por canto: importadas directamente del módulo del juego para no

@@ -27,7 +27,9 @@ export type CategoriaCanto =
   | "son_buenas"
   | "son_mejores";
 
-const VOCES = ["charlie", "daniel"] as const;
+// Voces disponibles: 3 argentinas (locale=es-AR) generadas via ElevenLabs.
+// Cada jugador recibe una voz estable por hash — Lucas siempre suena igual.
+const VOCES = ["facundo", "ramiro", "renzo"] as const;
 type Voz = (typeof VOCES)[number];
 const VARIANTES_POR_CANTO = 5;
 
