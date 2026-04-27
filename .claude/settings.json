@@ -91,7 +91,14 @@
       "Bash(supabase link *)",
       "Bash(supabase db *)",
       "Bash(supabase functions *)",
-      "Bash(ps -p 4902,49433 -o pid,comm,args)"
+      "Bash(ps -p 4902,49433 -o pid,comm,args)",
+      "Bash(curl -sI \"https://truco-primos.vercel.app/texturas/textura-mesa.png\")",
+      "Bash(curl -s \"https://truco-primos.vercel.app/_next/static/css/app/layout.css\")",
+      "Bash(curl -s \"https://truco-primos.vercel.app/\")",
+      "Bash(xargs -I{} curl -sI \"https://truco-primos.vercel.app{}\")",
+      "Bash(curl -s \"https://truco-primos.vercel.app/_next/static/css/d09f37def00af96b.css\")",
+      "Bash(grep -oE \"\\\\.tapete[^}]{0,400}\\\\}\")",
+      "Bash(xxd /Volumes/Emil/neuraz/projects/trucoprimos/truco-appweb/public/texturas/textura-mesa.png)"
     ],
     "additionalDirectories": [
       "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"
