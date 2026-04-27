@@ -14,7 +14,7 @@ import {
   reproducirCanto,
   silenciarTodo
 } from "./sonidos";
-import { precargarVoces } from "./voz";
+import { desbloquearVoz, precargarVoces } from "./voz";
 
 const PROB_REACCION_MANO = 0.55;
 const PROB_REACCION_PARTIDA = 1.0;
@@ -33,6 +33,7 @@ export function useAudioJuego(
     precargarVoces();
     const desbloquear = () => {
       despertarAudio();
+      desbloquearVoz();
       habilitado.current = true;
       window.removeEventListener("click", desbloquear);
       window.removeEventListener("touchstart", desbloquear);

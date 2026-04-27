@@ -17,11 +17,17 @@ const NOMBRES_FEMENINOS = [
   "lupe", "alejandra", "patricia", "dolores", "gabriela", "valentina",
   "natalia", "veronica", "verónica", "andrea", "marta", "raquel",
   "pilar", "rocio", "rocío", "soledad", "consuelo", "celia", "luciana",
-  // Microsoft Sabina/Hortensia/Helena
   "hortensia", "elsa", "mia",
   // Google identifiers
   "es-us-news-f", "es-us-news-g", "es-us-standard-a", "es-es-standard-a",
   "es-mx-standard-a", "es-mx-news-a"
+];
+
+const NOMBRES_MASCULINOS = [
+  "diego", "jorge", "juan", "carlos", "francisco", "pablo", "javier",
+  "miguel", "ricardo", "luis", "andres", "fernando", "pedro", "raul",
+  "roberto", "hector", "mario", "alberto", "enrique", "victor",
+  "tomas", "tomás", "santiago", "felipe", "alejandro", "mateo"
 ];
 
 function esVozFemenina(v: SpeechSynthesisVoice): boolean {
@@ -30,6 +36,14 @@ function esVozFemenina(v: SpeechSynthesisVoice): boolean {
   if (NOMBRES_FEMENINOS.some((n) => nombre.includes(n))) return true;
   // Convención Google TTS: variantes -A / -C / -E suelen ser femeninas.
   if (/standard-[ace]|wavenet-[ace]|news-[afg]/i.test(v.name)) return true;
+  return false;
+}
+
+function esVozMasculina(v: SpeechSynthesisVoice): boolean {
+  const nombre = v.name.toLowerCase();
+  if (/\bmale\b|\bhombre\b|\bmasculin/.test(nombre)) return true;
+  if (NOMBRES_MASCULINOS.some((n) => nombre.includes(n))) return true;
+  if (/standard-[bdf]|wavenet-[bdf]|news-[c-eh-z]/i.test(v.name)) return true;
   return false;
 }
 
@@ -52,22 +66,46 @@ export function precargarVoces() {
   window.speechSynthesis.onvoiceschanged = cargar;
 }
 
+let primerDisparoHecho = false;
+/** En iOS Safari, speak() requiere ocurrir durante un gesto del usuario.
+ *  Esto dispara una utterance vacía en el primer click para "desbloquear". */
+export function desbloquearVoz() {
+  if (primerDisparoHecho) return;
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance("");
+    u.volume = 0;
+    window.speechSynthesis.speak(u);
+    primerDisparoHecho = true;
+  } catch {
+    // ignorar
+  }
+}
+
 let logueado = false;
 
-function vocesEspanolas(): SpeechSynthesisVoice[] {
+interface VocesClasificadas {
+  masculinas: SpeechSynthesisVoice[];
+  neutras: SpeechSynthesisVoice[]; // ni claramente masculinas ni femeninas
+  cualquiera: SpeechSynthesisVoice[]; // todas las españolas, último fallback
+}
+
+function clasificarVoces(): VocesClasificadas {
   const todas = asegurarVocesCargadas();
-  if (todas.length === 0) return [];
+  if (todas.length === 0)
+    return { masculinas: [], neutras: [], cualquiera: [] };
   const score = (v: SpeechSynthesisVoice) => {
-    const i = PRIORIDAD_LANG.findIndex((p) => v.lang.toLowerCase().startsWith(p.toLowerCase()));
+    const i = PRIORIDAD_LANG.findIndex((p) =>
+      v.lang.toLowerCase().startsWith(p.toLowerCase())
+    );
     return i === -1 ? 99 : i;
   };
   const espanolas = todas
     .filter((v) => v.lang.toLowerCase().startsWith("es"))
     .sort((a, b) => score(a) - score(b));
 
-  // Filtramos voces femeninas conocidas. El resto se acepta.
-  const sinFemeninas = espanolas.filter((v) => !esVozFemenina(v));
-  const elegidas = sinFemeninas.length > 0 ? sinFemeninas : espanolas;
+  const masculinas = espanolas.filter(esVozMasculina);
+  const neutras = espanolas.filter((v) => !esVozMasculina(v) && !esVozFemenina(v));
 
   if (!logueado && typeof console !== "undefined") {
     logueado = true;
@@ -76,12 +114,13 @@ function vocesEspanolas(): SpeechSynthesisVoice[] {
       espanolas.map((v) => `${v.name} (${v.lang})`)
     );
     console.info(
-      "[truco] voces usables (sin femeninas):",
-      elegidas.map((v) => v.name)
+      "[truco] masculinas detectadas:",
+      masculinas.map((v) => v.name)
     );
+    console.info("[truco] neutras (sin género claro):", neutras.map((v) => v.name));
   }
 
-  return elegidas;
+  return { masculinas, neutras, cualquiera: espanolas };
 }
 
 function hashStr(s: string): number {
@@ -97,13 +136,28 @@ export interface PerfilVoz {
 }
 
 export function perfilVozParaJugador(jugadorId: string): PerfilVoz {
-  const espanolas = vocesEspanolas();
-  if (espanolas.length === 0) return { voice: null, pitch: 1, rate: 1 };
+  const { masculinas, neutras, cualquiera } = clasificarVoces();
+  // Preferencia: voces masculinas → neutras → cualquiera.
+  // Si tenemos que usar neutras o cualquiera, bajamos el pitch más fuerte
+  // para enmascarar la "femineidad" de la voz subyacente.
+  let pool: SpeechSynthesisVoice[];
+  let pitchBase: [number, number]; // [min, span]
+  if (masculinas.length > 0) {
+    pool = masculinas;
+    pitchBase = [0.78, 28]; // 0.78-1.06: rango masculino normal
+  } else if (neutras.length > 0) {
+    pool = neutras;
+    pitchBase = [0.6, 22]; // 0.60-0.82: bajamos para masculinizar
+  } else if (cualquiera.length > 0) {
+    pool = cualquiera;
+    pitchBase = [0.55, 18]; // 0.55-0.73: muy grave para tapar voces femeninas
+  } else {
+    return { voice: null, pitch: 1, rate: 1 };
+  }
   const h = hashStr(jugadorId);
-  const voice = espanolas[h % espanolas.length];
-  // Pitch en rango masculino: 0.72-1.04. Rate 0.92-1.18 (igual).
-  const pitch = 0.72 + ((h >> 3) % 32) / 100;
-  const rate = 0.92 + ((h >> 7) % 26) / 100;
+  const voice = pool[h % pool.length];
+  const pitch = pitchBase[0] + ((h >> 3) % pitchBase[1]) / 100;
+  const rate = 0.92 + ((h >> 7) % 22) / 100; // 0.92-1.14
   return { voice, pitch, rate };
 }
 
