@@ -67,7 +67,13 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   );
 
   return (
-    <div className="relative w-full h-full">
+    // Rotación leve de toda la mesa (incluye tapete, avatares, cartas y
+    // centro). Hace que las cartas del cuadrante BR queden visualmente
+    // más cerca del PanelAcciones (donde está mi mano).
+    <div
+      className="relative w-full h-full"
+      style={{ transform: "rotate(10deg)", transformOrigin: "center" }}
+    >
       <div className="absolute inset-1 sm:inset-2 tapete" />
 
       {/* Centro: sol criollo + meta info */}

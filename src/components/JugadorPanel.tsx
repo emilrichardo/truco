@@ -22,7 +22,7 @@ export function JugadorPanel({
     : "w-20 sm:w-24";
   const borderEquipo = jugador.equipo === 0 ? "border-dorado" : "border-azul-criollo";
   return (
-    <div className="flex flex-col items-center gap-0.5">
+    <div className="flex flex-col items-center gap-1">
       <div className="relative">
         <div
           className={clsx(
@@ -38,14 +38,6 @@ export function JugadorPanel({
             className="w-full h-full object-cover object-top"
           />
         </div>
-        {jugador.esBot && (
-          <span
-            className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-carbon text-crema/80 border border-dorado/50 rounded text-[8px] px-1 uppercase font-bold tracking-wider"
-            title="Bot"
-          >
-            bot
-          </span>
-        )}
         {esMano && (
           <span
             className="badge-mano absolute -top-1.5 -left-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider z-10"
@@ -58,7 +50,17 @@ export function JugadorPanel({
           <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-dorado parpadeo border border-carbon" />
         )}
       </div>
-      <div className="text-center leading-tight mt-1.5">
+      {/* BOT label como flex item separado (antes era absolute -bottom-1
+       * y se superponía con la imagen). */}
+      {jugador.esBot && (
+        <span
+          className="bg-carbon text-crema/80 border border-dorado/50 rounded text-[8px] px-1.5 py-0.5 uppercase font-bold tracking-wider leading-none"
+          title="Bot"
+        >
+          bot
+        </span>
+      )}
+      <div className="text-center leading-tight">
         <div
           className={clsx(
             "text-sm sm:text-base font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]",
