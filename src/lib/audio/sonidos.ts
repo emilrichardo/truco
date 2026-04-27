@@ -21,7 +21,10 @@ type CategoriaCanto =
   | "no_quiero"
   | "ir_al_mazo";
 
-const VOCES = ["antoni", "adam", "arnold", "charlie", "daniel"] as const;
+// Por ahora sólo mantenemos charlie y daniel — el resto sonaba mal y se
+// borraron los clips. Cuando se regeneren más voces, se pueden volver a
+// agregar acá y en scripts/generar-voces.ts.
+const VOCES = ["charlie", "daniel"] as const;
 type Voz = typeof VOCES[number];
 const MAX_VARIACIONES = 5;
 

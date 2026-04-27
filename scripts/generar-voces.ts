@@ -61,10 +61,11 @@ interface Voz {
   nombre: string;
 }
 
+// Por ahora dejamos sólo charlie y daniel — antoni / adam / arnold sonaban
+// mal con los settings y los clips se borraron. Para volver a agregarlos,
+// poné de nuevo el objeto y borrá el directorio public/audio/voces/<slug>
+// para forzar regeneración.
 const VOCES: Voz[] = [
-  { slug: "antoni",  id: "ErXwobaYiN019PkySvjV", nombre: "Antoni"  }, // calmo
-  { slug: "adam",    id: "pNInz6obpgDQGcFmaJgB", nombre: "Adam"    }, // grave
-  { slug: "arnold",  id: "VR6AewLTigWG4xSOukaG", nombre: "Arnold"  }, // narrador
   { slug: "charlie", id: "IKne3meq5aSn9XLyUdCD", nombre: "Charlie" }, // grave
   { slug: "daniel",  id: "onwK4e9ZLuTAKqWW03F9", nombre: "Daniel"  }  // narrador
 ];
