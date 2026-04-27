@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import type { EstadoJuego, Jugador, Carta } from "@/lib/truco/types";
 import { CartaEspanola } from "./CartaEspanola";
@@ -22,13 +22,18 @@ type JugadaEnMesa = {
  */
 export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   // Toggle estable para "espiar" las cartas del compañero (solo en 2v2).
-  // useCallback evita identidad nueva del handler en cada render (lo cual
-  // no afectaba el state pero sí confundía al diff de React).
   const [verCompañero, setVerCompañero] = useState(false);
   const toggleCompañero = useCallback(
     () => setVerCompañero((v) => !v),
     []
   );
+  // Auto-ocultar las cartas del compañero después de 5s para no espiar
+  // permanentemente (y que el rival no vea por encima del hombro).
+  useEffect(() => {
+    if (!verCompañero) return;
+    const t = window.setTimeout(() => setVerCompañero(false), 5000);
+    return () => clearTimeout(t);
+  }, [verCompañero]);
 
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
@@ -318,18 +323,18 @@ function repartoOffset(pos?: Posicion): { x: string; y: string } {
   }
 }
 
-/** Posición del puesto en una de las 4 esquinas del tablero.
- *  Yo voy a BR (manejado por MiAvatarBR); el resto a las otras tres. */
+/** Posición del puesto. Inset un poco mayor (8 = 2rem) para que los
+ *  avatares estén un poco más cerca del centro y no tan pegados al borde. */
 function clasePosicionPuesto(pos: Posicion): string {
   switch (pos) {
     case "abajo":
-      return "right-3 bottom-3"; // (no se usa: yo voy por MiAvatarBR)
+      return "right-8 bottom-8"; // (no se usa: yo voy por MiAvatarBR)
     case "arriba":
-      return "left-3 top-3"; // top-left
+      return "left-8 top-8"; // top-left
     case "izquierda":
-      return "left-3 bottom-3"; // bottom-left (rival 2v2)
+      return "left-8 bottom-8"; // bottom-left (rival 2v2)
     case "derecha":
-      return "right-3 top-3"; // top-right (rival 2v2)
+      return "right-8 top-8"; // top-right (rival 2v2)
   }
 }
 
