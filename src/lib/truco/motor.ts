@@ -19,6 +19,8 @@ import type {
   Mano,
   ResolucionEnvido
 } from "./types";
+import { fraseAleatoria, fraseCanonica } from "./frases";
+import type { CategoriaFrase } from "./frases";
 
 const ENVIDO_VALORES = {
   envido: { quiero: 2, no_quiero: 1 },
@@ -387,8 +389,7 @@ function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
   // Si hay envido pendiente y se va al mazo, perdés envido (1) + truco (valor actual).
   const eq = jugador.equipo;
   const otro = equipoContrario(eq);
-  // Anunciamos el "Me voy al mazo" como respuesta para que dispare la voz.
-  anuncio(estado, jugador.id, "Me voy al mazo", "respuesta");
+  anuncio(estado, jugador.id, fraseAleatoria("ir_al_mazo"), "respuesta");
   if (mano.envidoCantoActivo) {
     estado.puntos[otro] += 1;
     mano.puntosOtorgados.push({
@@ -448,20 +449,38 @@ function cantarEnvido(
   mano.envidoEstado = nivelNuevo as any;
   // Le pasamos el "turno de responder" a alguien del otro equipo.
   mano.turnoJugadorId = primerJugadorDeEquipo(estado, equipoContrario(jugador.equipo));
-  anuncio(estado, jugador.id, cantoTexto(nivelNuevo), "canto");
+  anuncio(estado, jugador.id, fraseDeCanto(nivelNuevo, cadena), "canto");
   estado.version++;
   return { ok: true, estado };
 }
 
 function cantoTexto(nivel: string): string {
-  return {
-    envido: "¡Envido!",
-    real_envido: "¡Real envido!",
-    falta_envido: "¡Falta envido!",
-    truco: "¡Truco!",
-    retruco: "¡Quiero retruco!",
-    vale4: "¡Vale cuatro!"
-  }[nivel] || nivel;
+  // Texto canónico (variante 1) para motivos en breakdowns y logs.
+  // Para anuncios al chat, usar fraseDeCanto que pica una variante random.
+  return fraseCanonica(nivelACategoria(nivel));
+}
+
+function nivelACategoria(nivel: string): CategoriaFrase {
+  // El motor usa "vale4" internamente, las frases usan "vale_cuatro".
+  if (nivel === "vale4") return "vale_cuatro";
+  return nivel as CategoriaFrase;
+}
+
+/** Texto cantado al chat — pica una variante random según el nivel.
+ *  Para envido, si la cadena tiene dos envidos seguidos, usa la categoría
+ *  envido_envido (que tiene frases dedicadas). */
+function fraseDeCanto(
+  nivel: string,
+  cadena?: ("envido" | "real_envido" | "falta_envido")[]
+): string {
+  if (
+    nivel === "envido" &&
+    cadena &&
+    cadena.filter((c) => c === "envido").length >= 2
+  ) {
+    return fraseAleatoria("envido_envido");
+  }
+  return fraseAleatoria(nivelACategoria(nivel));
 }
 
 function primerJugadorDeEquipo(estado: EstadoJuego, eq: Equipo): string {
@@ -505,7 +524,7 @@ function cantarTruco(
   };
   // Le pasamos el turno de responder al otro equipo.
   mano.turnoJugadorId = primerJugadorDeEquipo(estado, equipoContrario(jugador.equipo));
-  anuncio(estado, jugador.id, cantoTexto(subir), "canto");
+  anuncio(estado, jugador.id, fraseDeCanto(subir), "canto");
   estado.version++;
   return { ok: true, estado };
 }
@@ -566,7 +585,7 @@ function resolverEnvido(
       puntos: puntosOtorgados,
       motivo: `Envido no querido (+${puntosOtorgados})`
     });
-    anuncio(estado, jugador.id, "No quiero", "respuesta");
+    anuncio(estado, jugador.id, fraseAleatoria("no_quiero"), "respuesta");
     anuncio(
       estado,
       "",
@@ -630,7 +649,7 @@ function resolverEnvido(
     puntos: puntosOtorgados,
     motivo: `Envido querido (+${puntosOtorgados})`
   });
-  anuncio(estado, jugador.id, "¡Quiero!", "respuesta");
+  anuncio(estado, jugador.id, fraseAleatoria("quiero"), "respuesta");
   anuncio(estado, "", detalle, "puntos");
   anuncio(
     estado,
@@ -720,7 +739,7 @@ function resolverTrucoRespuesta(
       puntos: valorAnterior,
       motivo: `${cantoTexto(canto.nivel)} no querido (+${valorAnterior})`
     });
-    anuncio(estado, jugador.id, "No quiero", "respuesta");
+    anuncio(estado, jugador.id, fraseAleatoria("no_quiero"), "respuesta");
     cerrarMano(estado, canto.equipoQueCanto, "Truco no querido");
     mano.trucoCantoActivo = null;
     return { ok: true, estado };
@@ -730,7 +749,7 @@ function resolverTrucoRespuesta(
   mano.equipoConTruco = canto.equipoQueCanto;
   mano.valorMano =
     canto.nivel === "truco" ? 2 : canto.nivel === "retruco" ? 3 : 4;
-  anuncio(estado, jugador.id, "¡Quiero!", "respuesta");
+  anuncio(estado, jugador.id, fraseAleatoria("quiero"), "respuesta");
   mano.trucoCantoActivo = null;
   devolverTurnoAJugar(estado);
   estado.version++;

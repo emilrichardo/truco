@@ -1,13 +1,10 @@
 "use client";
-// Catálogo de sonidos del juego.
-// Estructura: /public/audio/voces/<voz>/<canto>/<n>.mp3
-// Cada jugador queda asignado por hash a una de las voces, así Cholo siempre
-// suena distinto a Hugui aunque digan el mismo canto. Dentro de la voz hay
-// hasta 5 variaciones del canto (escaladas por intensidad: callandito → bravo)
-// que se eligen al azar para no repetir.
-
-import { Howl } from "howler";
-import { hablar, silenciarVoz } from "./voz";
+// Stub mínimo del sistema de cantos por voz.
+//
+// Estado actual: las voces (clips MP3 + Web Speech) fueron eliminadas. El
+// motor emite frases random como texto en el chat (ver lib/truco/frases.ts)
+// y eso es lo único que el jugador ve. Acá quedan sólo no-ops para que el
+// código que llamaba a estas funciones siga compilando sin reproducir nada.
 
 type CategoriaCanto =
   | "envido"
@@ -21,68 +18,24 @@ type CategoriaCanto =
   | "no_quiero"
   | "ir_al_mazo";
 
-// Por ahora sólo mantenemos charlie y daniel — el resto sonaba mal y se
-// borraron los clips. Cuando se regeneren más voces, se pueden volver a
-// agregar acá y en scripts/generar-voces.ts.
-const VOCES = ["charlie", "daniel"] as const;
-type Voz = typeof VOCES[number];
-const MAX_VARIACIONES = 5;
-
-// Cache: cacheHowls[voz][canto] = Howl[] con las variaciones cargadas.
-const cacheHowls: Record<string, Record<string, Howl[]>> = {};
-const cacheLoaded: Record<string, Record<string, boolean>> = {};
-
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
+interface OpcionesCanto {
+  jugadorId: string;
+  texto?: string;
+  intensidad?: number;
 }
 
-function vozParaJugador(jugadorId: string): Voz {
-  return VOCES[hashStr(jugadorId) % VOCES.length];
+export function reproducirCanto(_canto: CategoriaCanto, _opts: OpcionesCanto) {
+  /* sin voz: el chat ya muestra el texto del canto */
 }
 
-// Marca por (voz, canto) si conocemos que no hay clips disponibles, para
-// poder caer al fallback de Web Speech sin esperar 5 timeouts de carga.
-const cantoSinClips: Record<string, Record<string, boolean>> = {};
-
-/** Carga las variaciones del canto para una voz dada. Idempotente. */
-function cargarHowlsVoz(voz: Voz, canto: CategoriaCanto): Howl[] {
-  cacheHowls[voz] = cacheHowls[voz] || {};
-  cacheLoaded[voz] = cacheLoaded[voz] || {};
-  cantoSinClips[voz] = cantoSinClips[voz] || {};
-  if (cacheLoaded[voz][canto]) return cacheHowls[voz][canto] || [];
-  cacheLoaded[voz][canto] = true;
-
-  const howls: Howl[] = [];
-  let intentos = 0;
-  let fallidos = 0;
-  for (let i = 1; i <= MAX_VARIACIONES; i++) {
-    const n = String(i).padStart(2, "0");
-    const src = `/audio/voces/${voz}/${canto}/${n}.mp3`;
-    intentos++;
-    const h = new Howl({
-      src: [src],
-      volume: 1.0,
-      preload: true,
-      onloaderror: () => {
-        const arr = cacheHowls[voz][canto];
-        if (arr) {
-          const idx = arr.indexOf(h);
-          if (idx >= 0) arr.splice(idx, 1);
-        }
-        fallidos++;
-        if (fallidos >= intentos) cantoSinClips[voz][canto] = true;
-      }
-    });
-    howls.push(h);
-  }
-  cacheHowls[voz][canto] = howls;
-  return howls;
+export function precargarTodosLosClips() {
+  /* sin voz */
 }
 
 // Map de identificación: detecta el canto a partir del texto del evento.
-function identificarCanto(texto: string): CategoriaCanto | null {
+// Lo dejamos exportado por si algún consumidor lo usa para otra cosa
+// (ej: routear a un futuro sistema de voz).
+export function identificarCanto(texto: string): CategoriaCanto | null {
   const t = texto.toLowerCase();
   if (t.includes("falta envido")) return "falta_envido";
   if (t.includes("real envido")) return "real_envido";
@@ -91,120 +44,20 @@ function identificarCanto(texto: string): CategoriaCanto | null {
   if (t.includes("vale cuatro") || t.includes("vale 4")) return "vale_cuatro";
   if (t.includes("retruco")) return "retruco";
   if (t.includes("truco")) return "truco";
-  if (t.includes("quiero") && !t.includes("no")) return "quiero";
   if (t.includes("no quiero") || t.includes("no_quiero")) return "no_quiero";
+  if (t.includes("quiero")) return "quiero";
   if (t.includes("mazo")) return "ir_al_mazo";
   return null;
 }
 
-interface OpcionesCanto {
-  jugadorId: string;
-  texto?: string;
-  intensidad?: number;
-}
-
-/** Reproduce un canto con la voz asignada al jugador. Cae a Web Speech
- *  cuando los clips MP3 no están disponibles para esa voz/canto. */
-export function reproducirCanto(canto: CategoriaCanto, opts: OpcionesCanto) {
-  const voz = vozParaJugador(opts.jugadorId);
-  const howls = cargarHowlsVoz(voz, canto);
-  const listas = howls.filter((h) => h.state() === "loaded");
-
-  // Si todos los clips fallaron al cargar (404, etc.), usamos Web Speech con
-  // el texto original para que igual se escuche algo.
-  if (cantoSinClips[voz]?.[canto]) {
-    const texto = opts.texto || textoFallback(canto);
-    if (texto) hablar(texto, opts.jugadorId, { interrumpir: true });
-    return;
-  }
-
-  if (listas.length === 0) {
-    // Aún cargando o ninguno listo: intentamos el primero (Howler reproducirá
-    // cuando termine el onload). Si en 1.5s no arrancó, fallback a Web Speech.
-    if (howls.length > 0) {
-      let arranco = false;
-      const h = howls[0];
-      const onPlay = () => {
-        arranco = true;
-        h.off("play", onPlay);
-      };
-      h.on("play", onPlay);
-      try {
-        h.play();
-      } catch {
-        /* silencio */
-      }
-      window.setTimeout(() => {
-        if (arranco) return;
-        const texto = opts.texto || textoFallback(canto);
-        if (texto) hablar(texto, opts.jugadorId, { interrumpir: true });
-      }, 1500);
-    } else {
-      const texto = opts.texto || textoFallback(canto);
-      if (texto) hablar(texto, opts.jugadorId, { interrumpir: true });
-    }
-    return;
-  }
-
-  const elegida = listas[Math.floor(Math.random() * listas.length)];
-  try {
-    elegida.stop();
-    elegida.play();
-  } catch {
-    /* silencio */
-  }
-}
-
-// Texto por defecto si la app no nos pasó el texto del evento.
-function textoFallback(canto: CategoriaCanto): string {
-  switch (canto) {
-    case "envido": return "¡Envido!";
-    case "envido_envido": return "¡Envido envido!";
-    case "real_envido": return "¡Real envido!";
-    case "falta_envido": return "¡Falta envido!";
-    case "truco": return "¡Truco!";
-    case "retruco": return "¡Quiero retruco!";
-    case "vale_cuatro": return "¡Vale cuatro!";
-    case "quiero": return "¡Quiero!";
-    case "no_quiero": return "No quiero";
-    case "ir_al_mazo": return "Me voy al mazo";
-  }
-}
-
-/** Precarga TODOS los clips de TODAS las voces. Útil al arrancar la
- *  partida para que el primer canto no tenga delay de red. Idempotente. */
-export function precargarTodosLosClips() {
-  const cantos: CategoriaCanto[] = [
-    "envido",
-    "envido_envido",
-    "real_envido",
-    "falta_envido",
-    "truco",
-    "retruco",
-    "vale_cuatro",
-    "quiero",
-    "no_quiero",
-    "ir_al_mazo"
-  ];
-  for (const v of VOCES) {
-    for (const c of cantos) cargarHowlsVoz(v, c);
-  }
-}
-
-// Reacciones futuras (cuando haya clips): por ahora no-ops.
-export function reaccionGanaMano(_jugadorId: string) { /* TODO clip risa */ }
-export function reaccionPierdeMano(_jugadorId: string) { /* TODO clip queja */ }
-export function reaccionGanaPartida(_jugadorId: string) { /* TODO clip celebra */ }
-export function reaccionPierdePartida(_jugadorId: string) { /* TODO clip derrota */ }
+// Reacciones al cierre de mano / partida — quedan como no-ops por ahora.
+export function reaccionGanaMano(_jugadorId: string) { /* no-op */ }
+export function reaccionPierdeMano(_jugadorId: string) { /* no-op */ }
+export function reaccionGanaPartida(_jugadorId: string) { /* no-op */ }
+export function reaccionPierdePartida(_jugadorId: string) { /* no-op */ }
 
 export function silenciarTodo() {
-  silenciarVoz();
-  for (const voz in cacheHowls) {
-    for (const canto in cacheHowls[voz]) {
-      cacheHowls[voz][canto].forEach((h) => h.stop());
-    }
-  }
+  /* sin voz; la música ambiental tiene su propio control */
 }
 
 export type { CategoriaCanto };
-export { identificarCanto };
