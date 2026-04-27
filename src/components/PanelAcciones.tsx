@@ -247,18 +247,21 @@ export function PanelAcciones({
           </GrupoBotones>
         )}
 
+        {/* En tu turno (sin canto pendiente) los grupos van sin rótulo —
+         *  los botones se distinguen entre sí por color/borde dorado (truco)
+         *  vs neutros (envido). Cada canto lleva su ícono. */}
         {!debeResponderEnvido &&
           !debeResponderTruco &&
           (puedo("cantar_envido") ||
             puedo("cantar_real_envido") ||
             puedo("cantar_falta_envido")) && (
-            <GrupoBotones titulo="Envido">
+            <GrupoBotones>
               {puedo("cantar_envido") && (
                 <button
                   className="btn"
                   onClick={() => enviar({ tipo: "cantar_envido", jugadorId: miId })}
                 >
-                  Envido
+                  <IconoEnvido /> Envido
                 </button>
               )}
               {puedo("cantar_real_envido") && (
@@ -268,7 +271,7 @@ export function PanelAcciones({
                     enviar({ tipo: "cantar_real_envido", jugadorId: miId })
                   }
                 >
-                  Real envido
+                  <IconoRealEnvido /> Real envido
                 </button>
               )}
               {puedo("cantar_falta_envido") && (
@@ -278,7 +281,7 @@ export function PanelAcciones({
                     enviar({ tipo: "cantar_falta_envido", jugadorId: miId })
                   }
                 >
-                  Falta envido
+                  <IconoFaltaEnvido /> Falta envido
                 </button>
               )}
             </GrupoBotones>
@@ -290,10 +293,10 @@ export function PanelAcciones({
             puedo("cantar_retruco") ||
             puedo("cantar_vale4") ||
             puedo("ir_al_mazo")) && (
-            <GrupoBotones titulo="Truco">
+            <GrupoBotones>
               {puedo("cantar_truco") && (
                 <button
-                  className="btn"
+                  className="btn btn-primary"
                   onClick={() => enviar({ tipo: "cantar_truco", jugadorId: miId })}
                 >
                   <IconoCanto /> Truco
@@ -302,6 +305,7 @@ export function PanelAcciones({
               {puedo("cantar_retruco") && (
                 <button
                   className="btn"
+                  style={{ borderColor: "var(--dorado-oscuro)" }}
                   onClick={() =>
                     enviar({ tipo: "cantar_retruco", jugadorId: miId })
                   }
@@ -312,6 +316,7 @@ export function PanelAcciones({
               {puedo("cantar_vale4") && (
                 <button
                   className="btn"
+                  style={{ borderColor: "var(--dorado-oscuro)" }}
                   onClick={() => enviar({ tipo: "cantar_vale4", jugadorId: miId })}
                 >
                   <IconoCanto /> Vale 4
@@ -319,12 +324,10 @@ export function PanelAcciones({
               )}
               {puedo("ir_al_mazo") && (
                 <button
-                  className="btn !px-3"
+                  className="btn"
                   onClick={() => enviar({ tipo: "ir_al_mazo", jugadorId: miId })}
-                  title="Ir al mazo"
-                  aria-label="Ir al mazo"
                 >
-                  <IconoMazo />
+                  <IconoMazo /> Ir al mazo
                 </button>
               )}
             </GrupoBotones>
@@ -348,9 +351,15 @@ function GrupoBotones({
   titulo,
   children
 }: {
-  titulo: string;
+  titulo?: string;
   children: React.ReactNode;
 }) {
+  // Sin título: la fila ocupa el 100% sin la columna del rótulo. Se usa
+  // para los grupos en turno propio (envido / truco) donde la diferencia
+  // ya la marca el color del botón.
+  if (!titulo) {
+    return <div className="flex flex-wrap gap-1.5">{children}</div>;
+  }
   return (
     <div className="flex items-stretch gap-1.5">
       <div
@@ -382,6 +391,62 @@ function IconoCanto() {
       <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" />
       <path d="M15 8a4 4 0 0 1 0 8" />
       <path d="M18 5a7 7 0 0 1 0 14" />
+    </svg>
+  );
+}
+
+/** Envido: dos cartas chiquitas en abanico, evoca "tener dos del mismo palo". */
+function IconoEnvido() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="6" y="5" width="9" height="13" rx="1.5" transform="rotate(-12 10 11)" />
+      <rect x="9" y="6" width="9" height="13" rx="1.5" transform="rotate(10 13 12)" />
+    </svg>
+  );
+}
+
+/** Real envido: estrella — "real" como realeza, sube el envido a 3. */
+function IconoRealEnvido() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M12 2.5l2.94 6.34 6.86.6-5.18 4.62 1.55 6.94L12 17.5l-6.17 3.5 1.55-6.94L2.2 9.44l6.86-.6L12 2.5z" />
+    </svg>
+  );
+}
+
+/** Falta envido: "todo o nada" — ficha de all-in con barras crecientes. */
+function IconoFaltaEnvido() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="14" width="4" height="7" rx="0.5" />
+      <rect x="10" y="9" width="4" height="12" rx="0.5" />
+      <rect x="17" y="4" width="4" height="17" rx="0.5" />
     </svg>
   );
 }

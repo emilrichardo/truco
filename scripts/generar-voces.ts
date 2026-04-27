@@ -36,12 +36,21 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { FRASES, type CategoriaFrase } from "../src/lib/truco/frases";
+
+// Node 22 tiene loadEnvFile built-in. Levanta .env.local sin necesidad de
+// `dotenv` ni de prefijar el comando con la key cada vez.
+try {
+  process.loadEnvFile?.(path.join(process.cwd(), ".env.local"));
+} catch {
+  // .env.local puede no existir en CI — no es fatal.
+}
 
 const API_KEY = process.env.ELEVENLABS_API_KEY;
 if (!API_KEY) {
   console.error(
     "✗ Falta ELEVENLABS_API_KEY.\n" +
-      "  ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts"
+      "  Ponela en .env.local o exportala antes de correr el script."
   );
   process.exit(1);
 }
@@ -70,116 +79,10 @@ const VOCES: Voz[] = [
   { slug: "daniel",  id: "onwK4e9ZLuTAKqWW03F9", nombre: "Daniel"  }  // narrador
 ];
 
-// Frases por canto, ordenadas de menor a mayor intensidad.
-// La IA elige el índice según su nivel de confianza/bluff:
-//   [0] = mano floja, jugada cautelosa
-//   [4] = mano cargada o bluff descarado
-const CANTOS: Record<string, string[]> = {
-  envido: [
-    "Envido, amigo... despacito nomás.",
-    "Envido pué, a ver qué tené'.",
-    "¡Envido che, mostrá las cartas!",
-    "¡Envidooo, primito!",
-    "¡ENVIDOOOO! ¡A ver si tené' agallas, changooo!"
-  ],
-  envido_envido: [
-    "Envido envido, callandito...",
-    "Envido envido nomás, pué.",
-    "¡Envido envido che, no me achico!",
-    "¡Envido envidooo, primito!",
-    "¡ENVIDO ENVIDOOOO! ¡Vamo a ver quién canta má' fuerte, changooo!"
-  ],
-  real_envido: [
-    "Real envido, callandito...",
-    "Real envido pué, despacito.",
-    "¡Real envido che!",
-    "¡Reaaal envidooo, primito!",
-    "¡REEEAL ENVIDOOOO! ¡Achalay la mano que tengo, hermanooo, no te va alcanzar ni rezando!"
-  ],
-  falta_envido: [
-    "Falta envido, despacito che.",
-    "Falta envido nomás, pué.",
-    "¡Falta envido che, te la juego!",
-    "¡Faaalta envidooo, primito!",
-    "¡FAAALTA ENVIDOOOO! ¡Si querés la partida, vení a buscarla, changooo!"
-  ],
-  truco: [
-    "Truco, callandito che.",
-    "Truco pué, vamo viendo.",
-    "¡Truco che, no te durmá!",
-    "¡Truuucooo, primito!",
-    "¡TRUUUCOOO, CARAJOOO! ¡A ver si te aguantá, changooo!"
-  ],
-  retruco: [
-    "Quiero retruco, despacito.",
-    "Retruco pué, no me asustá'.",
-    "¡Quiero retruco che!",
-    "¡Retruuucooo, primito!",
-    "¡QUIEROOO RETRUUUCOOO! ¡A ver si te aguantá ahora, changooo!"
-  ],
-  vale_cuatro: [
-    "Vale cuatro, callandito.",
-    "Vale cuatro pué, ahí va.",
-    "¡Vale cuatro che, todo o nada!",
-    "¡Vaaale cuatrooo, primito!",
-    "¡VAAALE CUATROOO! ¡Achalay, achalay, hermanooo, esta es la última!"
-  ],
-  quiero: [
-    "Quiero.",
-    "Quiero, amigo.",
-    "¡Quierooo, ckari! Vení nomá'.",
-    "¡QUIEROOO, hermano! ¡Acá te espero, no afloje'!",
-    "¡QUIEROOOOO, changooo! ¡Atatay con vo', vení a buscarme si te da la nafta!"
-  ],
-  no_quiero: [
-    "No quiero...",
-    "No quiero, amigo. Otra vuelta será.",
-    "No quierooo, ckari. Hoy no es mi día.",
-    "¡No quiero, paisano! Me guardo pa' mejor ocasión.",
-    "¡No quiero nadaaa, hermanooo! Pero ojo, que la próxima te como crudo, changooo."
-  ],
-  ir_al_mazo: [
-    "Me voy al mazo.",
-    "Al mazo nomá', amigo.",
-    "¡Me voy al mazoo, ckari! Estas cartas son pa' jugar al solitario.",
-    "¡Al mazo, hermano! Atatay con el reparto que me tocó.",
-    "¡Me voooy al mazoooo, paisanooo! ¡No me dieron ni una sota, changooo, esto es pa' agarrarse a las trompadas con el que mezcló!"
-  ],
-
-  // SON BUENAS: el que perdió el envido reconoce que el otro tiene mejor.
-  son_buenas: [
-    "Son buenas.",
-    "Son buenas, amigo. Bien jugado.",
-    "Son buenas, ckari... esta vez.",
-    "Son buena' che, te las llevá'.",
-    "¡Son buenaaa', hermanooo, te la llevá' vó'!"
-  ],
-  // SON MEJORES: el ganador canta su tanto con orgullo.
-  son_mejores: [
-    "Son mejores.",
-    "Son mejores, amigo.",
-    "¡Son mejores, ckari!",
-    "¡Son mejores, hermano! Treinta y tres.",
-    "¡Son mejoreeesss, changooo! ¡Treinta y tres con la del cuatro de espada, achalay la mano!"
-  ],
-
-  // Celebración cuando viene una mano linda (no es un canto formal).
-  celebracion: [
-    "¡Achalaaay las cartas, ckari!",
-    "¡Atatay, hermano, vení a ver esto!",
-    "¡La pucha que vino linda la mano, paisano!",
-    "¡Vamo' arriba, ckari, que esto se pone bueno!",
-    "¡Treinta y tres son, hermano!"
-  ],
-  // Chicaneo al rival (cuando perdió la mano o se va al mazo).
-  chicana: [
-    "Andá vé', amigo, andá vé'...",
-    "¡Pero qué opa que sos, changooo!",
-    "¡Atatay con vo', hermano, no la viste pasar!",
-    "¡Lloriqueá nomá', vidita, lloriqueá!",
-    "¡Truco le canto al mocito, que viene con cara de na'!"
-  ]
-};
+// Frases por canto: importadas directamente del módulo del juego para no
+// duplicarlas. El motor del truco usa el mismo `FRASES` para los anuncios
+// del chat, así que las voces y los textos quedan siempre en sync.
+const CANTOS: Record<CategoriaFrase, string[]> = FRASES;
 
 // Puntos del envido (0 a 33). Se cantan cuando hay un "¡Quiero!" para
 // declarar el tanto propio. Una sola variante por número, dicha con cantito.

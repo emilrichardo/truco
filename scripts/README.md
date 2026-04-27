@@ -21,12 +21,14 @@ con voces masculinas y frases con giros santiagueños.
 3. **Ver los archivos generados**:
 
    ```
-   public/audio/
-   ├── envido/01.mp3 02.mp3 03.mp3
-   ├── truco/01.mp3 02.mp3 03.mp3 04.mp3
-   ├── vale_cuatro/01.mp3 02.mp3 03.mp3
-   ├── quiero/01.mp3 ...
-   └── no_quiero/01.mp3 ...
+   public/audio/voces/
+   ├── charlie/
+   │   ├── envido/01.mp3 02.mp3 03.mp3 04.mp3 05.mp3
+   │   ├── truco/01.mp3 ... 05.mp3
+   │   ├── ...
+   │   └── envido_puntos/00.mp3 ... 33.mp3
+   └── daniel/
+       └── ... (igual)
    ```
 
 4. **Commit y push**:
@@ -67,16 +69,14 @@ ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
 
 ### Editar las frases
 
-Si querés cambiar qué dice cada canto, editá la constante `CANTOS`
-en el script. Cada frase tiene asignado un índice de voz (0-4) entre
-las definidas en `VOCES`. Mantené el formato:
+Las frases vienen importadas de [`src/lib/truco/frases.ts`](../src/lib/truco/frases.ts)
+— el motor del juego usa el mismo módulo para los anuncios del chat,
+así que voces y texto quedan siempre sincronizados. Si querés cambiar
+qué dice un canto, editá ese archivo y volvé a correr el script con
+`FORCE=1` para regenerar los MP3s afectados:
 
-```ts
-truco: [
-  { frase: "¡Truco!", voz: 0 },
-  { frase: "¡Trucooo, che!", voz: 1 },
-  ...
-]
+```sh
+SOLO_CANTOS=truco,retruco FORCE=1 ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
 ```
 
 ### Voice settings ("cantadito")
