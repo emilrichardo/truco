@@ -69,8 +69,19 @@ export function MusicaAmbiental() {
   });
   const [pistas, setPistas] = useState<string[]>([]);
   const [arrancada, setArrancada] = useState(false);
-  const [actualIdx, setActualIdx] = useState(0);
+  // -1 = todavía no elegimos pista. Cuando llega la lista de /api/musica
+  // arrancamos con una al azar (ver effect más abajo).
+  const [actualIdx, setActualIdx] = useState(-1);
   const howlRef = useRef<Howl | null>(null);
+
+  // Pica un índice random distinto del previo (a menos que haya una sola
+  // pista, en cuyo caso es la misma).
+  const proximoIndiceRandom = (cantidad: number, prev: number) => {
+    if (cantidad <= 1) return 0;
+    let n = Math.floor(Math.random() * cantidad);
+    if (n === prev) n = (n + 1) % cantidad;
+    return n;
+  };
 
   // Cargar preferencias guardadas (cliente sólo).
   useEffect(() => {
@@ -78,14 +89,18 @@ export function MusicaAmbiental() {
     setHidratado(true);
   }, []);
 
-  // Cargar lista de pistas.
+  // Cargar lista de pistas. Cuando llegan, elegimos una al azar para
+  // arrancar — el orden no es alfabético.
   useEffect(() => {
     let vivo = true;
     fetch("/api/musica")
       .then((r) => r.json())
       .then((d) => {
         if (!vivo) return;
-        if (Array.isArray(d.pistas)) setPistas(d.pistas);
+        if (Array.isArray(d.pistas) && d.pistas.length > 0) {
+          setPistas(d.pistas);
+          setActualIdx(Math.floor(Math.random() * d.pistas.length));
+        }
       })
       .catch(() => {
         /* sin red, sin música */
@@ -115,7 +130,7 @@ export function MusicaAmbiental() {
 
   // Crear/reemplazar la pista actual.
   useEffect(() => {
-    if (!arrancada || pistas.length === 0) return;
+    if (!arrancada || pistas.length === 0 || actualIdx < 0) return;
     const pista = pistas[actualIdx % pistas.length];
     const h = new Howl({
       src: [`/audio/musica/${encodeURIComponent(pista)}`],
@@ -123,7 +138,8 @@ export function MusicaAmbiental() {
       html5: true, // streamea archivos largos en vez de bajarlos enteros
       autoplay: true,
       onend: () => {
-        setActualIdx((a) => (a + 1) % pistas.length);
+        // Próxima pista al azar, distinta a la que acaba de sonar.
+        setActualIdx((a) => proximoIndiceRandom(pistas.length, a));
       }
     });
     howlRef.current = h;
