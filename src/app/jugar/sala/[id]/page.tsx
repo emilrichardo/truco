@@ -22,13 +22,15 @@ import { UltimoCanto } from "@/components/UltimoCanto";
 import { Marcador } from "@/components/Marcador";
 import { ChatFlotante } from "@/components/ChatFlotante";
 import { MenuCompartir } from "@/components/MenuCompartir";
+import { SelectorPersonaje } from "@/components/SelectorPersonaje";
+import { HeaderMarca } from "@/components/HeaderMarca";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 
 export default function SalaPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const salaId = params.id;
-  const [miSlug, , listoSlug] = usePersonajeLocal();
+  const [miSlug, setMiSlug, listoSlug] = usePersonajeLocal();
   const [miId, setMiId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [chatAbierto, setChatAbierto] = useState(false);
@@ -48,9 +50,9 @@ export default function SalaPage() {
     if (errorSala) setError(errorSala);
   }, [errorSala]);
 
-  useEffect(() => {
-    if (listoSlug && !miSlug) router.replace("/");
-  }, [listoSlug, miSlug, router]);
+  // No redirigimos a "/" si no hay personaje — mostramos un selector inline
+  // (ver más abajo) para que la persona que entra por un link compartido
+  // elija su primo y se sume directamente a esta sala.
 
   useEffect(() => {
     const s = leerSesion(salaId);
@@ -152,6 +154,18 @@ export default function SalaPage() {
           </div>
         </div>
       </main>
+    );
+  }
+
+  // Llegué por un link compartido sin tener primo elegido todavía: mostramos
+  // un selector inline para que elija acá mismo y se sume automáticamente.
+  if (listoSlug && !miSlug) {
+    return (
+      <ElegirPrimoEnSala
+        salaId={salaId}
+        modo={estado.modo}
+        onElegir={(slug) => setMiSlug(slug)}
+      />
     );
   }
 
@@ -504,5 +518,47 @@ function SlotEspera({
         </>
       )}
     </div>
+  );
+}
+
+/** Pantalla intermedia: alguien que abre el link compartido sin tener primo
+ *  guardado. Elige acá mismo y queda dentro de la sala (no rebota al home). */
+function ElegirPrimoEnSala({
+  salaId,
+  modo,
+  onElegir
+}: {
+  salaId: string;
+  modo: "1v1" | "2v2";
+  onElegir: (slug: string) => void;
+}) {
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  return (
+    <main className="min-h-[100dvh] px-4 py-6 max-w-xl mx-auto">
+      <HeaderMarca variante="compacto" />
+      <div className="card p-4 mt-5 mb-3 text-center border-l-4 border-l-azul-criollo">
+        <div className="label-slim acento-azul">Te invitaron a</div>
+        <div className="font-display text-xl text-dorado">{salaId}</div>
+        <div className="text-text-dim text-xs mt-1 subtitulo-claim">
+          {modo === "2v2" ? "Partida en parejas" : "Solo a solo"}
+        </div>
+      </div>
+      <p className="text-center text-text-dim text-sm mb-4">
+        Elegí qué primo te representa para entrar.
+      </p>
+      <div className="card p-4">
+        <SelectorPersonaje
+          seleccionado={seleccionado}
+          onSeleccionar={setSeleccionado}
+        />
+        <button
+          onClick={() => seleccionado && onElegir(seleccionado)}
+          disabled={!seleccionado}
+          className="btn btn-primary w-full mt-4"
+        >
+          {seleccionado ? "Entrar a la sala" : "Elegí un primo"}
+        </button>
+      </div>
+    </main>
   );
 }

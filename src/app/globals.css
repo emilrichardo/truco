@@ -405,7 +405,6 @@ body {
     repeating-linear-gradient(-45deg, transparent 0 11px, rgba(0, 0, 0, 0.2) 11px 12px),
     var(--azul-criollo);
   border: 1.5px solid var(--carbon);
-  container-type: inline-size;
 }
 /* Marco interno dorado */
 .es-card.back::before {
@@ -415,26 +414,24 @@ body {
   border: 1.5px solid var(--dorado);
   border-radius: 4px;
   pointer-events: none;
-  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.45) 0 60%, transparent 78%);
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.55) 0 65%, transparent 82%);
 }
-/* Sello "TP" centrado, estilo isotipo de la marca. font-size en cqw escala
- * con el ancho del card (container query) para que se vea bien en xs..lg. */
+/* Logo oficial de la app centrado, escalado a la mayor parte de la carta. */
 .es-card.back::after {
-  content: "TP";
+  content: "";
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: "Alfa Slab One", Georgia, serif;
-  font-size: 36cqw;
-  letter-spacing: 0.05em;
-  color: var(--dorado);
-  text-shadow:
-    1px 1px 0 var(--carbon),
-    0 0 6px rgba(0, 0, 0, 0.7);
+  width: 80%;
+  height: 80%;
+  background-image: url("/brand/logo.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
   pointer-events: none;
-  line-height: 1;
   z-index: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 /* Cartas en abanico: rotación / offset por carta */
