@@ -2,7 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getSocket, guardarSesion } from "@/lib/socket";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { getPersonaje, urlPersonaje } from "@/data/jugadores";
 import { usePersonajeLocal } from "@/lib/personaje";
@@ -26,20 +25,8 @@ export default function SoloPage() {
   const empezar = () => {
     if (creando) return;
     setCreando(true);
-    getSocket().emit(
-      "crear_sala",
-      {
-        nombre: yo.nombre,
-        personaje: miSlug,
-        modo: "solo",
-        tamanio,
-        puntosObjetivo: puntos
-      },
-      ({ salaId, jugadorId }: { salaId: string; jugadorId: string }) => {
-        guardarSesion({ salaId, jugadorId });
-        router.push(`/jugar/sala/${salaId}`);
-      }
-    );
+    // Sin backend: la partida vive en el browser. Pasamos la config por URL.
+    router.push(`/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}`);
   };
 
   return (
