@@ -1,12 +1,17 @@
 "use client";
 // Banner efímero cuando alguien canta o responde — aparece pegado al jugador
 // que habla para que se entienda quién dijo qué. Estilo cinta dorada.
-import { useEffect, useState } from "react";
+//
+// Implementación: usamos refs para el id ya mostrado y para el handle del
+// timeout de auto-hide. Así, cuando el chat cambia por otra razón (carta
+// jugada, nueva mano), no cancelamos el timeout que oculta la burbuja.
+import { useEffect, useRef, useState } from "react";
 import type { EstadoJuego } from "@/lib/truco/types";
 
 type Posicion = "arriba" | "abajo" | "izquierda" | "derecha";
 
 const DESTACAR = new Set(["canto", "respuesta"]);
+const DURACION_MS = 1800;
 
 export function UltimoCanto({
   estado,
@@ -22,12 +27,34 @@ export function UltimoCanto({
     pos?: Posicion;
   } | null>(null);
 
+  const ultimoIdMostrado = useRef<string | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+  const manoActualRef = useRef<number>(estado.manoActual?.numero ?? 0);
+
+  // Cuando cambia la mano, ocultamos cualquier burbuja en curso.
+  const manoNum = estado.manoActual?.numero ?? 0;
+  useEffect(() => {
+    if (manoNum !== manoActualRef.current) {
+      manoActualRef.current = manoNum;
+      ultimoIdMostrado.current = null;
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      setMostrar(null);
+    }
+  }, [manoNum]);
+
+  // Detectar nuevo canto/respuesta y mostrar burbuja por DURACION_MS.
   useEffect(() => {
     const ultimo = [...estado.chat]
       .reverse()
       .find((m) => m.evento && DESTACAR.has(m.evento));
     if (!ultimo) return;
-    if (mostrar?.id === ultimo.id) return;
+    if (ultimoIdMostrado.current === ultimo.id) return;
+
+    ultimoIdMostrado.current = ultimo.id;
+
     const me = estado.jugadores.find((j) => j.id === miId);
     const habla = estado.jugadores.find((x) => x.id === ultimo.jugadorId);
 
@@ -38,10 +65,20 @@ export function UltimoCanto({
       pos = posicionDesdeIdx(idx, total);
     }
 
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setMostrar({ id: ultimo.id, texto: ultimo.texto, nombre: habla?.nombre, pos });
-    const t = setTimeout(() => setMostrar(null), 1800);
-    return () => clearTimeout(t);
-  }, [estado.chat, estado.jugadores, miId, mostrar?.id]);
+    timeoutRef.current = window.setTimeout(() => {
+      setMostrar(null);
+      timeoutRef.current = null;
+    }, DURACION_MS);
+  }, [estado.chat, estado.jugadores, miId]);
+
+  // Cleanup al desmontar.
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   if (!mostrar) return null;
 
@@ -73,17 +110,13 @@ function posicionDesdeIdx(idx: number, total: number): Posicion {
   return "arriba";
 }
 
-/** Posición del banner debajo (o cerca) del jugador que habla. */
 function claseBubble(pos?: Posicion): string {
   switch (pos) {
     case "arriba":
-      // Avatar pegado al borde superior; el banner cae justo debajo de su nombre.
       return "left-1/2 -translate-x-1/2 top-24";
     case "abajo":
-      // Soy yo. Banner sobre mi avatar (que está abajo) para no taparlo.
       return "left-1/2 -translate-x-1/2 bottom-24";
     case "izquierda":
-      // Avatar a la izquierda en centro vertical; banner debajo de su nombre.
       return "left-4 top-[58%]";
     case "derecha":
       return "right-4 top-[58%]";

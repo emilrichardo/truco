@@ -18,6 +18,8 @@ import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
 import { UltimoCanto } from "@/components/UltimoCanto";
+import { Marcador } from "@/components/Marcador";
+import { ChatFlotante } from "@/components/ChatFlotante";
 
 export default function SalaPage() {
   const params = useParams<{ id: string }>();
@@ -30,6 +32,7 @@ export default function SalaPage() {
   const [chatAbierto, setChatAbierto] = useState(false);
   const [unidoIntentado, setUnidoIntentado] = useState(false);
   const [chatNoVisto, setChatNoVisto] = useState(0);
+  const [confirmSalir, setConfirmSalir] = useState(false);
   const lastChatLen = useRef(0);
 
   const { estado, salaMeta, error: errorSala } = useSalaOnline(salaId);
@@ -158,13 +161,13 @@ export default function SalaPage() {
     <main className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-bg">
       {/* Header compacto con mini logo */}
       <header className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
-        <Link
-          href="/"
+        <button
+          onClick={() => setConfirmSalir(true)}
           className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
-          title="Volver"
+          title="Salir de la partida"
         >
           ←
-        </Link>
+        </button>
         <Link href="/" className="hidden sm:inline-block">
           <img
             src="/brand/logo.png"
@@ -265,6 +268,21 @@ export default function SalaPage() {
             <div className="flex-1 relative min-h-0">
               <Mesa estado={estado} miId={miId!} />
               <UltimoCanto estado={estado} miId={miId!} />
+              {/* Marcador flotante: visible siempre, esquina superior derecha */}
+              <div className="absolute top-2 right-2 z-20 w-44 sm:w-52">
+                <Marcador
+                  puntosNos={estado.puntos[0]}
+                  puntosEllos={estado.puntos[1]}
+                  objetivo={estado.puntosObjetivo}
+                  miEquipoEs0={miEquipoEs0}
+                />
+              </div>
+              {/* Burbuja con últimos 3 mensajes humanos */}
+              <ChatFlotante
+                estado={estado}
+                miId={miId!}
+                onAbrir={abrirChat}
+              />
             </div>
             {meEnCurso && (
               <PanelAcciones
@@ -277,12 +295,7 @@ export default function SalaPage() {
 
           {/* Chat: panel lateral en desktop */}
           <aside className="hidden md:flex w-80 lg:w-96 border-l border-border flex-col p-2 overflow-hidden">
-            <Chat
-              estado={estado}
-              miId={miId!}
-              miEquipoEs0={miEquipoEs0}
-              enviar={enviarChat}
-            />
+            <Chat estado={estado} miId={miId!} enviar={enviarChat} />
           </aside>
 
           {/* Chat: drawer en mobile */}
@@ -305,12 +318,39 @@ export default function SalaPage() {
                   </button>
                 </div>
                 <div className="flex-1 min-h-0">
-                  <Chat
-                    estado={estado}
-                    miId={miId!}
-                    miEquipoEs0={miEquipoEs0}
-                    enviar={enviarChat}
-                  />
+                  <Chat estado={estado} miId={miId!} enviar={enviarChat} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Modal confirmación salir */}
+          {confirmSalir && (
+            <div
+              className="absolute inset-0 sheet-bg flex items-center justify-center z-50 p-4"
+              onClick={() => setConfirmSalir(false)}
+            >
+              <div
+                className="card p-5 max-w-sm w-full text-center border-t-4 border-t-red"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="titulo-marca text-xl mb-2">
+                  ¿Salir de la <span className="acento">partida</span>?
+                </div>
+                <p className="text-text-dim text-sm mb-4">
+                  Si la partida está en curso, los demás primos van a poder
+                  seguir jugando. Vos quedás afuera.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmSalir(false)}
+                    className="btn flex-1"
+                  >
+                    Quedarme
+                  </button>
+                  <Link href="/" className="btn btn-danger flex-1">
+                    Salir
+                  </Link>
                 </div>
               </div>
             </div>

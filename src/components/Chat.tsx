@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import type { CategoriaEvento, EstadoJuego, MensajeChat } from "@/lib/truco/types";
 import { urlPersonaje } from "@/data/jugadores";
-import { Marcador } from "./Marcador";
 
 const REACCIONES = ["👏", "🔥", "😂", "🤔", "🤬", "🧉"];
 const FRASES = ["Mazo", "Faltaba", "Mucha cancha", "Te vi"];
@@ -20,12 +19,12 @@ const COLOR_EVENTO: Record<CategoriaEvento, string> = {
 export function Chat({
   estado,
   miId,
-  miEquipoEs0,
   enviar
 }: {
   estado: EstadoJuego;
   miId: string;
-  miEquipoEs0: boolean;
+  /** @deprecated ya no se usa; el Marcador se renderiza fuera. */
+  miEquipoEs0?: boolean;
   enviar: (m: { texto?: string; reaccion?: string }) => void;
 }) {
   const [texto, setTexto] = useState("");
@@ -46,13 +45,6 @@ export function Chat({
 
   return (
     <div className="flex flex-col h-full min-h-0 gap-2">
-      <Marcador
-        puntosNos={estado.puntos[0]}
-        puntosEllos={estado.puntos[1]}
-        objetivo={estado.puntosObjetivo}
-        miEquipoEs0={miEquipoEs0}
-      />
-
       <div className="card flex-1 min-h-0 flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-surface-2/50">
           <span className="subtitulo-claim text-[10px] text-dorado">

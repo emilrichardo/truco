@@ -8,6 +8,8 @@ import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
 import { UltimoCanto } from "@/components/UltimoCanto";
+import { Marcador } from "@/components/Marcador";
+import { ChatFlotante } from "@/components/ChatFlotante";
 import { useSalaLocal, type ConfigSalaLocal } from "@/lib/salaLocal";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { getPersonaje } from "@/data/jugadores";
@@ -35,6 +37,7 @@ function PartidaSoloInterno() {
   const [miSlug, , listoSlug] = usePersonajeLocal();
   const [chatAbierto, setChatAbierto] = useState(false);
   const [chatNoVisto, setChatNoVisto] = useState(0);
+  const [confirmSalir, setConfirmSalir] = useState(false);
 
   const tamanio = (Number(params.get("tamanio")) === 4 ? 4 : 2) as 2 | 4;
   const puntos = (Number(params.get("puntos")) === 30 ? 30 : 15) as 15 | 30;
@@ -86,13 +89,13 @@ function PartidaSoloInterno() {
   return (
     <main className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-bg">
       <header className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
-        <Link
-          href="/"
+        <button
+          onClick={() => setConfirmSalir(true)}
           className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
-          title="Volver"
+          title="Salir de la partida"
         >
           ←
-        </Link>
+        </button>
         <Link href="/" className="hidden sm:inline-block">
           <img
             src="/brand/logo.png"
@@ -125,17 +128,28 @@ function PartidaSoloInterno() {
           <div className="flex-1 relative min-h-0">
             <Mesa estado={estado} miId={miId} />
             <UltimoCanto estado={estado} miId={miId} />
+            <div className="absolute top-2 right-2 z-20 w-44 sm:w-52">
+              <Marcador
+                puntosNos={estado.puntos[0]}
+                puntosEllos={estado.puntos[1]}
+                objetivo={estado.puntosObjetivo}
+                miEquipoEs0={miEquipoEs0}
+              />
+            </div>
+            <ChatFlotante
+              estado={estado}
+              miId={miId}
+              onAbrir={() => {
+                setChatAbierto(true);
+                setChatNoVisto(0);
+              }}
+            />
           </div>
           <PanelAcciones estado={estado} miId={miId} enviar={enviarAccion} />
         </div>
 
         <aside className="hidden md:flex w-80 lg:w-96 border-l border-border flex-col p-2 overflow-hidden">
-          <Chat
-            estado={estado}
-            miId={miId}
-            miEquipoEs0={miEquipoEs0}
-            enviar={enviarChat}
-          />
+          <Chat estado={estado} miId={miId} enviar={enviarChat} />
         </aside>
 
         {chatAbierto && (
@@ -157,12 +171,37 @@ function PartidaSoloInterno() {
                 </button>
               </div>
               <div className="flex-1 min-h-0">
-                <Chat
-                  estado={estado}
-                  miId={miId}
-                  miEquipoEs0={miEquipoEs0}
-                  enviar={enviarChat}
-                />
+                <Chat estado={estado} miId={miId} enviar={enviarChat} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {confirmSalir && estado.ganadorPartida === null && (
+          <div
+            className="absolute inset-0 sheet-bg flex items-center justify-center z-50 p-4"
+            onClick={() => setConfirmSalir(false)}
+          >
+            <div
+              className="card p-5 max-w-sm w-full text-center border-t-4 border-t-red"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="titulo-marca text-xl mb-2">
+                ¿Finalizar <span className="acento">partida</span>?
+              </div>
+              <p className="text-text-dim text-sm mb-4">
+                Vas a perder el progreso contra la máquina.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmSalir(false)}
+                  className="btn flex-1"
+                >
+                  Seguir jugando
+                </button>
+                <Link href="/" className="btn btn-danger flex-1">
+                  Finalizar
+                </Link>
               </div>
             </div>
           </div>
