@@ -128,10 +128,13 @@ export function reproducirCanto(canto: CategoriaCanto, opts: OpcionesCanto) {
       // sigue al fallback
     }
   }
-  const frase = opts.texto || elegir(FRASES[canto]);
+  const frase = elegir(FRASES[canto]);
+  // No interrumpimos: las voces hacen cola. Así si yo canto envido y el
+  // bot responde 700ms después, primero termina mi "¡Envido!" y luego
+  // suena el "¡No quiero!" del bot. Si interrumpíamos, mi voz se cortaba.
   hablar(frase, opts.jugadorId, {
     intensidad: opts.intensidad ?? 1.05,
-    interrumpir: true
+    interrumpir: false
   });
 }
 

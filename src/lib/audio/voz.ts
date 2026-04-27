@@ -7,41 +7,29 @@
 
 const PRIORIDAD_LANG = ["es-AR", "es-MX", "es-CL", "es-CO", "es-VE", "es-US", "es-ES", "es"];
 
-// Heurística para filtrar a voces masculinas. Web Speech no expone género
-// como propiedad estándar, así que detectamos por nombre.
-const NOMBRES_MASCULINOS = [
-  // macOS / iOS
-  "diego", "jorge", "juan", "carlos", "francisco", "pablo", "javier",
-  "miguel", "ricardo", "luis", "andres", "fernando", "pedro", "raul",
-  "roberto", "hector", "mario", "alberto", "enrique", "victor",
-  // Windows / Microsoft
-  "pablo", "raul", "jorge",
-  // Google
-  "es-us-standard-b", "es-es-standard-b", "es-mx-standard-b"
-];
-
+// Heurística inversa: rechazamos voces femeninas conocidas, aceptamos el
+// resto. Web Speech no expone género como propiedad estándar.
 const NOMBRES_FEMENINOS = [
-  "paulina", "helena", "sabina", "monica", "marisol", "ines", "laura",
-  "elena", "maria", "lucia", "sofia", "mariana", "camila", "esperanza",
-  "carmen", "isabel", "rosa", "lupe", "alejandra", "patricia", "dolores",
-  "gabriela", "valentina", "ana", "eva", "natalia", "veronica", "andrea",
-  "marta", "raquel"
+  // macOS / iOS / Windows
+  "paulina", "helena", "sabina", "monica", "mónica", "marisol", "ines",
+  "inés", "laura", "elena", "maria", "maría", "lucia", "lucía", "sofia",
+  "sofía", "mariana", "camila", "esperanza", "carmen", "isabel", "rosa",
+  "lupe", "alejandra", "patricia", "dolores", "gabriela", "valentina",
+  "natalia", "veronica", "verónica", "andrea", "marta", "raquel",
+  "pilar", "rocio", "rocío", "soledad", "consuelo", "celia", "luciana",
+  // Microsoft Sabina/Hortensia/Helena
+  "hortensia", "elsa", "mia",
+  // Google identifiers
+  "es-us-news-f", "es-us-news-g", "es-us-standard-a", "es-es-standard-a",
+  "es-mx-standard-a", "es-mx-news-a"
 ];
 
-function esVozMasculina(v: SpeechSynthesisVoice): boolean {
+function esVozFemenina(v: SpeechSynthesisVoice): boolean {
   const nombre = v.name.toLowerCase();
-  // Rechazo explícito por keywords claros
-  if (/\bfemale\b|\bmujer\b|\bfemenina\b/.test(nombre)) return false;
-  if (NOMBRES_FEMENINOS.some((n) => nombre.includes(n))) return false;
-  // Aceptación explícita
-  if (/\bmale\b|\bhombre\b|\bmasculin/.test(nombre)) return true;
-  if (NOMBRES_MASCULINOS.some((n) => nombre.includes(n))) return true;
-  // Convención Google TTS: Standard-B y Wavenet-B suelen ser masculinas;
-  // Standard-A / Wavenet-A femeninas.
-  if (/standard-[bdf]|wavenet-[bdf]/i.test(v.name)) return true;
-  if (/standard-[ace]|wavenet-[ace]/i.test(v.name)) return false;
-  // Por defecto: descartar (preferimos quedarnos sin voz que con una voz
-  // femenina si no podemos decidir).
+  if (/\bfemale\b|\bmujer\b|\bfemenina\b/.test(nombre)) return true;
+  if (NOMBRES_FEMENINOS.some((n) => nombre.includes(n))) return true;
+  // Convención Google TTS: variantes -A / -C / -E suelen ser femeninas.
+  if (/standard-[ace]|wavenet-[ace]|news-[afg]/i.test(v.name)) return true;
   return false;
 }
 
@@ -64,6 +52,8 @@ export function precargarVoces() {
   window.speechSynthesis.onvoiceschanged = cargar;
 }
 
+let logueado = false;
+
 function vocesEspanolas(): SpeechSynthesisVoice[] {
   const todas = asegurarVocesCargadas();
   if (todas.length === 0) return [];
@@ -75,10 +65,23 @@ function vocesEspanolas(): SpeechSynthesisVoice[] {
     .filter((v) => v.lang.toLowerCase().startsWith("es"))
     .sort((a, b) => score(a) - score(b));
 
-  // Preferimos masculinas. Si en el sistema no hay ninguna identificable
-  // como masculina, devolvemos todas (mejor que ninguna).
-  const masculinas = espanolas.filter(esVozMasculina);
-  return masculinas.length > 0 ? masculinas : espanolas;
+  // Filtramos voces femeninas conocidas. El resto se acepta.
+  const sinFemeninas = espanolas.filter((v) => !esVozFemenina(v));
+  const elegidas = sinFemeninas.length > 0 ? sinFemeninas : espanolas;
+
+  if (!logueado && typeof console !== "undefined") {
+    logueado = true;
+    console.info(
+      "[truco] voces es-* disponibles:",
+      espanolas.map((v) => `${v.name} (${v.lang})`)
+    );
+    console.info(
+      "[truco] voces usables (sin femeninas):",
+      elegidas.map((v) => v.name)
+    );
+  }
+
+  return elegidas;
 }
 
 function hashStr(s: string): number {
