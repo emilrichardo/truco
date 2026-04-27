@@ -131,15 +131,28 @@ function PuestoJugador({
         compacto
       />
       {jugadas.length > 0 && (
-        <div className="flex flex-row -space-x-7 sm:-space-x-9">
+        <div
+          className="relative flex-shrink-0"
+          // Reservamos espacio para una carta + offset acumulado de los apilados.
+          // sm card es ~80-96px ancho × 120-144px alto. Más 8px*(N-1) por offset.
+          style={{
+            width: `calc(6rem + ${(jugadas.length - 1) * 0.6}rem)`,
+            height: `calc(8.5rem + ${(jugadas.length - 1) * 0.4}rem)`
+          }}
+        >
           {jugadas.map((j, i) => {
-            const offset = (i - (jugadas.length - 1) / 2) * 5;
+            // Cada carta sucesiva: leve desplazamiento diagonal hacia abajo-derecha
+            // y rotación incremental para que el "pile" parezca natural.
+            const dx = i * 10; // px hacia derecha
+            const dy = i * 6;  // px hacia abajo
+            const rot = (i - (jugadas.length - 1) / 2) * 6;
             return (
               <div
                 key={`${j.bazaIdx}-${j.jugIdx}-${j.carta.id}`}
+                className="absolute top-0 left-0 transition-transform"
                 style={{
                   zIndex: i + 1,
-                  transform: `rotate(${offset}deg)`
+                  transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`
                 }}
               >
                 <CartaEspanola
