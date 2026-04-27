@@ -20,7 +20,8 @@ export default function SoloPage() {
   }, [listo, miSlug, router]);
 
   if (!listo || !miSlug) return <main className="min-h-[100dvh]" />;
-  const yo = getPersonaje(miSlug)!;
+  const yo = getPersonaje(miSlug);
+  if (!yo) return <main className="min-h-[100dvh]" />;
 
   const empezar = () => {
     if (creando) return;

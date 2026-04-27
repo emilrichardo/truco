@@ -13,7 +13,8 @@ export default function HomePage() {
   if (!listo) return <main className="min-h-[100dvh]" />;
   if (!miSlug) return <ElegirPrimero onElegir={(s) => setMiSlug(s)} />;
 
-  const yo = getPersonaje(miSlug)!;
+  const yo = getPersonaje(miSlug);
+  if (!yo) return <ElegirPrimero onElegir={(s) => setMiSlug(s)} />;
 
   return (
     <main className="min-h-[100dvh] px-4 py-6 max-w-2xl mx-auto">

@@ -15,15 +15,16 @@ export default function CrearSalaPage() {
   const [tamanio, setTamanio] = useState<2 | 4>(4);
   const [puntos, setPuntos] = useState<15 | 30>(30);
   const [creando, setCreando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (listo && !miSlug) router.replace("/");
   }, [listo, miSlug, router]);
 
   if (!listo || !miSlug) return <main className="min-h-[100dvh]" />;
-  const yo = getPersonaje(miSlug)!;
+  const yo = getPersonaje(miSlug);
+  if (!yo) return <main className="min-h-[100dvh]" />;
 
-  const [error, setError] = useState<string | null>(null);
   const crear = async () => {
     if (creando) return;
     setCreando(true);
