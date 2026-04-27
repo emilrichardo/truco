@@ -23,10 +23,16 @@
 // Para generar solo una voz (útil si querés partir la cuota mensual):
 //   SOLO_VOZ=antoni ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
 //
-// COSTO: ~12-15k chars por corrida completa
-//   (5 voces × 10 cantos × 5 variantes = 250 clips).
+// Para regenerar clips que ya existen (cuando cambiaron los textos):
+//   FORCE=1 ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
+//
+// Para regenerar SOLO ciertos cantos (ahorra cuota):
+//   SOLO_CANTOS=quiero,no_quiero,ir_al_mazo FORCE=1 ELEVENLABS_API_KEY=sk_xxx ...
+//
+// COSTO: ~15-20k chars por corrida completa
+//   (5 voces × 12 cantos × 5 variantes + 22 puntos = ~310 clips).
 // Free tier ElevenLabs = 10k chars/mes — corré por voz para repartir.
-// El script saltea archivos existentes, así podés reanudar tranquilo.
+// El script saltea archivos existentes (salvo FORCE=1), así podés reanudar.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -41,6 +47,11 @@ if (!API_KEY) {
 }
 
 const SOLO_VOZ = process.env.SOLO_VOZ?.toLowerCase().trim() || null;
+const FORCE = process.env.FORCE === "1" || process.env.FORCE === "true";
+const SOLO_CANTOS = (process.env.SOLO_CANTOS || "")
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
 
 // Voces premade gratuitas. Cada una se va a usar para TODOS los cantos.
 // Distintas por timbre para que jugadores distintos suenen distintos.
@@ -113,43 +124,59 @@ const CANTOS: Record<string, string[]> = {
     "¡VAAALE CUATROOO! ¡Achalay, achalay, hermanooo, esta es la última!"
   ],
   quiero: [
-    "Quiero, despacito.",
-    "Quiero pué, vení.",
-    "¡Quiero che, vamo!",
-    "¡Quieeerooo, primito!",
-    "¡QUIEEEROOO, CARAJOOO! ¡Vení que te enseño, changooo!"
+    "Quiero.",
+    "Quiero, amigo.",
+    "¡Quierooo, ckari! Vení nomá'.",
+    "¡QUIEROOO, hermano! ¡Acá te espero, no afloje'!",
+    "¡QUIEROOOOO, changooo! ¡Atatay con vo', vení a buscarme si te da la nafta!"
   ],
   no_quiero: [
-    "No quiero, despacio.",
-    "No quiero pué, dejá.",
-    "¡No quiero che!",
-    "¡Ni en pedo, primito!",
-    "¡NI EN PEDOOO, CHANGOOO! ¡Andá a cantarle a otro!"
+    "No quiero...",
+    "No quiero, amigo. Otra vuelta será.",
+    "No quierooo, ckari. Hoy no es mi día.",
+    "¡No quiero, paisano! Me guardo pa' mejor ocasión.",
+    "¡No quiero nadaaa, hermanooo! Pero ojo, que la próxima te como crudo, changooo."
   ],
   ir_al_mazo: [
-    "Me voy al mazo, despacito.",
-    "Mazo nomás, pué.",
-    "Al mazo che, esta no va.",
-    "Me voy al mazooo, primito.",
-    "¡AL MAZOOO, CARAJOOO! ¡No me dieron ni para empezar, changooo!"
+    "Me voy al mazo.",
+    "Al mazo nomá', amigo.",
+    "¡Me voy al mazoo, ckari! Estas cartas son pa' jugar al solitario.",
+    "¡Al mazo, hermano! Atatay con el reparto que me tocó.",
+    "¡Me voooy al mazoooo, paisanooo! ¡No me dieron ni una sota, changooo, esto es pa' agarrarse a las trompadas con el que mezcló!"
   ],
 
-  // Cantar puntos del envido tras un "¡Quiero!". Cada jugador dice su tanto.
-  // Generamos un clip por número común (20 a 33). Sólo una variante por
-  // número (no escala intensidad — son cantados con cierto tono cantadito).
+  // SON BUENAS: el que perdió el envido reconoce que el otro tiene mejor.
   son_buenas: [
-    "Son buenas...",
-    "Son buenas, pué.",
-    "Son buenas che.",
-    "Son buenas, primito.",
-    "¡Son buenaaa', hermanooo, te la llevá vó'!"
+    "Son buenas.",
+    "Son buenas, amigo. Bien jugado.",
+    "Son buenas, ckari... esta vez.",
+    "Son buena' che, te las llevá'.",
+    "¡Son buenaaa', hermanooo, te la llevá' vó'!"
   ],
+  // SON MEJORES: el ganador canta su tanto con orgullo.
   son_mejores: [
     "Son mejores.",
-    "Son mejores, pué.",
-    "¡Son mejores che!",
-    "¡Son mejoreee', primito!",
-    "¡SON MEJOREEEEE', CARAJOOO! ¡Achalay las que tengooo!"
+    "Son mejores, amigo.",
+    "¡Son mejores, ckari!",
+    "¡Son mejores, hermano! Treinta y tres.",
+    "¡Son mejoreeesss, changooo! ¡Treinta y tres con la del cuatro de espada, achalay la mano!"
+  ],
+
+  // Celebración cuando viene una mano linda (no es un canto formal).
+  celebracion: [
+    "¡Achalaaay las cartas, ckari!",
+    "¡Atatay, hermano, vení a ver esto!",
+    "¡La pucha que vino linda la mano, paisano!",
+    "¡Vamo' arriba, ckari, que esto se pone bueno!",
+    "¡Treinta y tres son, hermano!"
+  ],
+  // Chicaneo al rival (cuando perdió la mano o se va al mazo).
+  chicana: [
+    "Andá vé', amigo, andá vé'...",
+    "¡Pero qué opa que sos, changooo!",
+    "¡Atatay con vo', hermano, no la viste pasar!",
+    "¡Lloriqueá nomá', vidita, lloriqueá!",
+    "¡Truco le canto al mocito, que viene con cara de na'!"
   ]
 };
 
@@ -248,6 +275,8 @@ async function run() {
     fs.mkdirSync(dirVoz, { recursive: true });
 
     for (const [canto, frases] of Object.entries(CANTOS)) {
+      // Filtro opcional: si SOLO_CANTOS está seteado, sólo regeneramos esos.
+      if (SOLO_CANTOS.length && !SOLO_CANTOS.includes(canto)) continue;
       const dirCanto = path.join(dirVoz, canto);
       fs.mkdirSync(dirCanto, { recursive: true });
 
@@ -256,7 +285,7 @@ async function run() {
         const archivo = String(i + 1).padStart(2, "0") + ".mp3";
         const ruta = path.join(dirCanto, archivo);
 
-        if (fs.existsSync(ruta)) {
+        if (fs.existsSync(ruta) && !FORCE) {
           salteados++;
           continue;
         }
@@ -280,12 +309,13 @@ async function run() {
     }
 
     // Puntos del envido: un MP3 por número en envido_puntos/<n>.mp3.
+    if (SOLO_CANTOS.length && !SOLO_CANTOS.includes("envido_puntos")) continue;
     const dirPuntos = path.join(dirVoz, "envido_puntos");
     fs.mkdirSync(dirPuntos, { recursive: true });
     for (const n of PUNTOS_ENVIDO) {
       const archivo = String(n).padStart(2, "0") + ".mp3";
       const ruta = path.join(dirPuntos, archivo);
-      if (fs.existsSync(ruta)) {
+      if (fs.existsSync(ruta) && !FORCE) {
         salteados++;
         continue;
       }

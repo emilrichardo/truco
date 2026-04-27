@@ -14,9 +14,9 @@ function ctx(): AudioContext | null {
   return _ctx;
 }
 
-/** Sonido de carta deslizándose sobre la mesa: papel rozando el paño,
- *  suave, sin thump grave. Ruido filtrado con sweep descendente y envolvente
- *  larga (~180ms) que simula el barrido de la carta hasta detenerse. */
+/** Sonido de carta apoyándose sobre madera: golpecito sutil, breve.
+ *  Click corto de transitorio + cuerpo resonante (~280Hz) decayendo
+ *  rápidamente, con un partial alto opcional que da el "tick". */
 export function sonidoCarta() {
   const c = ctx();
   if (!c) return;
@@ -25,46 +25,55 @@ export function sonidoCarta() {
   if (c.state === "suspended") c.resume().catch(() => {});
 
   const t0 = c.currentTime;
-  const dur = 0.18;
 
-  // Ruido base de papel: ruido blanco con pequeñas modulaciones para que
-  // suene a "fricción de fibra" en vez de plano.
-  const len = Math.floor(c.sampleRate * dur);
-  const buf = c.createBuffer(1, len, c.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) {
-    // Ruido con leve "grano" de papel: white noise + low-rate flutter.
-    const ph = i / c.sampleRate;
-    const flutter = 0.85 + 0.15 * Math.sin(ph * 130 + Math.random() * 0.5);
-    d[i] = (Math.random() * 2 - 1) * flutter;
+  // 1) Transitorio: ruido ultra-breve (4ms) bandpass para el "tick" del
+  //    contacto carta-madera. Bajo volumen, sólo articulación.
+  const tickLen = Math.floor(c.sampleRate * 0.004);
+  const tickBuf = c.createBuffer(1, tickLen, c.sampleRate);
+  const tickData = tickBuf.getChannelData(0);
+  for (let i = 0; i < tickLen; i++) {
+    tickData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (tickLen * 0.5));
   }
-  const noise = c.createBufferSource();
-  noise.buffer = buf;
+  const tick = c.createBufferSource();
+  tick.buffer = tickBuf;
+  const tickFilt = c.createBiquadFilter();
+  tickFilt.type = "bandpass";
+  tickFilt.frequency.value = 3800 + Math.random() * 600;
+  tickFilt.Q.value = 1.2;
+  const tickGain = c.createGain();
+  tickGain.gain.value = 0.05;
+  tick.connect(tickFilt).connect(tickGain).connect(c.destination);
+  tick.start(t0);
 
-  // Bandpass alto que enfatiza el "shhh" del papel y sweep descendente para
-  // dar la sensación de que la carta arranca rápido y desacelera.
-  const bp = c.createBiquadFilter();
-  bp.type = "bandpass";
-  bp.Q.value = 0.7;
-  bp.frequency.setValueAtTime(4200 + Math.random() * 600, t0);
-  bp.frequency.exponentialRampToValueAtTime(1600, t0 + dur);
+  // 2) Cuerpo: sine en frecuencia de "madera" (~260-310Hz) con Q sutil,
+  //    decay rápido. Esto da el "knock" de la carta apoyándose.
+  const f0 = 260 + Math.random() * 50;
+  const body = c.createOscillator();
+  body.type = "sine";
+  body.frequency.setValueAtTime(f0 * 1.15, t0);
+  body.frequency.exponentialRampToValueAtTime(f0, t0 + 0.04);
 
-  // Highpass para sacar bajos: que no haya thump.
-  const hp = c.createBiquadFilter();
-  hp.type = "highpass";
-  hp.frequency.value = 900;
+  const bodyGain = c.createGain();
+  bodyGain.gain.setValueAtTime(0.0001, t0);
+  bodyGain.gain.exponentialRampToValueAtTime(0.13, t0 + 0.004);
+  bodyGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.075);
 
-  // Envolvente: ataque ~12ms, sostenido suave, salida exponencial.
-  const g = c.createGain();
-  const peak = 0.07 + Math.random() * 0.02;
-  g.gain.setValueAtTime(0.0001, t0);
-  g.gain.linearRampToValueAtTime(peak, t0 + 0.012);
-  g.gain.linearRampToValueAtTime(peak * 0.55, t0 + 0.07);
-  g.gain.exponentialRampToValueAtTime(0.0008, t0 + dur);
+  body.connect(bodyGain).connect(c.destination);
+  body.start(t0);
+  body.stop(t0 + 0.09);
 
-  noise.connect(bp).connect(hp).connect(g).connect(c.destination);
-  noise.start(t0);
-  noise.stop(t0 + dur + 0.02);
+  // 3) Partial alto sutil: triangle ~1100Hz con decay muy corto, da el
+  //    matiz "seco" de tablero hueco. Muy bajo volumen.
+  const part = c.createOscillator();
+  part.type = "triangle";
+  part.frequency.value = 1050 + Math.random() * 120;
+  const partGain = c.createGain();
+  partGain.gain.setValueAtTime(0.0001, t0);
+  partGain.gain.exponentialRampToValueAtTime(0.04, t0 + 0.003);
+  partGain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.05);
+  part.connect(partGain).connect(c.destination);
+  part.start(t0);
+  part.stop(t0 + 0.06);
 }
 
 /** Tintineo corto para puntos / fósforos sumando. */
