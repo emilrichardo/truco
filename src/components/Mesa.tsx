@@ -183,7 +183,8 @@ function PuestoJugador({
   hablando,
   hablandoKey,
   hablandoTexto,
-  hablandoEvento
+  hablandoEvento,
+  hablandoSticker
 }: {
   pos: Posicion;
   jugador: Jugador;
@@ -199,6 +200,7 @@ function PuestoJugador({
   hablandoKey?: string | null;
   hablandoTexto?: string | null;
   hablandoEvento?: import("@/lib/truco/types").CategoriaEvento | null;
+  hablandoSticker?: string | null;
 }) {
   const cartasOcultas = !esCompañero || !mostrarCompañero;
   const alineacion =
@@ -233,6 +235,7 @@ function PuestoJugador({
         hablandoKey={hablandoKey}
         hablandoTexto={hablandoTexto}
         hablandoEvento={hablandoEvento}
+        hablandoSticker={hablandoSticker}
         ladoBurbuja={ladoBurbuja}
       />
       {!esYo && cartasEnMano.length > 0 && (

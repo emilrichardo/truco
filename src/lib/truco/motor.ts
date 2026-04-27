@@ -805,6 +805,17 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
     const n = mano.trucoCantoActivo.nivel;
     if (n === "truco") out.push("cantar_retruco");
     else if (n === "retruco") out.push("cantar_vale4");
+    // "El envido está primero": cuando el rival canta truco antes de que se
+    // haya jugado/resuelto el envido en la primera baza, el equipo que debe
+    // responder puede cortarlo cantando envido. El motor resuelve primero el
+    // envido y después se vuelve a contestar al truco.
+    if (
+      !mano.envidoResuelto &&
+      mano.bazas.length === 1 &&
+      mano.bazas[0].jugadas.length < estado.jugadores.length
+    ) {
+      out.push("cantar_envido", "cantar_real_envido", "cantar_falta_envido");
+    }
     return out;
   }
 

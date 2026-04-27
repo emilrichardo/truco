@@ -96,11 +96,12 @@ body {
  * ============================================================ */
 
 .btn {
-  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full
+  @apply inline-flex items-center justify-center gap-2 px-5 py-2.5
     text-sm font-semibold transition select-none
     border-2 border-[var(--border)] bg-[var(--surface)] text-[var(--text)]
     active:scale-[0.97] active:translate-y-[1px]
     disabled:opacity-40 disabled:cursor-not-allowed;
+  border-radius: 10px;
   min-height: 44px;
   letter-spacing: 0.02em;
   text-transform: uppercase;

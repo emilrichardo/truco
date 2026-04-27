@@ -7,7 +7,6 @@ import Link from "next/link";
 import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
-import { UltimoCanto } from "@/components/UltimoCanto";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
 import { Marcador } from "@/components/Marcador";
@@ -117,7 +116,6 @@ function PartidaSoloInterno() {
         <div className="flex-1 flex flex-col overflow-hidden relative">
           <div className="flex-1 relative min-h-0">
             <Mesa estado={estado} miId={miId} />
-            <UltimoCanto estado={estado} miId={miId} />
             <ResultadoEnvido estado={estado} miId={miId} />
             <ResultadoMano estado={estado} miId={miId} />
             <MiAvatarBR estado={estado} miId={miId} />
