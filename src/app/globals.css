@@ -400,17 +400,41 @@ body {
 }
 .es-card.back {
   background:
-    radial-gradient(circle at center, rgba(241, 224, 184, 0.2) 0 8px, transparent 9px),
-    repeating-linear-gradient(45deg, var(--azul-criollo) 0 6px, #243f60 6px 12px);
+    /* trama cuadriculada / damero diagonal en azul criollo */
+    repeating-linear-gradient(45deg,  var(--azul-criollo) 0 6px, #243f60 6px 12px),
+    repeating-linear-gradient(-45deg, transparent 0 11px, rgba(0, 0, 0, 0.2) 11px 12px),
+    var(--azul-criollo);
   border: 1.5px solid var(--carbon);
+  container-type: inline-size;
 }
-.es-card.back::after {
+/* Marco interno dorado */
+.es-card.back::before {
   content: "";
   position: absolute;
-  inset: 4px;
+  inset: 6%;
   border: 1.5px solid var(--dorado);
   border-radius: 4px;
   pointer-events: none;
+  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.45) 0 60%, transparent 78%);
+}
+/* Sello "TP" centrado, estilo isotipo de la marca. font-size en cqw escala
+ * con el ancho del card (container query) para que se vea bien en xs..lg. */
+.es-card.back::after {
+  content: "TP";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: "Alfa Slab One", Georgia, serif;
+  font-size: 36cqw;
+  letter-spacing: 0.05em;
+  color: var(--dorado);
+  text-shadow:
+    1px 1px 0 var(--carbon),
+    0 0 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  line-height: 1;
+  z-index: 1;
 }
 
 /* Cartas en abanico: rotación / offset por carta */

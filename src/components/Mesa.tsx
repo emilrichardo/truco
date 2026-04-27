@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import clsx from "clsx";
 import type { EstadoJuego, Jugador, Carta } from "@/lib/truco/types";
 import { CartaEspanola } from "./CartaEspanola";
@@ -19,6 +20,10 @@ type JugadaEnMesa = {
  * pegado al borde, las cartas extendiéndose hacia el centro. Yo voy abajo.
  */
 export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
+  // Toggle para "espiar" las cartas del compañero (solo en 2v2). Por defecto
+  // boca abajo; al tocar se da vuelta para verlas. Click otra vez la oculta.
+  const [verCompañero, setVerCompañero] = useState(false);
+
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
   const orden = ordenAlrededorDeMesa(estado.jugadores, me);
@@ -77,13 +82,22 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
         const pos = posiciones[idx];
         if (!pos) return null;
         const esTurno = estado.manoActual?.turnoJugadorId === j.id;
+        const esYoFlag = j.id === miId;
+        // En 2v2, el compañero es del mismo equipo y NO soy yo.
+        const esCompañero =
+          total === 4 && !esYoFlag && j.equipo === me.equipo;
+        const cartasEnMano = estado.manoActual?.cartasPorJugador[j.id] || [];
         return (
           <PuestoJugador
             key={j.id}
             pos={pos}
             jugador={j}
             esTurno={!!esTurno}
-            esYo={j.id === miId}
+            esYo={esYoFlag}
+            esCompañero={esCompañero}
+            cartasEnMano={cartasEnMano}
+            mostrarCompañero={verCompañero}
+            onToggleCompañero={() => setVerCompañero((v) => !v)}
             jugadas={jugadasPorJugador.get(j.id) || []}
             numeroDeBaza={numeroDeBaza}
           />
@@ -100,12 +114,18 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
 }
 
 /** Puesto = avatar + cartas que ese jugador tiró, agrupados con flex.
- *  Avatar contra el borde de la mesa, cartas extendiéndose hacia el centro. */
+ *  Avatar contra el borde de la mesa, cartas extendiéndose hacia el centro.
+ *  Debajo del avatar mostramos la "mano oculta" (cartas que aún no jugó),
+ *  cara abajo. Si es mi compañero (2v2), tocando se dan vuelta. */
 function PuestoJugador({
   pos,
   jugador,
   esTurno,
   esYo,
+  esCompañero,
+  cartasEnMano,
+  mostrarCompañero,
+  onToggleCompañero,
   jugadas,
   numeroDeBaza
 }: {
@@ -113,9 +133,15 @@ function PuestoJugador({
   jugador: Jugador;
   esTurno: boolean;
   esYo: boolean;
+  esCompañero: boolean;
+  cartasEnMano: Carta[];
+  mostrarCompañero: boolean;
+  onToggleCompañero: () => void;
   jugadas: JugadaEnMesa[];
   numeroDeBaza: number;
 }) {
+  const cartasOcultas = !esCompañero || !mostrarCompañero;
+
   return (
     <div
       className={clsx(
@@ -124,12 +150,23 @@ function PuestoJugador({
         claseFlexPuesto(pos)
       )}
     >
-      <JugadorPanel
-        jugador={jugador}
-        esTurno={esTurno}
-        esYo={esYo}
-        compacto
-      />
+      <div className="flex flex-col items-center gap-1">
+        <JugadorPanel
+          jugador={jugador}
+          esTurno={esTurno}
+          esYo={esYo}
+          compacto
+        />
+        {/* Mini hand: solo para los demás (no yo), debajo del avatar */}
+        {!esYo && cartasEnMano.length > 0 && (
+          <ManoOculta
+            cartas={cartasEnMano}
+            ocultas={cartasOcultas}
+            esCompañero={esCompañero}
+            onTap={esCompañero ? onToggleCompañero : undefined}
+          />
+        )}
+      </div>
       {jugadas.length > 0 && (
         <div
           className="relative flex-shrink-0"
@@ -165,6 +202,52 @@ function PuestoJugador({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Mini-hand de cartas en mano (no jugadas todavía), boca abajo por default.
+ *  Si es la del compañero, tocando se da vuelta y se ven las cartas. */
+function ManoOculta({
+  cartas,
+  ocultas,
+  esCompañero,
+  onTap
+}: {
+  cartas: Carta[];
+  ocultas: boolean;
+  esCompañero: boolean;
+  onTap?: () => void;
+}) {
+  return (
+    <div
+      role={onTap ? "button" : undefined}
+      tabIndex={onTap ? 0 : undefined}
+      onClick={onTap}
+      onKeyDown={(e) => {
+        if (onTap && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onTap();
+        }
+      }}
+      className={clsx(
+        "flex -space-x-2 transition-transform",
+        esCompañero && "cursor-pointer hover:scale-110",
+        esCompañero && ocultas && "ring-2 ring-dorado/40 rounded p-0.5 parpadeo"
+      )}
+      title={
+        esCompañero
+          ? ocultas
+            ? "Tocá para ver las cartas de tu compañero"
+            : "Tocá para ocultarlas"
+          : undefined
+      }
+    >
+      {cartas.map((c, i) => (
+        <div key={c.id} style={{ zIndex: i, transform: `rotate(${(i - 1) * 4}deg)` }}>
+          <CartaEspanola carta={c} oculta={ocultas} tamanio="xs" />
+        </div>
+      ))}
     </div>
   );
 }
