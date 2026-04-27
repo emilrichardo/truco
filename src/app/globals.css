@@ -398,40 +398,21 @@ body {
   transform: scale(1.06);
   transform-origin: center;
 }
+/* Lomo de las cartas: imagen completa de la marca (sello "TRUCO ENTRE
+ * PRIMOS" simétrico tipo naipe). Vive en /public/brand/lomo-carta.png. */
 .es-card.back {
-  background:
-    /* trama cuadriculada / damero diagonal en azul criollo */
-    repeating-linear-gradient(45deg,  var(--azul-criollo) 0 6px, #243f60 6px 12px),
-    repeating-linear-gradient(-45deg, transparent 0 11px, rgba(0, 0, 0, 0.2) 11px 12px),
-    var(--azul-criollo);
+  background-image: url("/brand/lomo-carta.png");
+  background-size: cover;
+  background-position: center;
+  background-color: var(--crema);
+  background-repeat: no-repeat;
   border: 1.5px solid var(--carbon);
 }
-/* Marco interno dorado */
-.es-card.back::before {
-  content: "";
-  position: absolute;
-  inset: 6%;
-  border: 1.5px solid var(--dorado);
-  border-radius: 4px;
-  pointer-events: none;
-  background: radial-gradient(circle at center, rgba(0, 0, 0, 0.55) 0 65%, transparent 82%);
-}
-/* Logo oficial de la app centrado, escalado a la mayor parte de la carta. */
+/* Limpiamos los pseudo-elementos del diseño anterior — ahora el lomo es
+ * la imagen entera. */
+.es-card.back::before,
 .es-card.back::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80%;
-  height: 80%;
-  background-image: url("/brand/logo.png");
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  pointer-events: none;
-  z-index: 1;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+  content: none;
 }
 
 /* Cartas en abanico: rotación / offset por carta */
