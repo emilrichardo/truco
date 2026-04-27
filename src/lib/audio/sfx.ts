@@ -14,9 +14,9 @@ function ctx(): AudioContext | null {
   return _ctx;
 }
 
-/** Sonido de carta apoyándose sobre madera: golpecito sutil, breve.
- *  Click corto de transitorio + cuerpo resonante (~280Hz) decayendo
- *  rápidamente, con un partial alto opcional que da el "tick". */
+/** Sonido de carta seca cayendo en mesa de madera: tac corto, sin sustain.
+ *  Único modelo: ruido percusivo filtrado por una banda media (la mesa
+ *  responde brevemente) + microbody muy decaído. Total ~35ms. */
 export function sonidoCarta() {
   const c = ctx();
   if (!c) return;
@@ -26,54 +26,49 @@ export function sonidoCarta() {
 
   const t0 = c.currentTime;
 
-  // 1) Transitorio: ruido ultra-breve (4ms) bandpass para el "tick" del
-  //    contacto carta-madera. Bajo volumen, sólo articulación.
-  const tickLen = Math.floor(c.sampleRate * 0.004);
-  const tickBuf = c.createBuffer(1, tickLen, c.sampleRate);
-  const tickData = tickBuf.getChannelData(0);
-  for (let i = 0; i < tickLen; i++) {
-    tickData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (tickLen * 0.5));
+  // 1) Tac percusivo: ruido blanco muy corto (~6ms) filtrado por una banda
+  //    media (~700-1500Hz, el "thud" seco de la madera al recibir el papel).
+  //    Decay exponencial agresivo para que no resuene.
+  const noiseLen = Math.floor(c.sampleRate * 0.022);
+  const noiseBuf = c.createBuffer(1, noiseLen, c.sampleRate);
+  const data = noiseBuf.getChannelData(0);
+  for (let i = 0; i < noiseLen; i++) {
+    // Decay exponencial fuerte: el grueso del energía cae en los primeros 5ms.
+    const env = Math.exp(-i / (c.sampleRate * 0.005));
+    data[i] = (Math.random() * 2 - 1) * env;
   }
-  const tick = c.createBufferSource();
-  tick.buffer = tickBuf;
-  const tickFilt = c.createBiquadFilter();
-  tickFilt.type = "bandpass";
-  tickFilt.frequency.value = 3800 + Math.random() * 600;
-  tickFilt.Q.value = 1.2;
-  const tickGain = c.createGain();
-  tickGain.gain.value = 0.05;
-  tick.connect(tickFilt).connect(tickGain).connect(c.destination);
-  tick.start(t0);
+  const noise = c.createBufferSource();
+  noise.buffer = noiseBuf;
 
-  // 2) Cuerpo: sine en frecuencia de "madera" (~260-310Hz) con Q sutil,
-  //    decay rápido. Esto da el "knock" de la carta apoyándose.
-  const f0 = 260 + Math.random() * 50;
+  // Bandpass medio: la madera filtra los agudos del impacto, pasa "tac" seco.
+  const bp = c.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 900 + Math.random() * 400;
+  bp.Q.value = 1.4;
+
+  // Lowpass adicional para sacar el "shhhh" alto del ruido y dejar sólo
+  // la parte gruesa del impacto.
+  const lp = c.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = 2400;
+
+  const gN = c.createGain();
+  gN.gain.value = 0.18;
+  noise.connect(bp).connect(lp).connect(gN).connect(c.destination);
+  noise.start(t0);
+
+  // 2) Microbody: sine grave a ~180Hz, decay ULTRA rápido (~22ms) para
+  //    insinuar la masa de la carta sin agregar tono sostenido.
   const body = c.createOscillator();
   body.type = "sine";
-  body.frequency.setValueAtTime(f0 * 1.15, t0);
-  body.frequency.exponentialRampToValueAtTime(f0, t0 + 0.04);
-
-  const bodyGain = c.createGain();
-  bodyGain.gain.setValueAtTime(0.0001, t0);
-  bodyGain.gain.exponentialRampToValueAtTime(0.13, t0 + 0.004);
-  bodyGain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.075);
-
-  body.connect(bodyGain).connect(c.destination);
+  body.frequency.value = 170 + Math.random() * 30;
+  const gB = c.createGain();
+  gB.gain.setValueAtTime(0.0001, t0);
+  gB.gain.exponentialRampToValueAtTime(0.09, t0 + 0.003);
+  gB.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.025);
+  body.connect(gB).connect(c.destination);
   body.start(t0);
-  body.stop(t0 + 0.09);
-
-  // 3) Partial alto sutil: triangle ~1100Hz con decay muy corto, da el
-  //    matiz "seco" de tablero hueco. Muy bajo volumen.
-  const part = c.createOscillator();
-  part.type = "triangle";
-  part.frequency.value = 1050 + Math.random() * 120;
-  const partGain = c.createGain();
-  partGain.gain.setValueAtTime(0.0001, t0);
-  partGain.gain.exponentialRampToValueAtTime(0.04, t0 + 0.003);
-  partGain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.05);
-  part.connect(partGain).connect(c.destination);
-  part.start(t0);
-  part.stop(t0 + 0.06);
+  body.stop(t0 + 0.04);
 }
 
 /** Tintineo corto para puntos / fósforos sumando. */

@@ -60,14 +60,14 @@ export default function HomePage() {
       <section className="grid grid-cols-2 gap-3 mb-6">
         <OpcionMenu
           href="/jugar/crear"
-          icono="/brand/iconos/online.png"
+          icono="/brand/iconos/online.webp"
           titulo="Crear sala online"
           subtitulo="Generá un link para los primos"
           variante="primario"
         />
         <OpcionMenu
           href="/jugar/solo"
-          icono="/brand/iconos/maquina.png"
+          icono="/brand/iconos/maquina.webp"
           titulo="Contra la máquina"
           subtitulo="1 vs 1 o 2 vs 2 con bots"
           variante="secundario"

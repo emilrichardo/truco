@@ -20,7 +20,7 @@ export function HeaderMarca({
 
   const logo = (
     <img
-      src="/brand/logo.png"
+      src="/brand/logo.webp"
       alt="Truco Entre Primos"
       className={`${claseTamano} h-auto select-none drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)]`}
       draggable={false}

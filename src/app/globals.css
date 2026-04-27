@@ -493,9 +493,9 @@ body {
   transform-origin: center;
 }
 /* Lomo de las cartas: imagen completa de la marca (sello "TRUCO ENTRE
- * PRIMOS" simétrico tipo naipe). Vive en /public/brand/lomo-carta.png. */
+ * PRIMOS" simétrico tipo naipe). Vive en /public/brand/lomo-carta.webp. */
 .es-card.back {
-  background-image: url("/brand/lomo-carta.png");
+  background-image: url("/brand/lomo-carta.webp");
   background-size: cover;
   background-position: center;
   background-color: var(--crema);

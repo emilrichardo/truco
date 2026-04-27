@@ -83,7 +83,7 @@ function PartidaSoloInterno() {
       <main className="min-h-[100dvh] flex items-center justify-center text-center px-4">
         <div>
           <img
-            src="/brand/logo.png"
+            src="/brand/logo.webp"
             alt="Truco Entre Primos"
             className="w-32 mx-auto mb-4 opacity-80 parpadeo"
           />
@@ -110,7 +110,7 @@ function PartidaSoloInterno() {
         </button>
         <Link href="/" className="hidden sm:inline-block">
           <img
-            src="/brand/logo.png"
+            src="/brand/logo.webp"
             alt="Truco Entre Primos"
             className="h-7 w-auto opacity-90 hover:opacity-100 transition"
           />

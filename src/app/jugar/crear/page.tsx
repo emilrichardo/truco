@@ -104,13 +104,13 @@ export default function CrearSalaPage() {
           <ChoiceModo
             activo={tamanio === 2}
             onClick={() => setTamanio(2)}
-            icono="/brand/iconos/1vs1.png"
+            icono="/brand/iconos/1vs1.webp"
             label="Solo a solo"
           />
           <ChoiceModo
             activo={tamanio === 4}
             onClick={() => setTamanio(4)}
-            icono="/brand/iconos/2vs2.png"
+            icono="/brand/iconos/2vs2.webp"
             label="En parejas"
           />
         </Opcion>

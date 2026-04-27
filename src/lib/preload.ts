@@ -1,6 +1,6 @@
 "use client";
 // Preload de imágenes en background para que cuando se renderizan ya están
-// en cache del browser. Crítico mientras los PNGs originales pesen ~2 MB.
+// en cache del browser. Las imágenes se sirven en WebP (~50-150KB cada una).
 import { useEffect } from "react";
 
 const PALOS = ["espada", "basto", "oro", "copa"] as const;
@@ -23,7 +23,7 @@ export function precargarCartas() {
   orden.forEach(({ palo, numero }, i) => {
     setTimeout(() => {
       const img = new Image();
-      img.src = `/cartas/${palo}/${numero}.png`;
+      img.src = `/cartas/${palo}/${numero}.webp`;
     }, i * 30);
   });
 }
@@ -33,7 +33,7 @@ export function precargarAvatares(slugs: string[]) {
   if (typeof window === "undefined") return;
   for (const s of slugs) {
     const img = new Image();
-    img.src = `/jugadores/${s}.png`;
+    img.src = `/jugadores/${s}.webp`;
   }
 }
 

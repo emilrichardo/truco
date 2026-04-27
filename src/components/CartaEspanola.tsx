@@ -36,7 +36,7 @@ export function CartaEspanola({
       />
     );
   }
-  const src = `/cartas/${carta.palo}/${carta.numero}.png`;
+  const src = `/cartas/${carta.palo}/${carta.numero}.webp`;
   return (
     <button
       type="button"
