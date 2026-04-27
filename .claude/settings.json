@@ -102,7 +102,8 @@
       "Bash(curl -s \"https://truco-primos.vercel.app/texturas/textura-mesa.png\" -o /tmp/textura.png)",
       "Bash(sips -g all /tmp/textura.png)",
       "Bash(md5 /Volumes/Emil/neuraz/projects/trucoprimos/truco-appweb/public/texturas/textura-mesa.png)",
-      "Bash(md5 /tmp/textura.png)"
+      "Bash(md5 /tmp/textura.png)",
+      "Bash(awk '{print $1}')"
     ],
     "additionalDirectories": [
       "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"

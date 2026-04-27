@@ -118,21 +118,6 @@ function PartidaSoloInterno() {
         <div className="flex-1 min-w-0 text-[11px] text-text-dim truncate subtitulo-claim">
           🤖 vs máquina · {tamanio === 4 ? "2v2" : "1v1"} · a {puntos}
         </div>
-        <button
-          onClick={() => {
-            setChatAbierto(true);
-            setChatNoVisto(0);
-          }}
-          className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs relative md:hidden"
-          title="Abrir chat"
-        >
-          💬
-          {chatNoVisto > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red text-text text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
-              {chatNoVisto > 9 ? "9+" : chatNoVisto}
-            </span>
-          )}
-        </button>
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
