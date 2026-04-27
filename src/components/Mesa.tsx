@@ -36,8 +36,13 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
     return () => clearTimeout(t);
   }, [verCompañero]);
 
-  const { hablandoId, hablandoKey, hablandoTexto, hablandoEvento } =
-    useHablando(estado);
+  const {
+    hablandoId,
+    hablandoKey,
+    hablandoTexto,
+    hablandoEvento,
+    hablandoSticker
+  } = useHablando(estado);
 
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
@@ -128,6 +133,7 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
             hablandoKey={esQuienHabla ? hablandoKey : null}
             hablandoTexto={esQuienHabla ? hablandoTexto : null}
             hablandoEvento={esQuienHabla ? hablandoEvento : null}
+            hablandoSticker={esQuienHabla ? hablandoSticker : null}
           />
         );
       })}

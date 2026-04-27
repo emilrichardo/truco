@@ -6,6 +6,10 @@ import { urlPersonaje } from "@/data/jugadores";
 
 const REACCIONES = ["👏", "🔥", "😂", "🤔", "🤬", "🧉"];
 const FRASES = ["Mazo", "Faltaba", "Mucha cancha", "Te vi"];
+// Stickers santiagueños/criollos. La URL es relativa a /public.
+const STICKERS: { url: string; alt: string }[] = [
+  { url: "/brand/stickers/fernet.png", alt: "Fernet" }
+];
 
 const COLOR_EVENTO: Record<CategoriaEvento, string> = {
   carta: "text-text-dim",
@@ -25,7 +29,7 @@ export function Chat({
   miId: string;
   /** @deprecated ya no se usa; el Marcador se renderiza fuera. */
   miEquipoEs0?: boolean;
-  enviar: (m: { texto?: string; reaccion?: string }) => void;
+  enviar: (m: { texto?: string; reaccion?: string; sticker?: string }) => void;
 }) {
   const [texto, setTexto] = useState("");
   // Default "todo" para que se vea la conversación completa de la partida
@@ -114,6 +118,25 @@ export function Chat({
             </button>
           ))}
         </div>
+        {STICKERS.length > 0 && (
+          <div className="px-1.5 pb-1.5 flex flex-wrap gap-1 bg-surface-2/30">
+            {STICKERS.map((s) => (
+              <button
+                key={s.url}
+                type="button"
+                className="active:scale-90 hover:bg-surface rounded p-1 transition"
+                onClick={() => enviar({ sticker: s.url })}
+                title={s.alt}
+              >
+                <img
+                  src={s.url}
+                  alt={s.alt}
+                  className="w-9 h-9 object-contain"
+                />
+              </button>
+            ))}
+          </div>
+        )}
         <form
           className="flex gap-1 p-2 border-t border-border"
           onSubmit={(e) => {
@@ -252,7 +275,13 @@ function ItemMensaje({
             {jugador.nombre}
           </div>
         )}
-        {m.reaccion ? (
+        {m.sticker ? (
+          <img
+            src={m.sticker}
+            alt="sticker"
+            className="w-20 h-20 object-contain"
+          />
+        ) : m.reaccion ? (
           <span className="text-2xl">{m.reaccion}</span>
         ) : (
           <span>{m.texto}</span>

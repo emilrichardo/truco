@@ -119,7 +119,10 @@ export type AccionTipo =
   | "cantar_retruco"
   | "cantar_vale4"
   | "ir_al_mazo"
-  | "mazo";
+  | "mazo"
+  // Despacha el reparto de la mano siguiente cuando la actual quedó en
+  // fase "terminada". El cliente lo manda tras el delay del resumen.
+  | "iniciar_prox_mano";
 
 export interface Accion {
   tipo: AccionTipo;

@@ -17,6 +17,10 @@ import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { PERSONAJES } from "@/data/jugadores";
 
 const RETARDO_BOT_MS = 700;
+// Pausa entre que se cierra una mano (banner de resumen + última burbuja) y
+// el reparto de la siguiente. Sin esto las cartas nuevas aparecen detrás del
+// banner y se pisan con la burbuja del último canto.
+const RETARDO_PROX_MANO_MS = 3500;
 const STORAGE_KEY = "truco_primos_solo_partida";
 
 function elegirPersonajeLibre(jugadores: Jugador[]): string {
@@ -171,20 +175,40 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     }
   }, [estado, miId, config]);
 
-  // Avance automático de bots: cuando el turno (o respuesta requerida) cae
-  // en un bot, programamos su acción tras un retardo y volvemos a evaluar.
+  // Avance automático: dos casos.
+  //  1) Mano cerrada en fase "terminada" → tras un delay, disparar reparto
+  //     de la siguiente. Esto deja respirar el banner de resumen y la
+  //     burbuja del último "quiero/no quiero" antes del reparto.
+  //  2) Le toca a un bot (turno o respuesta) → programamos su acción.
   useEffect(() => {
     if (!estado || estado.ganadorPartida !== null) return;
     const mano = estado.manoActual;
     if (!mano) return;
 
-    const actor = quienActuaSiBot(estado);
-    if (!actor) return;
-
     if (botTimerRef.current) {
       clearTimeout(botTimerRef.current);
       botTimerRef.current = null;
     }
+
+    if (mano.fase === "terminada") {
+      botTimerRef.current = window.setTimeout(() => {
+        aplicarAccion(estado, {
+          tipo: "iniciar_prox_mano",
+          jugadorId: ""
+        });
+        dispatch({ tipo: "set", estado: { ...estado } });
+      }, RETARDO_PROX_MANO_MS);
+      return () => {
+        if (botTimerRef.current) {
+          clearTimeout(botTimerRef.current);
+          botTimerRef.current = null;
+        }
+      };
+    }
+
+    const actor = quienActuaSiBot(estado);
+    if (!actor) return;
+
     botTimerRef.current = window.setTimeout(() => {
       // Mutamos una copia: aplicarAccion mutará in-place, así que reusamos
       // referencia, pero hacemos shallow para forzar render.

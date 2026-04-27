@@ -1,12 +1,17 @@
 "use client";
-// Hook compartido: detecta el último canto/respuesta del chat y devuelve
-// quién habló, qué dijo, y si fue un canto inicial o una respuesta.
-// JugadorPanel/MiAvatarBR lo usan para mostrar la burbuja al lado del
+// Hook compartido: detecta el último canto/respuesta del chat (o el último
+// sticker enviado por un humano) y devuelve quién habló, qué dijo y de qué
+// tipo. JugadorPanel/MiAvatarBR lo usan para mostrar la burbuja al lado del
 // avatar y para hacer pulsar la foto del que está hablando.
 import { useEffect, useRef, useState } from "react";
-import type { CategoriaEvento, EstadoJuego } from "@/lib/truco/types";
+import type {
+  CategoriaEvento,
+  EstadoJuego,
+  MensajeChat
+} from "@/lib/truco/types";
 
 const DURACION_MS = 3500;
+const DURACION_STICKER_MS = 4500;
 const DESTACAR = new Set<CategoriaEvento>(["canto", "respuesta"]);
 
 function calcularDuracion(texto: string): number {
@@ -17,14 +22,22 @@ export type HablandoData = {
   id: string;
   key: string;
   texto: string;
-  evento: CategoriaEvento;
+  evento: CategoriaEvento | null;
+  sticker?: string;
 };
+
+function esBurbuja(m: MensajeChat): boolean {
+  if (m.evento && DESTACAR.has(m.evento)) return true;
+  if (!m.evento && m.sticker) return true;
+  return false;
+}
 
 export function useHablando(estado: EstadoJuego | null): {
   hablandoId: string | null;
   hablandoKey: string | null;
   hablandoTexto: string | null;
   hablandoEvento: CategoriaEvento | null;
+  hablandoSticker: string | null;
 } {
   const [data, setData] = useState<HablandoData | null>(null);
   const ultimoIdRef = useRef<string | null>(null);
@@ -56,24 +69,27 @@ export function useHablando(estado: EstadoJuego | null): {
 
   useEffect(() => {
     if (!estado) return;
-    const ultimo = [...estado.chat]
-      .reverse()
-      .find((m) => m.evento && DESTACAR.has(m.evento));
+    const ultimo = [...estado.chat].reverse().find(esBurbuja);
     if (!ultimo) return;
     if (ultimoIdRef.current === ultimo.id) return;
     ultimoIdRef.current = ultimo.id;
 
+    const esSticker = !!ultimo.sticker && !ultimo.evento;
     setData({
       id: ultimo.jugadorId,
       key: ultimo.id,
-      texto: ultimo.texto,
-      evento: ultimo.evento!
+      texto: ultimo.texto || "",
+      evento: ultimo.evento ?? null,
+      sticker: esSticker ? ultimo.sticker : undefined
     });
     if (tRef.current) clearTimeout(tRef.current);
+    const ms = esSticker
+      ? DURACION_STICKER_MS
+      : calcularDuracion(ultimo.texto) + DURACION_MS / 4;
     tRef.current = window.setTimeout(() => {
       setData(null);
       tRef.current = null;
-    }, calcularDuracion(ultimo.texto) + DURACION_MS / 4);
+    }, ms);
   }, [estado, versionDep, lenDep]);
 
   useEffect(() => {
@@ -86,6 +102,7 @@ export function useHablando(estado: EstadoJuego | null): {
     hablandoId: data?.id || null,
     hablandoKey: data?.key || null,
     hablandoTexto: data?.texto || null,
-    hablandoEvento: data?.evento || null
+    hablandoEvento: data?.evento || null,
+    hablandoSticker: data?.sticker || null
   };
 }

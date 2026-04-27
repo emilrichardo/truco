@@ -1,11 +1,30 @@
 "use client";
 // Banner grande que aparece cuando termina una mano (truco). Muestra qué
-// equipo se la llevó y cuántos puntos sumó. Dispara cuando crece la
-// historia de manos. Auto-oculta a los ~3.5s.
+// equipo se la llevó y cuántos puntos sumó. Dispara en dos casos:
+//  - Solo (motor con pausa): mano actual entra en fase "terminada" antes
+//    de repartir la siguiente.
+//  - Online (motor que aún reparte de corrido): crece historialManos y
+//    leemos la última cerrada de ahí.
+// Auto-oculta a los ~3.5s.
 import { useEffect, useRef, useState } from "react";
-import type { EstadoJuego } from "@/lib/truco/types";
+import type { Mano, EstadoJuego } from "@/lib/truco/types";
 
 const DURACION_MS = 3500;
+
+function resumenDeMano(mano: Mano, miEquipo: 0 | 1 | undefined) {
+  if (mano.ganadorMano === null) return null;
+  const yoGane = miEquipo !== undefined ? miEquipo === mano.ganadorMano : false;
+  const puntosMano = mano.puntosOtorgados
+    .filter((p) => !/envido/i.test(p.motivo))
+    .filter((p) => p.equipo === mano.ganadorMano)
+    .reduce((s, p) => s + p.puntos, 0);
+  const motivo =
+    mano.puntosOtorgados.find(
+      (p) => p.equipo === mano.ganadorMano && !/envido/i.test(p.motivo)
+    )?.motivo || "Mano";
+  if (puntosMano <= 0) return null;
+  return { yoGane, puntos: puntosMano, motivo, numero: mano.numero };
+}
 
 export function ResultadoMano({
   estado,
@@ -20,46 +39,41 @@ export function ResultadoMano({
     motivo: string;
     numero: number;
   } | null>(null);
-  const ultimaLen = useRef<number>(estado.historialManos.length);
+  const ultimoNumeroRef = useRef<number>(0);
   const tRef = useRef<number | null>(null);
 
+  const mano = estado.manoActual;
+  const fase = mano?.fase;
+  const numeroActual = mano?.numero ?? 0;
+  const histLen = estado.historialManos.length;
+
   useEffect(() => {
-    const len = estado.historialManos.length;
-    if (len <= ultimaLen.current) {
-      ultimaLen.current = len;
-      return;
-    }
-    ultimaLen.current = len;
-    const ultima = estado.historialManos[len - 1];
-    if (!ultima || ultima.ganadorMano === null) return;
-
-    // Sumamos los puntos de truco que se otorgaron en esa mano (excluyendo
-    // los del envido, que ya tuvieron su propio banner).
     const me = estado.jugadores.find((j) => j.id === miId);
-    const yoGane = me ? me.equipo === ultima.ganadorMano : false;
-    const puntosMano = ultima.puntosOtorgados
-      .filter((p) => !/envido/i.test(p.motivo))
-      .filter((p) => p.equipo === ultima.ganadorMano)
-      .reduce((s, p) => s + p.puntos, 0);
-    const motivo =
-      ultima.puntosOtorgados.find(
-        (p) => p.equipo === ultima.ganadorMano && !/envido/i.test(p.motivo)
-      )?.motivo || "Mano";
+    const miEquipo = me?.equipo;
 
-    if (puntosMano <= 0) return;
+    // Caso 1: mano actual quedó en fase "terminada" (flujo Solo con delay).
+    let resumen: ReturnType<typeof resumenDeMano> | null = null;
+    let numero = 0;
+    if (mano && fase === "terminada") {
+      resumen = resumenDeMano(mano, miEquipo);
+      numero = mano.numero;
+    } else if (histLen > 0) {
+      // Caso 2: ya repartieron la próxima (flujo Online). Leemos la última.
+      const ultima = estado.historialManos[histLen - 1];
+      resumen = resumenDeMano(ultima, miEquipo);
+      numero = ultima.numero;
+    }
+    if (!resumen) return;
+    if (ultimoNumeroRef.current === numero) return;
+    ultimoNumeroRef.current = numero;
 
-    setData({
-      yoGane,
-      puntos: puntosMano,
-      motivo,
-      numero: ultima.numero
-    });
+    setData(resumen);
     if (tRef.current) clearTimeout(tRef.current);
     tRef.current = window.setTimeout(() => {
       setData(null);
       tRef.current = null;
     }, DURACION_MS);
-  }, [estado.historialManos, estado.jugadores, miId]);
+  }, [fase, numeroActual, histLen, estado.jugadores, miId, mano, estado.historialManos]);
 
   useEffect(() => {
     return () => {

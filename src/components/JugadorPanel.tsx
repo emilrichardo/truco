@@ -16,6 +16,7 @@ export function JugadorPanel({
   hablandoKey,
   hablandoTexto,
   hablandoEvento,
+  hablandoSticker,
   ladoBurbuja = "derecha"
 }: {
   jugador: Jugador;
@@ -33,6 +34,9 @@ export function JugadorPanel({
   hablandoTexto?: string | null;
   /** Tipo de evento: respuesta agranda más la foto que un canto inicial. */
   hablandoEvento?: CategoriaEvento | null;
+  /** URL del sticker enviado — si está presente la burbuja muestra la imagen
+   *  en vez del texto. */
+  hablandoSticker?: string | null;
   /** Lado del avatar donde apoyar la burbuja. */
   ladoBurbuja?: LadoBurbuja;
 }) {
@@ -78,9 +82,10 @@ export function JugadorPanel({
         {esTurno && (
           <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-dorado parpadeo border border-carbon" />
         )}
-        {hablando && hablandoTexto && (
+        {hablando && (hablandoSticker || hablandoTexto) && (
           <BurbujaCanto
-            texto={hablandoTexto}
+            texto={hablandoTexto || ""}
+            sticker={hablandoSticker || undefined}
             lado={ladoBurbuja}
             destacado={hablandoEvento === "respuesta"}
             keyAnim={hablandoKey || ""}
@@ -122,11 +127,13 @@ export function JugadorPanel({
  *  en pantalla (lo decide el padre que sabe en qué borde está el puesto). */
 function BurbujaCanto({
   texto,
+  sticker,
   lado,
   destacado,
   keyAnim
 }: {
   texto: string;
+  sticker?: string;
   lado: LadoBurbuja;
   destacado?: boolean;
   keyAnim: string;
@@ -141,34 +148,46 @@ function BurbujaCanto({
     >
       <div
         className={clsx(
-          "relative rounded-xl px-3 py-1.5 shadow-xl",
-          "bg-crema",
-          "border",
-          destacado ? "border-rojo-rival" : "border-dorado-oscuro/70",
-          // Ancho mayor para que no se rompa palabra por palabra y se lea
-          // de un golpe. whitespace-normal con max razonable.
-          "max-w-[70vw] sm:max-w-[260px] min-w-[140px]"
+          "relative rounded-xl shadow-xl",
+          // Cuando hay sticker, fondo transparente y sin padding para que la
+          // imagen "respire" sin marco crema.
+          sticker ? "bg-transparent border-0 p-0" : "bg-crema border px-3 py-1.5",
+          !sticker &&
+            (destacado ? "border-rojo-rival" : "border-dorado-oscuro/70"),
+          sticker
+            ? "max-w-[40vw] sm:max-w-[120px]"
+            : "max-w-[70vw] sm:max-w-[260px] min-w-[140px]"
         )}
       >
-        <div
-          className="text-[11px] sm:text-[12px] font-bold leading-tight text-center"
-          style={{ color: "var(--carbon)" }}
-        >
-          {texto}
-        </div>
-        <div
-          aria-hidden
-          className={clsx("absolute w-3 h-3 rotate-45 bg-crema-2", colaPos(lado))}
-          style={{
-            borderLeftWidth: colaBordes(lado).left,
-            borderTopWidth: colaBordes(lado).top,
-            borderRightWidth: colaBordes(lado).right,
-            borderBottomWidth: colaBordes(lado).bottom,
-            borderColor: destacado
-              ? "var(--rojo-rival, #b8443a)"
-              : "var(--dorado-oscuro, #a07a2e)"
-          }}
-        />
+        {sticker ? (
+          <img
+            src={sticker}
+            alt="sticker"
+            className="w-20 h-20 sm:w-24 sm:h-24 object-contain drop-shadow-[0_3px_6px_rgba(0,0,0,0.45)]"
+          />
+        ) : (
+          <div
+            className="text-[11px] sm:text-[12px] font-bold leading-tight text-center"
+            style={{ color: "var(--carbon)" }}
+          >
+            {texto}
+          </div>
+        )}
+        {!sticker && (
+          <div
+            aria-hidden
+            className={clsx("absolute w-3 h-3 rotate-45 bg-crema-2", colaPos(lado))}
+            style={{
+              borderLeftWidth: colaBordes(lado).left,
+              borderTopWidth: colaBordes(lado).top,
+              borderRightWidth: colaBordes(lado).right,
+              borderBottomWidth: colaBordes(lado).bottom,
+              borderColor: destacado
+                ? "var(--rojo-rival, #b8443a)"
+                : "var(--dorado-oscuro, #a07a2e)"
+            }}
+          />
+        )}
       </div>
     </div>
   );

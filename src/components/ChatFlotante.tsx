@@ -99,7 +99,20 @@ export function ChatFlotante({
             borderBottomRightRadius: "4px"
           }}
         >
-          {ultimo.reaccion ? (
+          {ultimo.sticker ? (
+            <div className="flex items-center gap-1.5">
+              {nombreUltimo && !esYoUltimo && (
+                <span className="text-azul-claro font-bold">
+                  {nombreUltimo}:
+                </span>
+              )}
+              <img
+                src={ultimo.sticker}
+                alt="sticker"
+                className="w-10 h-10 object-contain"
+              />
+            </div>
+          ) : ultimo.reaccion ? (
             <span className="text-xl leading-none">{ultimo.reaccion}</span>
           ) : (
             <>

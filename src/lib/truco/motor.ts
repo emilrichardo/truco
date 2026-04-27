@@ -170,6 +170,11 @@ export function aplicarAccion(estado: EstadoJuego, accion: Accion): ResultadoAcc
   if (!estado.manoActual) {
     return { ok: false, error: "No hay mano activa.", estado };
   }
+  // `iniciar_prox_mano` no necesita jugador asociado — la dispara el cliente
+  // automáticamente tras el delay del resumen.
+  if (accion.tipo === "iniciar_prox_mano") {
+    return iniciarProxMano(estado);
+  }
   const mano = estado.manoActual;
   const jugador = jugadorPorId(estado, accion.jugadorId);
   if (!jugador) return { ok: false, error: "Jugador inválido.", estado };
@@ -358,15 +363,34 @@ function cerrarMano(estado: EstadoJuego, equipoGanador: Equipo, motivo: string) 
     "mano"
   );
 
-  if (chequearFinPartida(estado)) return;
+  // Chequea fin de partida — si terminó, no hay próxima mano.
+  // Si NO terminó, dejamos `manoActual` en fase "terminada" sin repartir.
+  // El cliente despacha la accion `iniciar_prox_mano` tras el delay del
+  // resumen para que se vea el banner antes de las cartas nuevas.
+  chequearFinPartida(estado);
+  estado.version++;
+}
 
-  // Próxima mano: rota el mano al siguiente jugador.
+/**
+ * Pasa de la mano "terminada" actual al reparto de la siguiente. Sólo válido
+ * si la mano terminó y la partida sigue en juego. El cliente la dispara tras
+ * el delay del resumen de mano.
+ */
+export function iniciarProxMano(estado: EstadoJuego): ResultadoAccion {
+  if (estado.ganadorPartida !== null) {
+    return { ok: false, error: "La partida ya terminó.", estado };
+  }
+  const mano = estado.manoActual;
+  if (!mano || mano.fase !== "terminada") {
+    return { ok: false, error: "La mano todavía no terminó.", estado };
+  }
+  estado.historialManos.push(mano);
   const proxAsiento = siguienteAsiento(
     estado,
     jugadorPorId(estado, mano.manoJugadorId)!.asiento
   );
-  estado.historialManos.push(mano);
   repartirNuevaMano(estado, jugadorPorAsiento(estado, proxAsiento).id);
+  return { ok: true, estado };
 }
 
 function chequearFinPartida(estado: EstadoJuego): boolean {
