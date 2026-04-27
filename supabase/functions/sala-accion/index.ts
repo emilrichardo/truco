@@ -1,80 +1,97 @@
-// Edge Function: aplicar acción a una sala.
-// Esqueleto inicial — el motor del truco aún no fue portado a Deno.
-// Estructura del flujo cuando esté completo:
-//   1. Cliente envía { sala_id, jugador_id, accion } con su anon JWT.
-//   2. Esta función carga la sala desde Postgres (usando service_role).
-//   3. Aplica la acción contra el motor (por portar).
-//   4. Guarda el nuevo estado, emite NOTIFY (vía UPDATE → Realtime broadcast).
-//   5. Si la acción terminó la partida, inserta en `partidas` + `partida_jugadores`.
-//   6. Si toca un bot, agenda otra invocación con setTimeout (700ms) y aplica.
-//
-// TODO fase 2:
-//   - Importar el motor de truco (lib/truco/motor.ts) adaptado a Deno.
-//   - Resolver el delay de bots: o cliente local del host, o tabla de
-//     "bot_pendientes" + cron al minuto, o auto-invocación con fetch demorado.
-
-import { createClient } from "jsr:@supabase/supabase-js@2";
+// Aplica una acción de juego (jugar carta, cantar envido, responder, etc.)
+// contra el motor del truco autoritativo. Persiste el nuevo estado y, si la
+// partida terminó, registra el resultado en el historial.
+import { admin, fail, ok, preflight, readJson } from "../_shared/lib.ts";
+import { aplicarAccion } from "../_shared/truco/motor.ts";
+import type { Accion, EstadoJuego } from "../_shared/truco/types.ts";
 
 interface Payload {
   sala_id: string;
   jugador_id: string;
-  accion: { tipo: string; [k: string]: unknown };
+  accion: Accion;
 }
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
 Deno.serve(async (req) => {
-  if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "method_not_allowed" }), {
-      status: 405,
-      headers: { "content-type": "application/json" }
-    });
-  }
+  if (req.method === "OPTIONS") return preflight();
+  if (req.method !== "POST") return fail("method_not_allowed", 405);
 
-  let body: Payload;
-  try {
-    body = await req.json();
-  } catch {
-    return jsonError("bad_json", 400);
+  const body = await readJson<Payload>(req);
+  if (!body || !body.sala_id || !body.jugador_id || !body.accion) {
+    return fail("missing_fields");
   }
-  if (!body.sala_id || !body.jugador_id || !body.accion) {
-    return jsonError("missing_fields", 400);
-  }
+  // El cliente puede mandar accion sin jugadorId; lo forzamos al del payload.
+  body.accion.jugadorId = body.jugador_id;
 
-  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { persistSession: false }
-  });
-
-  // 1. Cargar sala
-  const { data: sala, error: errSala } = await admin
+  const sb = admin();
+  const { data: sala, error: errSel } = await sb
     .from("salas")
     .select("*")
     .eq("id", body.sala_id)
     .single();
-  if (errSala || !sala) return jsonError("sala_not_found", 404);
-  if (sala.terminada) return jsonError("sala_terminada", 409);
+  if (errSel || !sala) return fail("sala_no_encontrada", 404);
+  if (!sala.iniciada) return fail("no_iniciada", 409);
+  if (sala.terminada) return fail("ya_terminada", 409);
 
-  // 2. Aplicar acción — STUB por ahora.
-  //    Cuando portemos el motor: const r = aplicarAccion(sala.estado, body.accion);
-  const nuevoEstado = sala.estado;
-  // r.ok === false → return jsonError(r.error, 400);
+  const estadoActual = sala.estado as EstadoJuego;
+  const inicio = Date.now();
+  const r = aplicarAccion(estadoActual, body.accion);
+  if (!r.ok) return fail(r.error || "accion_invalida");
 
-  // 3. Persistir estado actualizado (Realtime lo broadcasteará).
-  const { error: errUpd } = await admin
+  const updates: Record<string, unknown> = { estado: r.estado };
+
+  // Si la partida terminó: marcar sala y registrar historial.
+  if (r.estado.ganadorPartida !== null) {
+    updates.terminada = true;
+    updates.ganador_equipo = r.estado.ganadorPartida;
+    updates.terminada_at = new Date().toISOString();
+
+    const { data: partida, error: errPart } = await sb
+      .from("partidas")
+      .insert({
+        sala_id: body.sala_id,
+        modo: sala.modo,
+        puntos_objetivo: sala.puntos_objetivo,
+        ganador_equipo: r.estado.ganadorPartida,
+        duracion_seg: Math.round((Date.now() - new Date(sala.created_at).getTime()) / 1000),
+        estado_final: r.estado
+      })
+      .select()
+      .single();
+
+    if (!errPart && partida) {
+      // Registrar cada jugador con su resultado (perfil_id si hay).
+      // Para resolver perfil_id usamos el match nombre+personaje contra perfiles.
+      const filas = await Promise.all(
+        r.estado.jugadores.map(async (j) => {
+          const { data: perfil } = await sb
+            .from("perfiles")
+            .select("id")
+            .eq("nombre", j.nombre)
+            .eq("personaje", j.personaje)
+            .maybeSingle();
+          return {
+            partida_id: partida.id,
+            perfil_id: perfil?.id ?? null,
+            nombre: j.nombre,
+            personaje: j.personaje,
+            equipo: j.equipo,
+            asiento: j.asiento,
+            es_bot: j.esBot,
+            gano: r.estado.ganadorPartida === j.equipo,
+            puntos_finales:
+              j.equipo === 0 ? r.estado.puntos[0] : r.estado.puntos[1]
+          };
+        })
+      );
+      await sb.from("partida_jugadores").insert(filas);
+    }
+  }
+
+  const { error: errUpd } = await sb
     .from("salas")
-    .update({ estado: nuevoEstado })
+    .update(updates)
     .eq("id", body.sala_id);
-  if (errUpd) return jsonError(errUpd.message, 500);
+  if (errUpd) return fail(`update: ${errUpd.message}`, 500);
 
-  return new Response(JSON.stringify({ ok: true, estado: nuevoEstado }), {
-    headers: { "content-type": "application/json" }
-  });
+  return ok({ ms: Date.now() - inicio });
 });
-
-function jsonError(msg: string, status = 400) {
-  return new Response(JSON.stringify({ error: msg }), {
-    status,
-    headers: { "content-type": "application/json" }
-  });
-}

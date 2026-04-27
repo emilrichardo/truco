@@ -1,8 +1,16 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { getSocket, guardarSesion, leerSesion } from "@/lib/socket";
+import {
+  enviarAccionOnline,
+  enviarChatOnline,
+  guardarSesion,
+  iniciarPartidaOnline,
+  leerSesion,
+  unirseSalaOnline,
+  useSalaOnline
+} from "@/lib/salaOnline";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { getPersonaje, urlPersonaje } from "@/data/jugadores";
 import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
@@ -16,13 +24,19 @@ export default function SalaPage() {
   const router = useRouter();
   const salaId = params.id;
   const [miSlug, , listoSlug] = usePersonajeLocal();
-  const [estado, setEstado] = useState<EstadoJuego | null>(null);
   const [miId, setMiId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [linkCopiado, setLinkCopiado] = useState(false);
   const [chatAbierto, setChatAbierto] = useState(false);
   const [unidoIntentado, setUnidoIntentado] = useState(false);
   const [chatNoVisto, setChatNoVisto] = useState(0);
+  const lastChatLen = useRef(0);
+
+  const { estado, salaMeta, error: errorSala } = useSalaOnline(salaId);
+
+  useEffect(() => {
+    if (errorSala) setError(errorSala);
+  }, [errorSala]);
 
   useEffect(() => {
     if (listoSlug && !miSlug) router.replace("/");
@@ -33,68 +47,62 @@ export default function SalaPage() {
     if (s) setMiId(s.jugadorId);
   }, [salaId]);
 
+  // Contador de chat no visto cuando el drawer está cerrado.
   useEffect(() => {
-    const sock = getSocket();
-    const onEstado = (e: EstadoJuego) => {
-      setEstado((prev) => {
-        // Sumar mensajes nuevos al contador si el chat está cerrado.
-        if (prev && !chatAbierto && e.chat.length > prev.chat.length) {
-          setChatNoVisto((n) => n + (e.chat.length - prev.chat.length));
-        }
-        return e;
-      });
-    };
-    const onError = (msg: string) => setError(msg);
-    sock.on("estado", onEstado);
-    sock.on("estado_error", onError);
-    sock.on("accion_error", onError);
-    if (miId) sock.emit("reconectar", { salaId, jugadorId: miId });
-    return () => {
-      sock.off("estado", onEstado);
-      sock.off("estado_error", onError);
-      sock.off("accion_error", onError);
-    };
-  }, [salaId, miId, chatAbierto]);
+    if (!estado) return;
+    if (chatAbierto) {
+      lastChatLen.current = estado.chat.length;
+      return;
+    }
+    if (estado.chat.length > lastChatLen.current) {
+      setChatNoVisto((n) => n + (estado.chat.length - lastChatLen.current));
+      lastChatLen.current = estado.chat.length;
+    }
+  }, [estado?.chat.length, chatAbierto]);
 
+  // Auto-unirse a la sala si ya tengo perfil pero no estoy en jugadores.
   useEffect(() => {
     if (!estado || !miSlug || unidoIntentado) return;
     const yaSoy = miId && estado.jugadores.some((j) => j.id === miId);
-    if (yaSoy || estado.iniciada) return;
+    if (yaSoy || (salaMeta?.iniciada ?? false)) return;
     setUnidoIntentado(true);
-    const sock = getSocket();
-    sock.emit(
-      "unirse_sala",
-      {
+    (async () => {
+      const r = await unirseSalaOnline({
         salaId,
         nombre: getPersonaje(miSlug)?.nombre || "Primo",
         personaje: miSlug
-      },
-      (resp: { ok: boolean; jugadorId?: string; error?: string }) => {
-        if (!resp.ok) return setError(resp.error || "No se pudo entrar.");
-        if (resp.jugadorId) {
-          setMiId(resp.jugadorId);
-          guardarSesion({ salaId, jugadorId: resp.jugadorId });
-        }
+      });
+      if (!r.ok || !r.jugador_id) {
+        setError(r.error || "No se pudo entrar.");
+        return;
       }
-    );
-  }, [estado, miSlug, miId, unidoIntentado, salaId]);
+      setMiId(r.jugador_id);
+      guardarSesion({
+        salaId,
+        jugadorId: r.jugador_id,
+        perfilId: r.perfil_id
+      });
+    })();
+  }, [estado, miSlug, miId, unidoIntentado, salaId, salaMeta?.iniciada]);
 
   const enviarAccion = useCallback(
-    (a: Accion) => {
+    async (a: Accion) => {
       if (!miId) return;
-      getSocket().emit("accion", { salaId, jugadorId: miId, accion: a });
+      const r = await enviarAccionOnline(salaId, miId, a);
+      if (!r.ok) setError(r.error || "Acción rechazada.");
     },
     [salaId, miId]
   );
   const enviarChat = useCallback(
-    (m: { texto?: string; reaccion?: string }) => {
+    async (m: { texto?: string; reaccion?: string }) => {
       if (!miId) return;
-      getSocket().emit("chat", { salaId, jugadorId: miId, ...m });
+      await enviarChatOnline(salaId, miId, m);
     },
     [salaId, miId]
   );
-  const iniciar = useCallback(() => {
-    getSocket().emit("iniciar_partida", { salaId });
+  const iniciar = useCallback(async () => {
+    const r = await iniciarPartidaOnline(salaId);
+    if (!r.ok) setError(r.error || "No se pudo iniciar.");
   }, [salaId]);
   const compartirLink = useCallback(() => {
     if (typeof window === "undefined") return;

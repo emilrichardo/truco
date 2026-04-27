@@ -1,78 +1,97 @@
-// Edge Function: crear una sala nueva con alias truquero.
-// Genera el alias evitando colisiones contra `salas.id` y devuelve la sala
-// recién creada. El motor del truco aún se ejecuta en el server Node;
-// migración a Edge en fase 2.
-
-import { createClient } from "jsr:@supabase/supabase-js@2";
-
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_KEY  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const ALIASES = [
-  "fernet-y-mazo","fernet-y-yapa","anchito-bravo","anchito-pelado",
-  "anchito-de-espada","siete-vieja","siete-bravo","siete-de-oro",
-  "olorosa-criolla","olorosa-falsa","rabona-larga","rabona-criolla",
-  "sota-loca","sota-pelada","mazo-pelado","envido-falso","envido-largo",
-  "real-envido","falta-envido","truco-pelado","truco-bravo","vale-cuatro",
-  "carpeta-larga","picardia-criolla","picardia-pura","yapa-final",
-  "puntazo-bravo","puntazo-final","matraca-larga","bocha-fina",
-  "asadito-largo","asadito-criollo","manilla-corta","rey-del-monte",
-  "caballo-rabona","mano-y-pie","ancho-pelado","viejas-bravas",
-  "verdes-que-secan","verdes-secas","embocada-larga","criolla-picara",
-  "matrera-vieja","no-quiero-ni-ver","mucha-cancha","buena-flor",
-  "cara-rota","tirando-a-matar","tres-de-espada","siete-falso",
-  "vino-y-mazo","yapa-criolla","primo-bravo","primo-rabona",
-  "olor-a-fernet"
-];
+// Crea una sala online con alias truquero. Inserta al creador como primer
+// jugador (asiento 0, equipo 0). El motor del truco corre en Edge: el estado
+// inicial se calcula acá y se guarda en la tabla `salas`.
+import { admin, fail, ok, preflight, readJson } from "../_shared/lib.ts";
+import { generarAliasSala } from "../_shared/aliasSala.ts";
+import { crearEstadoInicial } from "../_shared/truco/motor.ts";
+import type { Jugador } from "../_shared/truco/types.ts";
 
 interface Payload {
-  modo: "1v1" | "2v2";
+  perfil_id?: string;          // si se conoce; si no, podemos crear uno anónimo
+  nombre: string;
+  personaje: string;
+  tamanio: 2 | 4;
   puntos_objetivo: 15 | 30;
-  perfil_id?: string;
-  estado_inicial: unknown;
+  device_id?: string;          // identificador estable del cliente
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== "POST") return error("method_not_allowed", 405);
-  let body: Payload;
-  try { body = await req.json(); } catch { return error("bad_json", 400); }
-  if (!body.modo || !body.puntos_objetivo || !body.estado_inicial) {
-    return error("missing_fields", 400);
+  if (req.method === "OPTIONS") return preflight();
+  if (req.method !== "POST") return fail("method_not_allowed", 405);
+
+  const body = await readJson<Payload>(req);
+  if (!body) return fail("bad_json");
+  if (!body.nombre || !body.personaje || !body.tamanio || !body.puntos_objetivo) {
+    return fail("missing_fields");
   }
 
-  const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
-    auth: { persistSession: false }
+  const sb = admin();
+
+  // 1) Asegurar perfil del creador (upsert por device_id si no llega perfil_id).
+  let perfilId = body.perfil_id ?? null;
+  if (!perfilId && body.device_id) {
+    const { data: existente } = await sb
+      .from("perfiles")
+      .select("id")
+      .eq("device_id", body.device_id)
+      .maybeSingle();
+    if (existente) {
+      perfilId = existente.id;
+      await sb
+        .from("perfiles")
+        .update({ nombre: body.nombre, personaje: body.personaje })
+        .eq("id", existente.id);
+    } else {
+      const { data: nuevo, error } = await sb
+        .from("perfiles")
+        .insert({
+          device_id: body.device_id,
+          nombre: body.nombre,
+          personaje: body.personaje
+        })
+        .select("id")
+        .single();
+      if (error) return fail(`perfil_insert: ${error.message}`, 500);
+      perfilId = nuevo.id;
+    }
+  }
+
+  // 2) Generar alias único.
+  const { data: salasUsadas } = await sb.from("salas").select("id");
+  const usadas = new Set((salasUsadas || []).map((r: { id: string }) => r.id));
+  const salaId = generarAliasSala(usadas);
+
+  // 3) Construir estado inicial con el creador como único jugador.
+  const jugadorId = crypto.randomUUID();
+  const jugador: Jugador = {
+    id: jugadorId,
+    nombre: body.nombre,
+    personaje: body.personaje,
+    equipo: 0,
+    asiento: 0,
+    conectado: true,
+    esBot: false
+  };
+  const estadoInicial = crearEstadoInicial({
+    salaId,
+    jugadores: [jugador],
+    modo: body.tamanio === 4 ? "2v2" : "1v1",
+    puntosObjetivo: body.puntos_objetivo
   });
 
-  // Generar alias único
-  const baraja = [...ALIASES].sort(() => Math.random() - 0.5);
-  let salaId: string | null = null;
-  for (const a of baraja) {
-    const { count } = await admin
-      .from("salas").select("id", { count: "exact", head: true }).eq("id", a);
-    if ((count ?? 0) === 0) { salaId = a; break; }
-  }
-  if (!salaId) {
-    salaId = `${baraja[0]}-${Date.now().toString(36).slice(-4)}`;
-  }
+  // 4) Persistir.
+  const { data: sala, error: errIns } = await sb
+    .from("salas")
+    .insert({
+      id: salaId,
+      modo: estadoInicial.modo,
+      puntos_objetivo: estadoInicial.puntosObjetivo,
+      estado: estadoInicial,
+      created_by: perfilId
+    })
+    .select()
+    .single();
+  if (errIns) return fail(`sala_insert: ${errIns.message}`, 500);
 
-  const { data, error: errIns } = await admin.from("salas").insert({
-    id: salaId,
-    modo: body.modo,
-    puntos_objetivo: body.puntos_objetivo,
-    estado: body.estado_inicial,
-    created_by: body.perfil_id ?? null
-  }).select().single();
-  if (errIns) return error(errIns.message, 500);
-
-  return new Response(JSON.stringify({ ok: true, sala: data }), {
-    headers: { "content-type": "application/json" }
-  });
+  return ok({ sala_id: salaId, jugador_id: jugadorId, sala, perfil_id: perfilId });
 });
-
-function error(msg: string, status = 400) {
-  return new Response(JSON.stringify({ error: msg }), {
-    status,
-    headers: { "content-type": "application/json" }
-  });
-}

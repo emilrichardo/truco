@@ -89,7 +89,9 @@
       "Bash(supabase --version)",
       "Bash(supabase projects *)",
       "Bash(supabase link *)",
-      "Bash(supabase db *)"
+      "Bash(supabase db *)",
+      "Bash(supabase functions *)",
+      "Bash(ps -p 4902,49433 -o pid,comm,args)"
     ],
     "additionalDirectories": [
       "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"

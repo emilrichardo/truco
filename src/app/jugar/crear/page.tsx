@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getSocket, guardarSesion } from "@/lib/socket";
+import { crearSalaOnline, guardarSesion } from "@/lib/salaOnline";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { getPersonaje, urlPersonaje } from "@/data/jugadores";
 import { usePersonajeLocal } from "@/lib/personaje";
@@ -23,23 +23,28 @@ export default function CrearSalaPage() {
   if (!listo || !miSlug) return <main className="min-h-[100dvh]" />;
   const yo = getPersonaje(miSlug)!;
 
-  const crear = () => {
+  const [error, setError] = useState<string | null>(null);
+  const crear = async () => {
     if (creando) return;
     setCreando(true);
-    getSocket().emit(
-      "crear_sala",
-      {
-        nombre: yo.nombre,
-        personaje: miSlug,
-        modo: "online",
-        tamanio,
-        puntosObjetivo: puntos
-      },
-      ({ salaId, jugadorId }: { salaId: string; jugadorId: string }) => {
-        guardarSesion({ salaId, jugadorId });
-        router.push(`/jugar/sala/${salaId}`);
-      }
-    );
+    setError(null);
+    const r = await crearSalaOnline({
+      nombre: yo.nombre,
+      personaje: miSlug,
+      tamanio,
+      puntosObjetivo: puntos
+    });
+    if (!r.ok || !r.sala_id || !r.jugador_id) {
+      setError(r.error || "No se pudo crear la sala.");
+      setCreando(false);
+      return;
+    }
+    guardarSesion({
+      salaId: r.sala_id,
+      jugadorId: r.jugador_id,
+      perfilId: r.perfil_id
+    });
+    router.push(`/jugar/sala/${r.sala_id}`);
   };
 
   return (
@@ -115,6 +120,9 @@ export default function CrearSalaPage() {
         >
           {creando ? "Generando…" : "Generar sala"}
         </button>
+        {error && (
+          <p className="text-red text-xs mt-2 text-center font-bold">{error}</p>
+        )}
         <p className="text-text-dim text-xs mt-3 text-center italic">
           Después podés copiar el link y mandarlo a los primos.
         </p>
