@@ -10,6 +10,7 @@ import { Chat } from "@/components/Chat";
 import { UltimoCanto } from "@/components/UltimoCanto";
 import { Marcador } from "@/components/Marcador";
 import { ChatFlotante } from "@/components/ChatFlotante";
+import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 import { useSalaLocal, type ConfigSalaLocal } from "@/lib/salaLocal";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { getPersonaje } from "@/data/jugadores";
@@ -59,6 +60,9 @@ function PartidaSoloInterno() {
   }, [listoSlug, miSlug, tamanio, puntos]);
 
   const { estado, miId, enviarAccion, enviarChat } = useSalaLocal(config);
+
+  // Audio del juego: cantos, cartas, reacciones.
+  useAudioJuego(estado, miId);
 
   // Contador de mensajes no vistos en chat (cuando está cerrado).
   useEffect(() => {

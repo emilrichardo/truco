@@ -295,34 +295,90 @@ body {
  * MESA Y CARTAS ESPAÑOLAS
  * ============================================================ */
 
-/* Mesa de madera vieja de campo: tablones desgastados, vetas y nudos */
+/* Mesa de madera vieja, gastada por años de partidas: tablones desparejos,
+ * nudos oscuros, manchas de fernet y rayones aleatorios. */
 .tapete {
   background-color: var(--madera);
   background-image:
-    radial-gradient(ellipse 28px 5px at 18% 22%, rgba(20, 10, 4, 0.55), transparent 70%),
-    radial-gradient(ellipse 22px 4px at 72% 64%, rgba(20, 10, 4, 0.45), transparent 70%),
-    radial-gradient(ellipse 36px 6px at 42% 82%, rgba(20, 10, 4, 0.4), transparent 70%),
-    radial-gradient(ellipse 18px 3px at 88% 34%, rgba(20, 10, 4, 0.5), transparent 70%),
+    /* manchas / círculos de vasos sudados */
+    radial-gradient(circle 18px at 23% 18%, rgba(0, 0, 0, 0.18) 0 12px, transparent 14px),
+    radial-gradient(circle 22px at 78% 28%, rgba(0, 0, 0, 0.15) 0 14px, transparent 16px),
+    radial-gradient(circle 14px at 64% 72%, rgba(0, 0, 0, 0.12) 0 10px, transparent 12px),
+    /* nudos / quemaduras de cigarrillo */
+    radial-gradient(ellipse 32px 6px at 18% 22%, rgba(20, 10, 4, 0.7), transparent 70%),
+    radial-gradient(ellipse 26px 5px at 72% 64%, rgba(20, 10, 4, 0.6), transparent 70%),
+    radial-gradient(ellipse 38px 7px at 42% 82%, rgba(20, 10, 4, 0.55), transparent 70%),
+    radial-gradient(ellipse 20px 4px at 88% 34%, rgba(20, 10, 4, 0.65), transparent 70%),
+    radial-gradient(ellipse 24px 4px at 8% 64%, rgba(20, 10, 4, 0.5), transparent 70%),
+    radial-gradient(ellipse 16px 3px at 56% 12%, rgba(20, 10, 4, 0.55), transparent 70%),
+    /* rayones diagonales finos (years of dealing cards) */
+    repeating-linear-gradient(
+      35deg,
+      transparent 0 35px,
+      rgba(255, 240, 200, 0.04) 35px 36px,
+      transparent 36px 80px
+    ),
+    repeating-linear-gradient(
+      -28deg,
+      transparent 0 60px,
+      rgba(0, 0, 0, 0.07) 60px 61px,
+      transparent 61px 130px
+    ),
+    /* separación entre tablones, ancho irregular */
     repeating-linear-gradient(
       90deg,
-      transparent 0 118px,
-      rgba(0, 0, 0, 0.6) 118px 121px,
-      rgba(255, 255, 255, 0.04) 121px 122px
+      transparent 0 96px,
+      rgba(0, 0, 0, 0.7) 96px 99px,
+      rgba(255, 220, 170, 0.05) 99px 100px,
+      transparent 100px 138px,
+      rgba(0, 0, 0, 0.55) 138px 141px,
+      transparent 141px 220px
     ),
+    /* veta horizontal de la madera, líneas finas y desparejas */
     repeating-linear-gradient(
       180deg,
-      rgba(0, 0, 0, 0.06) 0 1px,
-      transparent 1px 4px,
-      rgba(255, 255, 255, 0.025) 4px 5px,
-      transparent 5px 9px
+      rgba(0, 0, 0, 0.1) 0 1px,
+      transparent 1px 3px,
+      rgba(255, 220, 170, 0.04) 3px 4px,
+      transparent 4px 7px,
+      rgba(0, 0, 0, 0.06) 7px 8px,
+      transparent 8px 12px
     ),
-    linear-gradient(180deg, var(--madera-clara) 0%, var(--madera) 45%, var(--madera-oscura) 100%);
-  border: 8px solid var(--madera-oscura);
+    /* base con variación cálida tipo madera curada y oscurecida */
+    linear-gradient(180deg, #7a4f2e 0%, var(--madera) 35%, #4a2d18 100%);
+  border: 10px solid var(--madera-oscura);
   border-radius: 10px;
   box-shadow:
-    inset 0 0 80px rgba(0, 0, 0, 0.55),
-    inset 0 0 4px rgba(0, 0, 0, 0.6),
-    0 6px 18px rgba(0, 0, 0, 0.6);
+    inset 0 0 90px rgba(0, 0, 0, 0.7),
+    inset 0 0 4px rgba(0, 0, 0, 0.7),
+    inset 6px 6px 18px rgba(0, 0, 0, 0.4),
+    inset -4px -4px 12px rgba(0, 0, 0, 0.3),
+    0 8px 22px rgba(0, 0, 0, 0.7);
+  position: relative;
+}
+
+/* Vignette + ralladuras sutiles encima del tapete (capa decorativa) */
+.tapete::before,
+.tapete::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 4px;
+}
+.tapete::before {
+  background-image:
+    radial-gradient(ellipse at center, transparent 50%, rgba(0, 0, 0, 0.45) 100%);
+}
+.tapete::after {
+  background-image:
+    radial-gradient(circle 3px at 12% 38%, rgba(0, 0, 0, 0.5) 0 1px, transparent 2px),
+    radial-gradient(circle 2px at 27% 71%, rgba(0, 0, 0, 0.55) 0 1px, transparent 2px),
+    radial-gradient(circle 4px at 46% 24%, rgba(0, 0, 0, 0.4) 0 2px, transparent 3px),
+    radial-gradient(circle 2px at 81% 55%, rgba(0, 0, 0, 0.5) 0 1px, transparent 2px),
+    radial-gradient(circle 3px at 67% 88%, rgba(0, 0, 0, 0.45) 0 1px, transparent 2px),
+    radial-gradient(circle 2px at 38% 92%, rgba(0, 0, 0, 0.5) 0 1px, transparent 2px);
+  opacity: 0.85;
 }
 
 /* Carta española: la imagen del naipe ya trae su propio diseño.

@@ -20,6 +20,7 @@ import { Chat } from "@/components/Chat";
 import { UltimoCanto } from "@/components/UltimoCanto";
 import { Marcador } from "@/components/Marcador";
 import { ChatFlotante } from "@/components/ChatFlotante";
+import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 
 export default function SalaPage() {
   const params = useParams<{ id: string }>();
@@ -36,6 +37,9 @@ export default function SalaPage() {
   const lastChatLen = useRef(0);
 
   const { estado, salaMeta, error: errorSala } = useSalaOnline(salaId);
+
+  // Audio del juego: cantos, cartas, reacciones.
+  useAudioJuego(estado, miId);
 
   useEffect(() => {
     if (errorSala) setError(errorSala);
