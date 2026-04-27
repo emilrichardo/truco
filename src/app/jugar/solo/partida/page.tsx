@@ -8,11 +8,17 @@ import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
 import { UltimoCanto } from "@/components/UltimoCanto";
+import { ResultadoEnvido } from "@/components/ResultadoEnvido";
+import { ResultadoMano } from "@/components/ResultadoMano";
 import { Marcador } from "@/components/Marcador";
 import { ChatFlotante } from "@/components/ChatFlotante";
 import { MiAvatarBR } from "@/components/MiAvatarBR";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
-import { useSalaLocal, type ConfigSalaLocal } from "@/lib/salaLocal";
+import {
+  useSalaLocal,
+  borrarSnapshotLocal,
+  type ConfigSalaLocal
+} from "@/lib/salaLocal";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { getPersonaje } from "@/data/jugadores";
 
@@ -134,6 +140,8 @@ function PartidaSoloInterno() {
           <div className="flex-1 relative min-h-0">
             <Mesa estado={estado} miId={miId} />
             <UltimoCanto estado={estado} miId={miId} />
+            <ResultadoEnvido estado={estado} miId={miId} />
+            <ResultadoMano estado={estado} miId={miId} />
             <MiAvatarBR estado={estado} miId={miId} />
             <div
               className={
@@ -265,9 +273,25 @@ function PartidaSoloInterno() {
                   ? "¡Ganaste!"
                   : "Perdiste."}
               </p>
-              <Link href="/" className="btn btn-primary">
-                Volver al inicio
-              </Link>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    // Hard reload para garantizar que el motor empiece
+                    // de cero con un nuevo reparto contra el mismo oponente.
+                    borrarSnapshotLocal();
+                    window.location.href = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}`;
+                  }}
+                  className="btn btn-primary w-full"
+                >
+                  Revancha
+                </button>
+                <Link href="/jugar/solo" className="btn w-full">
+                  Cambiar de oponente
+                </Link>
+                <Link href="/" className="btn btn-ghost w-full text-xs">
+                  Volver al inicio
+                </Link>
+              </div>
             </div>
           </div>
         )}

@@ -4,6 +4,7 @@ import clsx from "clsx";
 import type { EstadoJuego, Jugador, Carta } from "@/lib/truco/types";
 import { CartaEspanola } from "./CartaEspanola";
 import { JugadorPanel } from "./JugadorPanel";
+import { useHablando } from "@/lib/useHablando";
 
 type Posicion = "arriba" | "abajo" | "izquierda" | "derecha";
 
@@ -34,6 +35,8 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
     const t = window.setTimeout(() => setVerCompañero(false), 5000);
     return () => clearTimeout(t);
   }, [verCompañero]);
+
+  const { hablandoId, hablandoKey } = useHablando(estado);
 
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
@@ -75,7 +78,10 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
         <div className="text-dorado/15 text-6xl leading-none -mb-1 select-none">
           ☀
         </div>
-        <div className="text-crema/40 text-[10px] uppercase tracking-widest font-bold">
+        <div
+          className="text-dorado/80 text-[10px] uppercase tracking-widest font-bold"
+          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.5)" }}
+        >
           Mano {estado.manoActual?.numero ?? 0} · Baza {numeroDeBaza}
         </div>
         {estado.manoActual && estado.manoActual.valorMano > 1 && (
@@ -111,6 +117,8 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
             cartasEnMano={cartasEnMano}
             mostrarCompañero={verCompañero}
             onToggleCompañero={toggleCompañero}
+            hablando={hablandoId === j.id}
+            hablandoKey={hablandoId === j.id ? hablandoKey : null}
           />
         );
       })}
@@ -132,7 +140,10 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
       })}
 
       {totalJugadas === 0 && (
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-20 text-crema/40 italic text-xs subtitulo-claim z-10">
+        <div
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-20 text-crema/85 italic text-xs subtitulo-claim z-10 parpadeo"
+          style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.55)" }}
+        >
           Esperando primera carta…
         </div>
       )}
@@ -152,7 +163,9 @@ function PuestoJugador({
   esCompañero,
   cartasEnMano,
   mostrarCompañero,
-  onToggleCompañero
+  onToggleCompañero,
+  hablando,
+  hablandoKey
 }: {
   pos: Posicion;
   jugador: Jugador;
@@ -163,6 +176,8 @@ function PuestoJugador({
   cartasEnMano: Carta[];
   mostrarCompañero: boolean;
   onToggleCompañero: () => void;
+  hablando?: boolean;
+  hablandoKey?: string | null;
 }) {
   const cartasOcultas = !esCompañero || !mostrarCompañero;
   const alineacion =
@@ -182,6 +197,8 @@ function PuestoJugador({
         esMano={esMano}
         esYo={esYo}
         compacto
+        hablando={hablando}
+        hablandoKey={hablandoKey}
       />
       {!esYo && cartasEnMano.length > 0 && (
         <ManoOculta

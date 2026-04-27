@@ -285,64 +285,48 @@ function resolverBaza(estado: EstadoJuego, baza: Baza) {
  */
 function evaluarFinDeMano(estado: EstadoJuego) {
   const mano = estado.manoActual!;
-  const ganadores = mano.bazas.map((b) => b.ganadorEquipo);
-  const gan0 = ganadores.filter((g) => g === 0).length;
-  const gan1 = ganadores.filter((g) => g === 1).length;
-
+  const bazas = mano.bazas;
   let ganador: Equipo | null = null;
 
-  // Reglas de truco para definir el ganador con pardas.
-  // Si en una baza hay parda, gana la siguiente (regla simplificada habitual):
-  //  - Parda en 1ra: gana quien gane la 2da; si 2da también es parda, gana quien gane la 3ra; si las tres pardas, gana el mano.
-  //  - 1ra ganada por X, 2da parda: gana X.
-  //  - 1ra parda, 2da X, 3ra parda: gana X.
-  //  - 1ra X, 2da Y, 3ra parda: gana 1ra (X).
-  if (mano.bazas.length >= 1) {
-    const b1 = mano.bazas[0];
-    if (mano.bazas.length === 1 && !b1.pardada && (gan0 === 1 || gan1 === 1)) {
-      // primer baza ganada, esperar 2da
+  // Reglas estándar del truco:
+  //  - 1ra X, 2da X         → gana X
+  //  - 1ra X, 2da parda     → gana X (no se juega 3ra)
+  //  - 1ra parda, 2da X     → gana X (no se juega 3ra)
+  //  - 1ra X, 2da Y         → 1-1, va a la 3ra
+  //  - 1ra parda, 2da parda → va a la 3ra
+  //  - 3ra decidida         → gana esa
+  //  - 3ra parda con 1-1    → gana el de la 1ra
+  //  - 3ra parda con parda-X → gana X
+  //  - Las tres pardas      → gana el equipo que es mano
+  if (bazas.length >= 2) {
+    const b1 = bazas[0];
+    const b2 = bazas[1];
+
+    if (!b1.pardada && !b2.pardada) {
+      if (b1.ganadorEquipo === b2.ganadorEquipo) ganador = b1.ganadorEquipo;
+      // si distintos → 1-1, seguimos a la 3ra
+    } else if (!b1.pardada && b2.pardada) {
+      ganador = b1.ganadorEquipo;
+    } else if (b1.pardada && !b2.pardada) {
+      ganador = b2.ganadorEquipo;
     }
-    if (mano.bazas.length >= 2) {
-      const b2 = mano.bazas[1];
-      const ganaUno = (b: Baza) => b.ganadorEquipo;
+    // ambas pardas → seguimos a la 3ra
+  }
 
-      if (!b1.pardada && !b2.pardada && b1.ganadorEquipo === b2.ganadorEquipo) {
-        ganador = b1.ganadorEquipo;
-      } else if (b1.pardada && !b2.pardada && mano.bazas.length === 2) {
-        // Parda 1ra, espera 3ra... salvo que ya no quede.
-      } else if (!b1.pardada && b2.pardada) {
-        // 1ra ganada, 2da parda → si la 3ra es parda también, gana 1ra. Si no, gana la 3ra...
-        // Simplificación: con 2 bazas (1ra X, 2da parda) seguimos a 3ra.
-      } else if (b1.pardada && b2.pardada) {
-        // Esperamos 3ra; si la 3ra es parda, gana el mano.
-      } else if (!b1.pardada && !b2.pardada && b1.ganadorEquipo !== b2.ganadorEquipo) {
-        // Una a una, vamos a la 3ra. Gana quien gane la 3ra; si es parda, gana la 1ra.
-      }
+  if (ganador === null && bazas.length === 3) {
+    const b1 = bazas[0];
+    const b2 = bazas[1];
+    const b3 = bazas[2];
 
-      if (mano.bazas.length === 3) {
-        const b3 = mano.bazas[2];
-        if (b1.pardada && !b2.pardada && b3.pardada) {
-          ganador = b2.ganadorEquipo;
-        } else if (b1.pardada && b2.pardada && !b3.pardada) {
-          ganador = b3.ganadorEquipo;
-        } else if (b1.pardada && b2.pardada && b3.pardada) {
-          ganador = mano.manoEquipo;
-        } else if (!b1.pardada && b2.pardada && !b3.pardada) {
-          ganador = b1.ganadorEquipo;
-        } else if (!b1.pardada && b2.pardada && b3.pardada) {
-          ganador = b1.ganadorEquipo;
-        } else if (!b1.pardada && !b2.pardada && !b3.pardada) {
-          // 1-1-1 imposible; es 2-1.
-          if (b1.ganadorEquipo === b3.ganadorEquipo) ganador = b1.ganadorEquipo;
-          else if (b2.ganadorEquipo === b3.ganadorEquipo) ganador = b2.ganadorEquipo;
-          else ganador = b3.ganadorEquipo;
-        } else if (!b1.pardada && !b2.pardada && b3.pardada) {
-          if (b1.ganadorEquipo === b2.ganadorEquipo) ganador = b1.ganadorEquipo;
-          else ganador = b1.ganadorEquipo; // 1-1 con parda al final: gana la primera
-        } else if (b1.pardada && !b2.pardada && !b3.pardada) {
-          ganador = b3.ganadorEquipo;
-        }
-      }
+    if (!b3.pardada) {
+      ganador = b3.ganadorEquipo;
+    } else if (!b1.pardada) {
+      // 1-1 (o X-parda imposible aquí porque hubiera cerrado antes) → gana 1ra.
+      ganador = b1.ganadorEquipo;
+    } else if (!b2.pardada) {
+      ganador = b2.ganadorEquipo;
+    } else {
+      ganador = mano.manoEquipo;
     }
   }
 
@@ -590,6 +574,11 @@ function resolverEnvido(
     mano.envidoResuelto = true;
     mano.envidoEstado = "ninguno";
     mano.envidoCantoActivo = null;
+    mano.envidoResolucion = {
+      ganadorEquipo: eqGanador,
+      puntos: puntosOtorgados,
+      detalle: `Envido no querido. Equipo ${eqGanador + 1} +${puntosOtorgados}.`
+    };
     // Devuelvo el turno al "mano" o a quien le tocaba jugar carta.
     devolverTurnoAJugar(estado);
     if (chequearFinPartida(estado)) return { ok: true, estado };

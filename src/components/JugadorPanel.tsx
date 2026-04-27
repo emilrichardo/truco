@@ -8,13 +8,19 @@ export function JugadorPanel({
   esTurno,
   esYo,
   esMano,
-  compacto
+  compacto,
+  hablando,
+  hablandoKey
 }: {
   jugador: Jugador;
   esTurno: boolean;
   esYo?: boolean;
   esMano?: boolean;
   compacto?: boolean;
+  /** Si está hablando (cantó/respondió recién), pulsa más grande. */
+  hablando?: boolean;
+  /** Cambia cada vez que dice algo nuevo, para reiniciar la animación. */
+  hablandoKey?: string | null;
 }) {
   // Avatares rectangulares (aspect 3/4) para usar mejor el espacio en mobile.
   const tam = compacto
@@ -25,11 +31,13 @@ export function JugadorPanel({
     <div className="flex flex-col items-center gap-1">
       <div className="relative">
         <div
+          key={hablandoKey || "estatico"}
           className={clsx(
             "aspect-[3/4] rounded-md overflow-hidden border-2 transition shadow-md",
             tam,
             esTurno ? "border-dorado halo" : borderEquipo,
-            !jugador.conectado && "grayscale opacity-60"
+            !jugador.conectado && "grayscale opacity-60",
+            hablando && "hablando"
           )}
         >
           <img

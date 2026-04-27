@@ -170,6 +170,39 @@ function ItemEvento({
   jugadorNombre?: string;
 }) {
   const cat = m.evento || "sistema";
+  // Eventos de puntos y cierre de mano se destacan con un "ribbon" para
+  // que sea fácil ubicar lo importante: quién ganó qué.
+  const destacado = cat === "puntos" || cat === "mano";
+  if (destacado) {
+    const colorTop =
+      cat === "puntos" ? "border-t-dorado" : "border-t-azul-criollo";
+    return (
+      <div
+        className={clsx(
+          "rounded-md border border-border bg-surface-2/70 px-2 py-1.5 my-1 border-t-2",
+          colorTop
+        )}
+      >
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-dorado text-[9px] uppercase tracking-widest font-bold shrink-0">
+            {cat === "puntos" ? "✦ Puntos" : "✦ Mano"}
+          </span>
+          <div
+            className={clsx(
+              "text-sm font-bold leading-snug",
+              cat === "puntos" ? "text-dorado" : "text-azul-criollo"
+            )}
+            style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+          >
+            {jugadorNombre && (
+              <span className="text-crema mr-1">{jugadorNombre}:</span>
+            )}
+            {m.texto}
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="flex items-baseline gap-1.5 leading-snug">
       <span className="text-text-dim/50 text-[9px] uppercase tracking-wider w-12 shrink-0 text-right font-bold">

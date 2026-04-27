@@ -3,7 +3,8 @@
 // Estructura: /public/audio/voces/<voz>/<canto>/<n>.mp3
 // Cada jugador queda asignado por hash a una de las voces, así Cholo siempre
 // suena distinto a Hugui aunque digan el mismo canto. Dentro de la voz hay
-// 2-3 variaciones del canto que se eligen al azar para no repetir.
+// hasta 5 variaciones del canto (escaladas por intensidad: callandito → bravo)
+// que se eligen al azar para no repetir.
 
 import { Howl } from "howler";
 import { silenciarVoz } from "./voz";

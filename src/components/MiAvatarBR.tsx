@@ -3,6 +3,7 @@
 // Vive fuera de la Mesa para que no interfiera con el layout de la cruz de
 // cartas y siempre quede visible en el corner.
 import { JugadorPanel } from "./JugadorPanel";
+import { useHablando } from "@/lib/useHablando";
 import type { EstadoJuego } from "@/lib/truco/types";
 
 export function MiAvatarBR({
@@ -12,10 +13,12 @@ export function MiAvatarBR({
   estado: EstadoJuego;
   miId: string;
 }) {
+  const { hablandoId, hablandoKey } = useHablando(estado);
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
   const esTurno = estado.manoActual?.turnoJugadorId === me.id;
   const esMano = estado.manoActual?.manoJugadorId === me.id;
+  const yoHablo = hablandoId === me.id;
   return (
     // absolute (no fixed) para que se apoye contra el contenedor del mesa
     // y quede ENCIMA del PanelAcciones (no chocando con el chat).
@@ -26,6 +29,8 @@ export function MiAvatarBR({
         esTurno={!!esTurno}
         esMano={!!esMano}
         esYo
+        hablando={yoHablo}
+        hablandoKey={yoHablo ? hablandoKey : null}
       />
     </div>
   );
