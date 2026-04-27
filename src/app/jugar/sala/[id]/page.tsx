@@ -269,10 +269,11 @@ export default function SalaPage() {
       {/* Layout principal: mesa flexible + chat lateral en desktop / drawer en mobile */}
       {estado.iniciada && yaSoyJugador && (
         <div className="flex-1 flex overflow-hidden relative">
-          {/* Mi avatar flotante en BR de TODA la pantalla */}
-          <MiAvatarBR estado={estado} miId={miId!} />
           {/* Columna principal */}
           <div className="flex-1 flex flex-col overflow-hidden relative">
+            {/* Mi avatar flotante: BR de la columna de juego, no del viewport,
+             * para no chocar con el chat sidebar en desktop. */}
+            <MiAvatarBR estado={estado} miId={miId!} />
             <div className="flex-1 relative min-h-0">
               <Mesa estado={estado} miId={miId!} />
               <UltimoCanto estado={estado} miId={miId!} />

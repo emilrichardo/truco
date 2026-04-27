@@ -226,7 +226,7 @@ function CartasJugadas({
           >
             <CartaEspanola
               carta={j.carta}
-              tamanio="sm"
+              tamanio="md"
               resaltada={j.bazaIdx === numeroDeBaza - 1}
             />
           </div>
