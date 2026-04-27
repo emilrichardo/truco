@@ -75,12 +75,21 @@ export default function HomePage() {
       </section>
 
       <footer className="text-center mt-8 space-y-2">
-        <Link
-          href="/reglas"
-          className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
-        >
-          📖 Reglas del truco
-        </Link>
+        <div className="flex items-center justify-center gap-4">
+          <Link
+            href="/reglas"
+            className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
+          >
+            📖 Reglas
+          </Link>
+          <span className="text-text-dim/40">·</span>
+          <Link
+            href="/ranking"
+            className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
+          >
+            🏆 Tabla de posiciones
+          </Link>
+        </div>
         <div className="text-text-dim/60 text-[10px] subtitulo-claim">
           Hecho con asado y mate · {new Date().getFullYear()}
         </div>

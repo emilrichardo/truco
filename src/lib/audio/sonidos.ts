@@ -4,7 +4,7 @@
 // (o fallan), cae a Web Speech con la voz personalizada por jugador.
 
 import { Howl } from "howler";
-import { hablar, silenciarVoz } from "./voz";
+import { silenciarVoz } from "./voz";
 
 type CategoriaCanto =
   | "envido"
@@ -116,43 +116,27 @@ interface OpcionesCanto {
   intensidad?: number;
 }
 
-/** Reproduce un canto: intenta clip MP3, cae a TTS con personalidad. */
-export function reproducirCanto(canto: CategoriaCanto, opts: OpcionesCanto) {
+/** Reproduce un canto. Sólo si hay clip MP3 cargado en /audio/<canto>/.
+ * Si no hay clip, se queda en silencio y el banner visual de UltimoCanto
+ * cumple la función. (Web Speech API se descartó porque en Chrome/Android
+ * la voz default es femenina y no se puede forzar una masculina confiable.) */
+export function reproducirCanto(canto: CategoriaCanto, _opts: OpcionesCanto) {
   const h = cargarHowl(canto);
-  if (h && cacheHowl[canto] !== null) {
-    try {
-      h.stop();
-      h.play();
-      return;
-    } catch {
-      // sigue al fallback
-    }
+  if (!h || cacheHowl[canto] === null) return;
+  try {
+    h.stop();
+    h.play();
+  } catch {
+    /* silencio */
   }
-  const frase = elegir(FRASES[canto]);
-  // No interrumpimos: las voces hacen cola. Así si yo canto envido y el
-  // bot responde 700ms después, primero termina mi "¡Envido!" y luego
-  // suena el "¡No quiero!" del bot. Si interrumpíamos, mi voz se cortaba.
-  hablar(frase, opts.jugadorId, {
-    intensidad: opts.intensidad ?? 1.05,
-    interrumpir: false
-  });
 }
 
-export function reaccionGanaMano(jugadorId: string) {
-  hablar(elegir(FRASES_GANE_MANO), jugadorId, { intensidad: 1.15 });
-}
-
-export function reaccionPierdeMano(jugadorId: string) {
-  hablar(elegir(FRASES_PIERDE_MANO), jugadorId, { intensidad: 0.95 });
-}
-
-export function reaccionGanaPartida(jugadorId: string) {
-  hablar(elegir(FRASES_GANE_PARTIDA), jugadorId, { intensidad: 1.2 });
-}
-
-export function reaccionPierdePartida(jugadorId: string) {
-  hablar(elegir(FRASES_PIERDE_PARTIDA), jugadorId, { intensidad: 0.85 });
-}
+// Reacciones: se mantienen como no-ops por ahora. Cuando haya clips reales
+// en /audio/laugh/, /audio/angry/, etc., se cablean acá.
+export function reaccionGanaMano(_jugadorId: string) { /* TODO: clip de risa */ }
+export function reaccionPierdeMano(_jugadorId: string) { /* TODO: clip de queja */ }
+export function reaccionGanaPartida(_jugadorId: string) { /* TODO: clip celebración */ }
+export function reaccionPierdePartida(_jugadorId: string) { /* TODO: clip derrota */ }
 
 export function silenciarTodo() {
   silenciarVoz();

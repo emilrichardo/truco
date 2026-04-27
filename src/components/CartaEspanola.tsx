@@ -1,5 +1,6 @@
 "use client";
 import clsx from "clsx";
+import Image from "next/image";
 import type { Carta } from "@/lib/truco/types";
 import { nombreCarta } from "@/lib/truco/cartas";
 
@@ -49,11 +50,13 @@ export function CartaEspanola({
         resaltada && "halo"
       )}
     >
-      <img
+      <Image
         src={src}
         alt={nombreCarta(carta)}
+        fill
+        sizes="(max-width: 640px) 160px, (max-width: 768px) 208px, 256px"
         draggable={false}
-        className="absolute inset-0 w-full h-full object-cover select-none"
+        className="object-cover select-none"
       />
     </button>
   );

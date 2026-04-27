@@ -6,6 +6,8 @@ import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { getPersonaje, urlPersonaje } from "@/data/jugadores";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
+import { IconoIndividual, IconoParejas } from "@/components/IconoModo";
+import { usePreloadCartas } from "@/lib/preload";
 
 export default function SoloPage() {
   const router = useRouter();
@@ -14,6 +16,9 @@ export default function SoloPage() {
   const [tamanio, setTamanio] = useState<2 | 4>(2);
   const [puntos, setPuntos] = useState<15 | 30>(15);
   const [creando, setCreando] = useState(false);
+
+  // Mientras el usuario elige config, ya empezamos a bajar las cartas.
+  usePreloadCartas();
 
   useEffect(() => {
     if (listo && !miSlug) router.replace("/");
@@ -79,11 +84,13 @@ export default function SoloPage() {
         )}
 
         <Opcion label="Modo">
-          <Choice activo={tamanio === 2} onClick={() => setTamanio(2)}>
-            1 vs 1
-          </Choice>
           <Choice activo={tamanio === 4} onClick={() => setTamanio(4)}>
-            2 vs 2
+            <IconoParejas size={22} />
+            <span>En parejas</span>
+          </Choice>
+          <Choice activo={tamanio === 2} onClick={() => setTamanio(2)}>
+            <IconoIndividual size={22} />
+            <span>Individual</span>
           </Choice>
         </Opcion>
         <Opcion label="A cuántos">

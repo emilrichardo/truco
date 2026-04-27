@@ -7,6 +7,8 @@ import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { getPersonaje, urlPersonaje } from "@/data/jugadores";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
+import { IconoIndividual, IconoParejas } from "@/components/IconoModo";
+import { usePreloadCartas } from "@/lib/preload";
 
 export default function CrearSalaPage() {
   const router = useRouter();
@@ -16,6 +18,9 @@ export default function CrearSalaPage() {
   const [puntos, setPuntos] = useState<15 | 30>(30);
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Mientras el usuario elige config, precargamos las cartas en background.
+  usePreloadCartas();
 
   useEffect(() => {
     if (listo && !miSlug) router.replace("/");
@@ -96,12 +101,14 @@ export default function CrearSalaPage() {
           </div>
         )}
 
-        <Opcion label="Cantidad">
-          <Choice activo={tamanio === 2} onClick={() => setTamanio(2)}>
-            1 vs 1
-          </Choice>
+        <Opcion label="Modo">
           <Choice activo={tamanio === 4} onClick={() => setTamanio(4)}>
-            2 vs 2
+            <IconoParejas size={22} />
+            <span>En parejas</span>
+          </Choice>
+          <Choice activo={tamanio === 2} onClick={() => setTamanio(2)}>
+            <IconoIndividual size={22} />
+            <span>Individual</span>
           </Choice>
         </Opcion>
 
