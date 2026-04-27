@@ -207,6 +207,10 @@ function CartasJugadas({
   // arriba → TL, abajo → BR, izquierda → BL, derecha → TR.
   const dirX = pos === "arriba" || pos === "izquierda" ? -1 : 1;
   const dirY = pos === "arriba" || pos === "derecha" ? -1 : 1;
+  // Inclinación base sutil: cada carta apunta hacia su dueño. Cards en el
+  // lado izquierdo (TL/BL) inclinan negativo (top hacia la izq); en el
+  // derecho (TR/BR) inclinan positivo.
+  const rotBase = pos === "arriba" || pos === "izquierda" ? -12 : 12;
 
   return (
     <div className={clsx("absolute z-15", clasePosicionArm(pos))}>
@@ -214,7 +218,8 @@ function CartasJugadas({
         // Cartas sucesivas se desplazan un poco hacia la esquina del jugador.
         const dx = dirX * i * 12;
         const dy = dirY * i * 8;
-        const rot = (i - (jugadas.length - 1) / 2) * 5;
+        // Rotación base + variación leve por baza para que no queden idénticas.
+        const rot = rotBase + (i - (jugadas.length - 1) / 2) * 4;
         return (
           <div
             key={`${j.bazaIdx}-${j.jugIdx}-${j.carta.id}`}
