@@ -10,6 +10,7 @@ import { Chat } from "@/components/Chat";
 import { UltimoCanto } from "@/components/UltimoCanto";
 import { Marcador } from "@/components/Marcador";
 import { ChatFlotante } from "@/components/ChatFlotante";
+import { MiAvatarBR } from "@/components/MiAvatarBR";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 import { useSalaLocal, type ConfigSalaLocal } from "@/lib/salaLocal";
 import { usePersonajeLocal } from "@/lib/personaje";
@@ -128,6 +129,7 @@ function PartidaSoloInterno() {
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
+        <MiAvatarBR estado={estado} miId={miId} />
         <div className="flex-1 flex flex-col overflow-hidden relative">
           <div className="flex-1 relative min-h-0">
             <Mesa estado={estado} miId={miId} />

@@ -37,8 +37,8 @@ export function PanelAcciones({
       {/* Sutil borde dorado superior */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-dorado/40 to-transparent" />
 
-      {/* Mis cartas en abanico — grandes y separadas para leerlas bien */}
-      <div className="flex justify-center items-end mb-2 min-h-[180px] sm:min-h-[230px]">
+      {/* Mis cartas en abanico — tamaño "sm" para que ocupen menos pantalla */}
+      <div className="flex justify-center items-end mb-2 min-h-[140px] sm:min-h-[170px]">
         {misCartas.length === 0 ? (
           <span className="text-text-dim italic text-xs py-3 subtitulo-claim">
             {mano.fase === "terminada" ? "Repartiendo…" : "Sin cartas."}
@@ -47,7 +47,7 @@ export function PanelAcciones({
           misCartas.map((c, i) => {
             const offset = i - centro;
             const rot = offset * 9;
-            const dy = Math.abs(offset) * 10;
+            const dy = Math.abs(offset) * 8;
             return (
               <div
                 key={c.id}
@@ -56,7 +56,7 @@ export function PanelAcciones({
                   {
                     "--r": `${rot}deg`,
                     "--dy": `${dy}px`,
-                    marginLeft: i === 0 ? 0 : "-2.25rem",
+                    marginLeft: i === 0 ? 0 : "-1.25rem",
                     zIndex: i + 1
                   } as React.CSSProperties
                 }
@@ -64,7 +64,7 @@ export function PanelAcciones({
                 <CartaEspanola
                   carta={c}
                   jugable={puedeJugarCarta}
-                  tamanio="md"
+                  tamanio="sm"
                   onClick={() =>
                     puedeJugarCarta &&
                     enviar({

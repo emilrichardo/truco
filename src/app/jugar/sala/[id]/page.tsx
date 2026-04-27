@@ -24,6 +24,7 @@ import { ChatFlotante } from "@/components/ChatFlotante";
 import { MenuCompartir } from "@/components/MenuCompartir";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { HeaderMarca } from "@/components/HeaderMarca";
+import { MiAvatarBR } from "@/components/MiAvatarBR";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 
 export default function SalaPage() {
@@ -268,6 +269,8 @@ export default function SalaPage() {
       {/* Layout principal: mesa flexible + chat lateral en desktop / drawer en mobile */}
       {estado.iniciada && yaSoyJugador && (
         <div className="flex-1 flex overflow-hidden relative">
+          {/* Mi avatar flotante en BR de TODA la pantalla */}
+          <MiAvatarBR estado={estado} miId={miId!} />
           {/* Columna principal */}
           <div className="flex-1 flex flex-col overflow-hidden relative">
             <div className="flex-1 relative min-h-0">
