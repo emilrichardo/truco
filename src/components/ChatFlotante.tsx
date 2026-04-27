@@ -14,12 +14,17 @@ import type { EstadoJuego } from "@/lib/truco/types";
 export function ChatFlotante({
   estado,
   miId,
-  onAbrir
+  onAbrir,
+  oculto
 }: {
   estado: EstadoJuego;
   miId: string;
   onAbrir?: () => void;
+  /** Cuando el sheet del chat ya está abierto, no tiene sentido seguir
+   *  mostrando el botón — se renderiza encima del input de enviar. */
+  oculto?: boolean;
 }) {
+  if (oculto) return null;
   // Mensajes humanos (no eventos del juego).
   const humanos = useMemo(
     () => estado.chat.filter((m) => !m.evento),
@@ -72,7 +77,9 @@ export function ChatFlotante({
 
   return (
     <div
-      className="fixed z-40 right-2 bottom-2 flex flex-col items-end gap-1.5 pointer-events-none"
+      // En desktop ya hay un panel de chat lateral siempre visible, así
+      // que escondemos el botón flotante. Sólo aparece en mobile.
+      className="md:hidden fixed z-40 right-2 bottom-2 flex flex-col items-end gap-1.5 pointer-events-none"
       style={{
         // Respetar safe-area en mobiles con notch / barra inferior.
         paddingBottom: "max(0px, env(safe-area-inset-bottom))",
@@ -82,7 +89,7 @@ export function ChatFlotante({
       {previewVisible && ultimo && (
         <div
           className={clsx(
-            "max-w-[60vw] sm:max-w-[260px] rounded-xl px-3 py-1.5 text-xs leading-snug shadow-lg backdrop-blur-sm border pointer-events-none",
+            "md:hidden max-w-[60vw] sm:max-w-[260px] rounded-xl px-3 py-1.5 text-xs leading-snug shadow-lg backdrop-blur-sm border pointer-events-none",
             esYoUltimo
               ? "bg-dorado/90 text-carbon border-dorado-oscuro"
               : "bg-carbon/85 text-crema border-azul-criollo/50"
@@ -111,22 +118,27 @@ export function ChatFlotante({
         type="button"
         onClick={abrir}
         aria-label={`Abrir chat${sinVer > 0 ? ` (${sinVer} sin ver)` : ""}`}
-        className="pointer-events-auto relative w-14 h-14 rounded-full bg-gradient-to-br from-dorado-claro via-dorado to-dorado-oscuro border-2 border-carbon shadow-xl active:scale-95 hover:brightness-110 transition flex items-center justify-center"
+        className={clsx(
+          "pointer-events-auto relative w-[68px] h-[68px] rounded-full",
+          "bg-gradient-to-br from-dorado-claro via-dorado to-dorado-oscuro",
+          "border-[3px] border-carbon",
+          "shadow-[0_4px_16px_rgba(0,0,0,0.55),0_0_0_2px_rgba(217,164,65,0.35)]",
+          "active:scale-95 hover:brightness-110 transition",
+          "flex items-center justify-center",
+          // Anillo ámbar pulsante cuando hay mensajes sin ver
+          sinVer > 0 && "ring-4 ring-dorado/60 animate-pulse"
+        )}
       >
         <svg
           viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-7 h-7 text-carbon drop-shadow-[0_1px_0_rgba(255,255,255,0.3)]"
+          fill="currentColor"
+          className="w-9 h-9 text-carbon drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]"
           aria-hidden
         >
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+          <path d="M12 3C6.48 3 2 6.92 2 11.5c0 2.08.93 3.97 2.46 5.4L3 21l4.6-1.45c1.32.62 2.84.95 4.4.95 5.52 0 10-3.92 10-8.5S17.52 3 12 3zm-4 9.5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm4 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm4 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
         </svg>
         {sinVer > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 bg-red text-crema text-[10px] font-bold rounded-full flex items-center justify-center border border-carbon shadow">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1 bg-red text-crema text-[11px] font-bold rounded-full flex items-center justify-center border-2 border-carbon shadow-md">
             {sinVer > 9 ? "9+" : sinVer}
           </span>
         )}

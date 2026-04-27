@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
+  abandonarSalaOnline,
   cerrarSalaOnline,
   enviarAccionOnline,
   enviarChatOnline,
@@ -18,7 +19,6 @@ import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
-import { UltimoCanto } from "@/components/UltimoCanto";
 import { Marcador } from "@/components/Marcador";
 import { ChatFlotante } from "@/components/ChatFlotante";
 import { MenuCompartir } from "@/components/MenuCompartir";
@@ -41,7 +41,12 @@ export default function SalaPage() {
   const [menuCompartir, setMenuCompartir] = useState(false);
   const [cerrando, setCerrando] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [avisoAbandono, setAvisoAbandono] = useState<string | null>(null);
   const lastChatLen = useRef(0);
+  const ultimaListaJugadores = useRef<
+    { id: string; nombre: string; conectado: boolean }[]
+  >([]);
+  const avisoTimerRef = useRef<number | null>(null);
 
   const { estado, salaMeta, error: errorSala } = useSalaOnline(salaId);
 
@@ -115,15 +120,21 @@ export default function SalaPage() {
     [salaId, miId]
   );
   const iniciar = useCallback(async () => {
-    const r = await iniciarPartidaOnline(salaId);
+    const r = await iniciarPartidaOnline(salaId, miId ?? undefined);
     if (!r.ok) setError(r.error || "No se pudo iniciar.");
-  }, [salaId]);
+  }, [salaId, miId]);
   const cerrarSala = useCallback(async () => {
     if (cerrando) return;
     setCerrando(true);
-    await cerrarSalaOnline(salaId);
+    await cerrarSalaOnline(salaId, miId ?? undefined);
     router.replace("/");
-  }, [salaId, cerrando, router]);
+  }, [salaId, miId, cerrando, router]);
+  const abandonarSala = useCallback(async () => {
+    if (cerrando || !miId) return;
+    setCerrando(true);
+    await abandonarSalaOnline(salaId, miId);
+    router.replace("/");
+  }, [salaId, miId, cerrando, router]);
   const abrirChat = useCallback(() => {
     setChatAbierto(true);
     setChatNoVisto(0);
@@ -138,6 +149,47 @@ export default function SalaPage() {
     () => estado?.jugadores.filter((j) => !j.esBot) || [],
     [estado]
   );
+
+  // Detectar abandonos: si la lista de jugadores se achica o uno pasa a
+  // desconectado, mostramos un cartel arriba con quién se fue.
+  useEffect(() => {
+    if (!estado) return;
+    const actuales = estado.jugadores.map((j) => ({
+      id: j.id,
+      nombre: j.nombre,
+      conectado: j.conectado !== false
+    }));
+    const previa = ultimaListaJugadores.current;
+    if (previa.length > 0) {
+      const idsActuales = new Set(actuales.map((a) => a.id));
+      const previosConectadosPorId = new Map(
+        previa.filter((p) => p.conectado).map((p) => [p.id, p])
+      );
+      // Sacaron a alguien (espera) o uno pasó de conectado a desconectado.
+      const removido = previa.find(
+        (p) => p.conectado && !idsActuales.has(p.id)
+      );
+      const desconectado = actuales.find(
+        (a) => !a.conectado && previosConectadosPorId.has(a.id)
+      );
+      const idoNombre = removido?.nombre || desconectado?.nombre;
+      if (idoNombre) {
+        setAvisoAbandono(`${idoNombre} se fue de la mesa`);
+        if (avisoTimerRef.current) clearTimeout(avisoTimerRef.current);
+        avisoTimerRef.current = window.setTimeout(() => {
+          setAvisoAbandono(null);
+          avisoTimerRef.current = null;
+        }, 3500);
+      }
+    }
+    ultimaListaJugadores.current = actuales;
+    return () => {
+      if (avisoTimerRef.current) {
+        clearTimeout(avisoTimerRef.current);
+        avisoTimerRef.current = null;
+      }
+    };
+  }, [estado]);
 
   if (!estado) {
     return (
@@ -274,7 +326,6 @@ export default function SalaPage() {
           <div className="flex-1 flex flex-col overflow-hidden relative">
             <div className="flex-1 relative min-h-0">
               <Mesa estado={estado} miId={miId!} />
-              <UltimoCanto estado={estado} miId={miId!} />
               {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
                * para que quede arriba de mi mano de cartas. */}
               <MiAvatarBR estado={estado} miId={miId!} />
@@ -299,6 +350,7 @@ export default function SalaPage() {
                 estado={estado}
                 miId={miId!}
                 onAbrir={abrirChat}
+                oculto={chatAbierto}
               />
             </div>
             {meEnCurso && (

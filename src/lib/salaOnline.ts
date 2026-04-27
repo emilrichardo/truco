@@ -92,12 +92,28 @@ export async function unirseSalaOnline(payload: {
   });
 }
 
-export async function iniciarPartidaOnline(salaId: string): Promise<SalaResp> {
-  return invocar("sala-iniciar", { sala_id: salaId });
+export async function iniciarPartidaOnline(
+  salaId: string,
+  jugadorId?: string
+): Promise<SalaResp> {
+  return invocar("sala-iniciar", { sala_id: salaId, jugador_id: jugadorId });
 }
 
-export async function cerrarSalaOnline(salaId: string): Promise<SalaResp> {
-  return invocar("sala-cerrar", { sala_id: salaId });
+export async function cerrarSalaOnline(
+  salaId: string,
+  jugadorId?: string
+): Promise<SalaResp> {
+  return invocar("sala-cerrar", { sala_id: salaId, jugador_id: jugadorId });
+}
+
+export async function abandonarSalaOnline(
+  salaId: string,
+  jugadorId: string
+): Promise<SalaResp> {
+  return invocar("sala-abandonar", {
+    sala_id: salaId,
+    jugador_id: jugadorId
+  });
 }
 
 export async function enviarAccionOnline(
@@ -115,13 +131,14 @@ export async function enviarAccionOnline(
 export async function enviarChatOnline(
   salaId: string,
   jugadorId: string,
-  msg: { texto?: string; reaccion?: string }
+  msg: { texto?: string; reaccion?: string; sticker?: string }
 ): Promise<SalaResp> {
   return invocar("sala-chat", {
     sala_id: salaId,
     jugador_id: jugadorId,
     texto: msg.texto,
-    reaccion: msg.reaccion
+    reaccion: msg.reaccion,
+    sticker: msg.sticker
   });
 }
 

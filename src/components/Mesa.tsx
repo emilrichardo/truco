@@ -36,7 +36,8 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
     return () => clearTimeout(t);
   }, [verCompañero]);
 
-  const { hablandoId, hablandoKey } = useHablando(estado);
+  const { hablandoId, hablandoKey, hablandoTexto, hablandoEvento } =
+    useHablando(estado);
 
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
@@ -73,11 +74,14 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
     <div className="relative w-full h-full">
       <div className="absolute inset-1 sm:inset-2 tapete" />
 
-      {/* Centro: sol criollo + meta info */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1 pointer-events-none">
-        <div className="text-dorado/15 text-6xl leading-none -mb-1 select-none">
+      {/* Centro: sólo el sol criollo, decorativo. La meta info (Mano · Baza
+       *  y Vale X) se renderea abajo para no pisar las cartas tiradas. */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
+        <div className="text-dorado/10 text-6xl leading-none select-none">
           ☀
         </div>
+      </div>
+      <div className="absolute left-1/2 bottom-1 -translate-x-1/2 z-10 flex items-center gap-2 pointer-events-none">
         <div
           className="text-dorado/80 text-[10px] uppercase tracking-widest font-bold"
           style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.5)" }}
@@ -86,7 +90,7 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
         </div>
         {estado.manoActual && estado.manoActual.valorMano > 1 && (
           <div
-            className="bg-azul-criollo text-crema font-bold px-3 py-1 rounded uppercase text-[10px] tracking-widest border border-dorado shadow-lg subtitulo-claim mt-1"
+            className="bg-azul-criollo text-crema font-bold px-2 py-0.5 rounded uppercase text-[10px] tracking-widest border border-dorado shadow-lg subtitulo-claim"
             style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
           >
             Vale {estado.manoActual.valorMano}
@@ -105,6 +109,8 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
         const esCompañero = total === 4 && j.equipo === me.equipo;
         const cartasEnMano =
           estado.manoActual?.cartasPorJugador[j.id] || [];
+        const esRival = total === 4 ? j.equipo !== me.equipo : true;
+        const esQuienHabla = hablandoId === j.id;
         return (
           <PuestoJugador
             key={j.id}
@@ -113,12 +119,15 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
             esTurno={!!esTurno}
             esMano={!!esMano}
             esYo={false}
+            esRival={esRival}
             esCompañero={esCompañero}
             cartasEnMano={cartasEnMano}
             mostrarCompañero={verCompañero}
             onToggleCompañero={toggleCompañero}
-            hablando={hablandoId === j.id}
-            hablandoKey={hablandoId === j.id ? hablandoKey : null}
+            hablando={esQuienHabla}
+            hablandoKey={esQuienHabla ? hablandoKey : null}
+            hablandoTexto={esQuienHabla ? hablandoTexto : null}
+            hablandoEvento={esQuienHabla ? hablandoEvento : null}
           />
         );
       })}
@@ -160,28 +169,44 @@ function PuestoJugador({
   esTurno,
   esMano,
   esYo,
+  esRival,
   esCompañero,
   cartasEnMano,
   mostrarCompañero,
   onToggleCompañero,
   hablando,
-  hablandoKey
+  hablandoKey,
+  hablandoTexto,
+  hablandoEvento
 }: {
   pos: Posicion;
   jugador: Jugador;
   esTurno: boolean;
   esMano: boolean;
   esYo: boolean;
+  esRival?: boolean;
   esCompañero: boolean;
   cartasEnMano: Carta[];
   mostrarCompañero: boolean;
   onToggleCompañero: () => void;
   hablando?: boolean;
   hablandoKey?: string | null;
+  hablandoTexto?: string | null;
+  hablandoEvento?: import("@/lib/truco/types").CategoriaEvento | null;
 }) {
   const cartasOcultas = !esCompañero || !mostrarCompañero;
   const alineacion =
     pos === "arriba" || pos === "izquierda" ? "items-start" : "items-end";
+  // Lado de la burbuja: que apunte hacia adentro (centro de la mesa) para
+  // que el rabito quede pegado a la foto y el texto se lea sobre el tapete.
+  const ladoBurbuja: "izquierda" | "derecha" | "arriba" | "abajo" =
+    pos === "arriba"
+      ? "abajo"
+      : pos === "abajo"
+        ? "arriba"
+        : pos === "izquierda"
+          ? "derecha"
+          : "izquierda";
 
   return (
     <div
@@ -196,9 +221,13 @@ function PuestoJugador({
         esTurno={esTurno}
         esMano={esMano}
         esYo={esYo}
+        esRival={esRival}
         compacto
         hablando={hablando}
         hablandoKey={hablandoKey}
+        hablandoTexto={hablandoTexto}
+        hablandoEvento={hablandoEvento}
+        ladoBurbuja={ladoBurbuja}
       />
       {!esYo && cartasEnMano.length > 0 && (
         <ManoOculta
@@ -368,7 +397,7 @@ function clasePosicionArm(pos: Posicion): string {
     case "arriba":
       return "top-[28%] left-[38%]"; // arm vertical superior, sesgado a izq
     case "abajo":
-      return "bottom-[28%] right-[38%]"; // arm vertical inferior, sesgado a der
+      return "bottom-[28%] right-[44%]"; // arm vertical inferior, levemente sesgado a der
     case "izquierda":
       return "left-[28%] bottom-[38%]"; // arm horizontal izq, sesgado abajo
     case "derecha":

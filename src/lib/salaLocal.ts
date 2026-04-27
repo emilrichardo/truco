@@ -213,13 +213,14 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   );
 
   const enviarChat = useCallback(
-    (m: { texto?: string; reaccion?: string }) => {
+    (m: { texto?: string; reaccion?: string; sticker?: string }) => {
       if (!estado || !miId) return;
       estado.chat.push({
         id: nuevoIdLocal().slice(6),
         jugadorId: miId,
         texto: (m.texto || "").slice(0, 200),
         reaccion: m.reaccion,
+        sticker: m.sticker,
         ts: Date.now()
       });
       if (estado.chat.length > 80) estado.chat.shift();

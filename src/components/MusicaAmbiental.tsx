@@ -153,6 +153,24 @@ export function MusicaAmbiental() {
     }
   }, [estado.silenciado, estado.volumen]);
 
+  // Pausar al cambiar de pestaña / minimizar y retomar al volver.
+  // No tocamos `estado.silenciado` para que la preferencia del usuario se
+  // respete: si silenció a mano, no le arrancamos la música al regresar.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onVisibility = () => {
+      const h = howlRef.current;
+      if (!h) return;
+      if (document.hidden) {
+        if (h.playing()) h.pause();
+      } else if (!estado.silenciado && !h.playing()) {
+        h.play();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [estado.silenciado]);
+
   const setEstado = (parc: Partial<Estado>) => {
     setEstadoLocal((prev) => {
       const next = { ...prev, ...parc };

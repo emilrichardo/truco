@@ -13,7 +13,8 @@ export function MiAvatarBR({
   estado: EstadoJuego;
   miId: string;
 }) {
-  const { hablandoId, hablandoKey } = useHablando(estado);
+  const { hablandoId, hablandoKey, hablandoTexto, hablandoEvento } =
+    useHablando(estado);
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
   const esTurno = estado.manoActual?.turnoJugadorId === me.id;
@@ -23,6 +24,8 @@ export function MiAvatarBR({
     // absolute (no fixed) para que se apoye contra el contenedor del mesa
     // y quede ENCIMA del PanelAcciones (no chocando con el chat).
     // compacto=false → más grande que el resto de los avatares.
+    // pointer-events-auto sólo donde hace falta — la burbuja queda
+    // por encima a la izquierda apuntando hacia mi foto.
     <div className="absolute bottom-2 right-2 z-30 pointer-events-none">
       <JugadorPanel
         jugador={me}
@@ -31,6 +34,9 @@ export function MiAvatarBR({
         esYo
         hablando={yoHablo}
         hablandoKey={yoHablo ? hablandoKey : null}
+        hablandoTexto={yoHablo ? hablandoTexto : null}
+        hablandoEvento={yoHablo ? hablandoEvento : null}
+        ladoBurbuja="izquierda"
       />
     </div>
   );

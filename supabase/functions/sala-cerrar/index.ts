@@ -1,10 +1,12 @@
 // Cierra una sala. Si no empezó, la borra. Si está en curso, la marca
-// como terminada. La llama el creador desde la pantalla de espera o
-// cualquier jugador desde adentro.
+// como terminada. Sólo el creador (asiento 0) puede cerrarla; si llega
+// `jugador_id` se valida.
 import { admin, fail, ok, preflight, readJson } from "../_shared/lib.ts";
+import type { EstadoJuego } from "../_shared/truco/types.ts";
 
 interface Payload {
   sala_id: string;
+  jugador_id?: string;
 }
 
 Deno.serve(async (req) => {
@@ -17,11 +19,17 @@ Deno.serve(async (req) => {
   const sb = admin();
   const { data: sala, error: errSel } = await sb
     .from("salas")
-    .select("id, iniciada, terminada")
+    .select("id, iniciada, terminada, estado")
     .eq("id", body.sala_id)
     .maybeSingle();
   if (errSel) return fail(errSel.message, 500);
   if (!sala) return ok({ ya_no_existe: true });
+
+  if (body.jugador_id) {
+    const estado = sala.estado as EstadoJuego;
+    const j = estado.jugadores.find((x) => x.id === body.jugador_id);
+    if (!j || j.asiento !== 0) return fail("solo_el_creador", 403);
+  }
 
   if (!sala.iniciada) {
     // No empezó: la borramos directamente.

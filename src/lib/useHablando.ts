@@ -1,20 +1,58 @@
 "use client";
 // Hook compartido: detecta el último canto/respuesta del chat y devuelve
-// { hablandoId, hablandoKey } por ~1.4s. JugadorPanel lo usa para hacer
-// pulsar al avatar del que está hablando.
+// quién habló, qué dijo, y si fue un canto inicial o una respuesta.
+// JugadorPanel/MiAvatarBR lo usan para mostrar la burbuja al lado del
+// avatar y para hacer pulsar la foto del que está hablando.
 import { useEffect, useRef, useState } from "react";
-import type { EstadoJuego } from "@/lib/truco/types";
+import type { CategoriaEvento, EstadoJuego } from "@/lib/truco/types";
 
-const DURACION_MS = 1400;
-const DESTACAR = new Set(["canto", "respuesta"]);
+const DURACION_MS = 3500;
+const DESTACAR = new Set<CategoriaEvento>(["canto", "respuesta"]);
+
+function calcularDuracion(texto: string): number {
+  return Math.max(2500, Math.min(6000, texto.length * 70 + 1500));
+}
+
+export type HablandoData = {
+  id: string;
+  key: string;
+  texto: string;
+  evento: CategoriaEvento;
+};
 
 export function useHablando(estado: EstadoJuego | null): {
   hablandoId: string | null;
   hablandoKey: string | null;
+  hablandoTexto: string | null;
+  hablandoEvento: CategoriaEvento | null;
 } {
-  const [data, setData] = useState<{ id: string; key: string } | null>(null);
+  const [data, setData] = useState<HablandoData | null>(null);
   const ultimoIdRef = useRef<string | null>(null);
   const tRef = useRef<number | null>(null);
+
+  // OJO: en modo Solo el chat se muta in-place (misma referencia de array)
+  // y `{...estado}` solo cambia el wrapper. Por eso usamos `version` (que el
+  // motor incrementa en cada acción) + length como deps. El gate por id
+  // dentro del effect evita re-disparar cuando no hay un evento nuevo.
+  const versionDep = estado?.version ?? 0;
+  const lenDep = estado?.chat.length ?? 0;
+  const manoNum = estado?.manoActual?.numero ?? 0;
+  const manoNumRef = useRef<number>(manoNum);
+
+  // Cuando arranca una mano nueva (se reparten cartas), borramos la
+  // burbuja del canto/respuesta anterior para no superponerla con el
+  // reparto. Si llegan eventos nuevos en la misma mano, el effect de
+  // abajo los muestra normalmente.
+  useEffect(() => {
+    if (manoNum !== manoNumRef.current) {
+      manoNumRef.current = manoNum;
+      if (tRef.current) {
+        clearTimeout(tRef.current);
+        tRef.current = null;
+      }
+      setData(null);
+    }
+  }, [manoNum]);
 
   useEffect(() => {
     if (!estado) return;
@@ -25,13 +63,18 @@ export function useHablando(estado: EstadoJuego | null): {
     if (ultimoIdRef.current === ultimo.id) return;
     ultimoIdRef.current = ultimo.id;
 
-    setData({ id: ultimo.jugadorId, key: ultimo.id });
+    setData({
+      id: ultimo.jugadorId,
+      key: ultimo.id,
+      texto: ultimo.texto,
+      evento: ultimo.evento!
+    });
     if (tRef.current) clearTimeout(tRef.current);
     tRef.current = window.setTimeout(() => {
       setData(null);
       tRef.current = null;
-    }, DURACION_MS);
-  }, [estado?.chat]);
+    }, calcularDuracion(ultimo.texto) + DURACION_MS / 4);
+  }, [estado, versionDep, lenDep]);
 
   useEffect(() => {
     return () => {
@@ -41,6 +84,8 @@ export function useHablando(estado: EstadoJuego | null): {
 
   return {
     hablandoId: data?.id || null,
-    hablandoKey: data?.key || null
+    hablandoKey: data?.key || null,
+    hablandoTexto: data?.texto || null,
+    hablandoEvento: data?.evento || null
   };
 }

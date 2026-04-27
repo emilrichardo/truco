@@ -101,6 +101,8 @@ export interface MensajeChat {
   jugadorId: string;
   texto: string;
   reaccion?: string;
+  /** URL pública del sticker (ej. "/brand/stickers/fernet.png"). */
+  sticker?: string;
   ts: number;
   /** Si está presente, es un evento del juego (no un mensaje humano). */
   evento?: CategoriaEvento;

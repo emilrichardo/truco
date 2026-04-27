@@ -8,6 +8,7 @@ interface Payload {
   jugador_id: string;
   texto?: string;
   reaccion?: string;
+  sticker?: string;
 }
 
 Deno.serve(async (req) => {
@@ -16,7 +17,7 @@ Deno.serve(async (req) => {
 
   const body = await readJson<Payload>(req);
   if (!body || !body.sala_id || !body.jugador_id) return fail("missing_fields");
-  if (!body.texto && !body.reaccion) return fail("vacio");
+  if (!body.texto && !body.reaccion && !body.sticker) return fail("vacio");
 
   const sb = admin();
   const { data: sala, error: errSel } = await sb
@@ -32,6 +33,7 @@ Deno.serve(async (req) => {
     jugadorId: body.jugador_id,
     texto: (body.texto || "").slice(0, 200),
     reaccion: body.reaccion,
+    sticker: body.sticker,
     ts: Date.now()
   });
   if (estado.chat.length > 200) estado.chat.shift();

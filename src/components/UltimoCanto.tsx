@@ -15,8 +15,9 @@ type Posicion = "arriba" | "abajo" | "izquierda" | "derecha";
 const DESTACAR = new Set(["canto", "respuesta"]);
 
 function calcularDuracion(texto: string): number {
-  // ~70ms por carácter, mínimo 2s, máximo 5s.
-  return Math.max(2000, Math.min(5000, texto.length * 70));
+  // ~80ms por carácter, mínimo 3s, máximo 7s. Lo bastante para alcanzar
+  // a leer las frases largas santiagueñas.
+  return Math.max(3000, Math.min(7000, texto.length * 80 + 1500));
 }
 
 export function UltimoCanto({
