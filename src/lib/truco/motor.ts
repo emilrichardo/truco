@@ -549,8 +549,8 @@ function cantarTruco(
       mano.equipoConTruco = jugador.equipo;
     } else if (mano.trucoEstado !== "truco") {
       return { ok: false, error: "Solo se canta retruco después de truco.", estado };
-    } else if (mano.equipoConTruco !== jugador.equipo) {
-      return { ok: false, error: "No tenés el truco para subir.", estado };
+    } else if (mano.equipoConTruco === jugador.equipo) {
+      return { ok: false, error: "No podés subir tu propio truco.", estado };
     }
   }
   if (subir === "vale4") {
@@ -561,8 +561,8 @@ function cantarTruco(
       mano.equipoConTruco = jugador.equipo;
     } else if (mano.trucoEstado !== "retruco") {
       return { ok: false, error: "Solo se canta vale 4 después de retruco.", estado };
-    } else if (mano.equipoConTruco !== jugador.equipo) {
-      return { ok: false, error: "No tenés el retruco para subir.", estado };
+    } else if (mano.equipoConTruco === jugador.equipo) {
+      return { ok: false, error: "No podés subir tu propio retruco.", estado };
     }
   }
 

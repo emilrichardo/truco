@@ -57,11 +57,10 @@ export function ResultadoEnvido({
   const colorAcento = yoGane ? "var(--dorado)" : "var(--rojo-fernet)";
   const titulo = yoGane ? "Ganaste el envido" : "Perdiste el envido";
 
-  // Toast compacto pinned al top — antes era un banner grande centrado
-  // que las cartas tiradas terminaban tapando. z-[450] queda por encima
-  // de las cartas (max 350) y de los globos (400).
+  // Toast efímero de puntos: nace en el centro de la mesa, sube y se
+  // desvanece. z-[450] queda por encima de cartas (max 350) y globos (400).
   return (
-    <div className="absolute top-12 left-1/2 -translate-x-1/2 z-[450] pointer-events-none envido-pop">
+    <div className="resultado-puntos-float absolute left-1/2 top-1/2 z-[450] pointer-events-none">
       <div
         className="flex items-center gap-2 bg-carbon/95 backdrop-blur-sm border-2 px-3 py-1.5 rounded-full shadow-lg"
         style={{ borderColor: colorAcento }}

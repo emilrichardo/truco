@@ -371,6 +371,31 @@ body {
   animation: envido-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+@keyframes resultado-puntos-float {
+  0% {
+    transform: translate(-50%, -50%) translateY(18px) scale(0.88);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  24% {
+    transform: translate(-50%, -50%) translateY(0) scale(1);
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.78;
+  }
+  100% {
+    transform: translate(-50%, -50%) translateY(-86px) scale(0.96);
+    opacity: 0;
+  }
+}
+
+.resultado-puntos-float {
+  animation: resultado-puntos-float 2.8s ease-out both;
+}
+
 /* Pulso del avatar cuando el jugador canta o responde. Se aplica por
  * unos segundos y vuelve solo al estado normal. */
 @keyframes hablando-pulse {

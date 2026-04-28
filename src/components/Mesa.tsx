@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import clsx from "clsx";
 import type { EstadoJuego, Jugador, Carta } from "@/lib/truco/types";
+import { jerarquia } from "@/lib/truco/cartas";
 import { CartaEspanola } from "./CartaEspanola";
 import { JugadorPanel } from "./JugadorPanel";
 import { useHablando } from "@/lib/useHablando";
@@ -127,16 +128,11 @@ export function Mesa({
           if (!pos) return null;
           const jugadas = jugadasPorJugador.get(j.id) || [];
           if (jugadas.length === 0) return null;
-          const jugadasConGanador = jugadas.map((jg) => {
-            const baza = estado.manoActual?.bazas[jg.bazaIdx];
-            const gano = !!baza && baza.ganadorEquipo === j.equipo;
-            return { ...jg, gano };
-          });
           return (
             <CartasJugadas
               key={`cards-${j.id}`}
               pos={pos}
-              jugadas={jugadasConGanador}
+              jugadas={jugadas}
               numeroDeBaza={numeroDeBaza}
             />
           );
@@ -447,7 +443,7 @@ function CartasJugadas({
   numeroDeBaza
 }: {
   pos: Posicion;
-  jugadas: (JugadaEnMesa & { gano: boolean })[];
+  jugadas: JugadaEnMesa[];
   numeroDeBaza: number;
 }) {
   // Las cartas sucesivas se desplazan hacia la esquina del dueño.
@@ -474,10 +470,10 @@ function CartasJugadas({
         const rot = rotBase + (i - (jugadas.length - 1) / 2) * 4;
         // z-index por capas:
         //   - Cada baza tiene su propio rango (baza 0: 100s, 1: 200s, 2: 300s).
-        //   - La carta ganadora DENTRO de su baza suma +50 para quedar
-        //     por encima de las perdedoras de esa misma baza.
-        //   - La baza más nueva siempre queda arriba de las viejas.
-        const zIndex = (j.bazaIdx + 1) * 100 + (j.gano ? 50 : 0);
+        //   - Dentro de la misma baza manda la jerarquía real de Truco:
+        //     un 3 debe tapar a un 11, aunque la baza ya haya cerrado.
+        //   - La baza más nueva sigue quedando arriba de las viejas.
+        const zIndex = (j.bazaIdx + 1) * 100 + jerarquia(j.carta);
         const esUltimaBaza = j.bazaIdx === numeroDeBaza - 1;
         return (
           <div
