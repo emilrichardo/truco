@@ -90,6 +90,16 @@ function PartidaSoloInterno() {
   }
 
   const miEquipoEs0 = estado.jugadores.find((j) => j.id === miId)?.equipo === 0;
+  // En 1v1 mostramos los nombres reales en el marcador y el resumen en
+  // vez de los abstractos "Nos / Ellos" — así Richi ve "Richi vs Lucas"
+  // directamente. En 2v2 se mantienen los rótulos de equipo.
+  const es1v1 = estado.jugadores.length === 2;
+  const yo = estado.jugadores.find((j) => j.id === miId);
+  const rival = es1v1
+    ? estado.jugadores.find((j) => j.id !== miId)
+    : undefined;
+  const tituloNos = es1v1 && yo ? yo.nombre : "Nos";
+  const tituloEllos = es1v1 && rival ? rival.nombre : "Ellos";
 
   return (
     <main className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-bg">
@@ -132,6 +142,8 @@ function PartidaSoloInterno() {
                 puntosEllos={estado.puntos[1]}
                 objetivo={estado.puntosObjetivo}
                 miEquipoEs0={miEquipoEs0}
+                tituloNos={tituloNos}
+                tituloEllos={tituloEllos}
               />
             </div>
             <ChatFlotante
@@ -272,10 +284,10 @@ function PartidaSoloInterno() {
                 >
                   <div className="text-center">
                     <div
-                      className="text-[10px] uppercase tracking-widest font-bold mb-0.5"
+                      className="text-[10px] uppercase tracking-widest font-bold mb-0.5 truncate"
                       style={{ color: "var(--azul-criollo)" }}
                     >
-                      Nosotros
+                      {es1v1 && yo ? yo.nombre : "Nosotros"}
                     </div>
                     <div
                       className="text-3xl font-display"
@@ -286,10 +298,10 @@ function PartidaSoloInterno() {
                   </div>
                   <div className="text-center">
                     <div
-                      className="text-[10px] uppercase tracking-widest font-bold mb-0.5"
+                      className="text-[10px] uppercase tracking-widest font-bold mb-0.5 truncate"
                       style={{ color: "var(--rojo-fernet)" }}
                     >
-                      Ellos
+                      {es1v1 && rival ? rival.nombre : "Ellos"}
                     </div>
                     <div
                       className="text-3xl font-display"

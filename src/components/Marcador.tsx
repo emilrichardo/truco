@@ -8,21 +8,26 @@ const TAM = 18; // px de cada cuadradito
 export function Marcador({
   puntosNos,
   puntosEllos,
-  miEquipoEs0
+  miEquipoEs0,
+  tituloNos = "Nos",
+  tituloEllos = "Ellos"
 }: {
   puntosNos: number;
   puntosEllos: number;
   /** Mantenido por compatibilidad — ya no se muestra header. */
   objetivo?: 15 | 30;
   miEquipoEs0: boolean;
+  /** En 1v1 se pasan los nombres reales (yo / rival) en vez de "Nos / Ellos". */
+  tituloNos?: string;
+  tituloEllos?: string;
 }) {
   const nos = miEquipoEs0 ? puntosNos : puntosEllos;
   const ellos = miEquipoEs0 ? puntosEllos : puntosNos;
   return (
     <div className="placa-madera p-1.5 flex gap-2 items-start">
-      <Columna puntos={nos} color="var(--dorado)" titulo="Nos" />
+      <Columna puntos={nos} color="var(--dorado)" titulo={tituloNos} />
       <div className="w-px self-stretch bg-crema/15" />
-      <Columna puntos={ellos} color="var(--crema)" titulo="Ellos" />
+      <Columna puntos={ellos} color="var(--crema)" titulo={tituloEllos} />
     </div>
   );
 }
