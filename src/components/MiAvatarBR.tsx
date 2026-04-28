@@ -28,7 +28,7 @@ export function MiAvatarBR({
   const esMano = estado.manoActual?.manoJugadorId === me.id;
   const yoHablo = hablandoId === me.id;
   return (
-    <div className="absolute bottom-4 left-4 z-30 pointer-events-none">
+    <div className="absolute bottom-4 left-4 z-[500] pointer-events-none">
       <JugadorPanel
         jugador={me}
         esTurno={!!esTurno}

@@ -284,9 +284,12 @@ function PuestoJugador({
   const direccionFlex = enLadoInferior ? "flex-col-reverse" : "flex-col";
 
   return (
+    // z-[500] para que el puesto (avatar + burbuja) quede por encima de
+    // las cartas tiradas. Las cartas usan zIndex inline 100..314 con stacking
+    // context propio, así que un z-20 dejaba el avatar atrás del mazo.
     <div
       className={clsx(
-        "absolute z-20 flex gap-1",
+        "absolute z-[500] flex gap-1",
         direccionFlex,
         alineacion,
         clasePosicionPuesto(pos)

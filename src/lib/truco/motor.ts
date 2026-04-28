@@ -564,6 +564,15 @@ function cantarTruco(
   const respondiendoAlRival =
     !!cantoPendiente && cantoPendiente.equipoQueDebeResponder === jugador.equipo;
 
+  // El truco se canta SIEMPRE en el turno propio (a diferencia del envido
+  // que en baza 1 lo puede cantar cualquiera). Sólo se permite cantar
+  // fuera de turno si es respuesta directa al canto del rival (retruco
+  // sobre truco, vale 4 sobre retruco) — en ese caso responde cualquier
+  // jugador del equipo que debe responder.
+  if (!respondiendoAlRival && mano.turnoJugadorId !== jugador.id) {
+    return { ok: false, error: "Tenés que esperar tu turno para cantar.", estado };
+  }
+
   if (subir === "truco" && mano.trucoEstado !== "ninguno") {
     return { ok: false, error: "Ya se cantó truco.", estado };
   }

@@ -280,15 +280,27 @@ function intentarCantarEnvido(ctx: ContextoCanto): Accion | null {
   if (mano.bazas[0].jugadas.length > 0) return null; // sólo antes de tirar
   if (!legales.includes("cantar_envido")) return null;
 
-  // Etiqueta trucera 2v2: si soy mano de mi equipo (el que juega
-  // primero) y tengo compañero HUMANO, no canto envido. El pie del
-  // equipo (el otro compañero, que juega después) es quien decide en
-  // base a la info disponible. Antes el bot pisaba al humano cantando
-  // envido sin que el humano pudiera evaluar.
+  // Etiqueta trucera 2v2: si soy mano de mi equipo (el primero del
+  // equipo en jugar en esta mano) y tengo compañero HUMANO, no canto
+  // envido. El pie del equipo (el último en jugar) suele cantar porque
+  // tiene más info — y si el pie es humano, le dejamos la decisión.
+  // Importante: "mano del equipo" depende del orden de juego desde el
+  // mano de la mano actual, NO del número de asiento. En 2v2 con mano
+  // en asiento 1, el orden es 1, 2, 3, 0 → asiento 2 es mano de equipo
+  // 0 y asiento 0 es pie, aunque 0 < 2.
   const compañeros = estado.jugadores.filter(
     (j) => j.equipo === yo.equipo && j.id !== jugadorId
   );
-  const yoSoyManoDelEquipo = compañeros.every((c) => c.asiento > yo.asiento);
+  const manoAsiento = estado.jugadores.find(
+    (j) => j.id === mano.manoJugadorId
+  )!.asiento;
+  const n = estado.jugadores.length;
+  const distanciaDeJuego = (asiento: number) =>
+    (asiento - manoAsiento + n) % n;
+  const miDistancia = distanciaDeJuego(yo.asiento);
+  const yoSoyManoDelEquipo = compañeros.every(
+    (c) => distanciaDeJuego(c.asiento) > miDistancia
+  );
   const tengoCompañeroHumano = compañeros.some((j) => !j.esBot);
   if (yoSoyManoDelEquipo && tengoCompañeroHumano) return null;
 
