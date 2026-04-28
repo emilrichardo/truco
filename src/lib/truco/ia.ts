@@ -319,14 +319,23 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   const mano = estado.manoActual!;
   if (!legales.includes("cantar_truco")) return null;
 
-  // Si tengo compañero humano, NO canto truco por mi cuenta — la decisión
-  // de cantar es del humano. Misma regla que para envido: cuando hay un
-  // partner humano en el equipo, el bot juega su carta y nada más; el
-  // humano controla cuándo se sube la apuesta.
+  // Con compañero humano, en general NO canto truco — la decisión es del
+  // humano. PERO si tengo una mano excepcional (fuerza ≥ 80, tipo ancho
+  // de espada + ancho de basto, o el bot vio un 1 espada en su mano),
+  // canto igual: sería un desperdicio quedarse callado con cartas que
+  // ganan seguro. El humano siempre puede subir o ir al mazo después.
   const tengoCompañeroHumano = estado.jugadores.some(
     (j) => j.equipo === yo.equipo && j.id !== jugadorId && !j.esBot
   );
-  if (tengoCompañeroHumano) return null;
+  if (tengoCompañeroHumano) {
+    const fuerzaActual = fuerzaTruco(vista.enMano);
+    const tieneAncho = vista.enMano.some((c) => jerarquia(c) === 14);
+    const manoExcepcional = fuerzaActual >= 80 || tieneAncho;
+    if (!manoExcepcional) return null;
+    // Caemos a la lógica normal — sigue evaluando los thresholds, así
+    // un ancho solo no obliga a cantar si el resto de la mano es basura
+    // y el bot prefiere jugar carta primero.
+  }
 
   // Etiqueta trucera: en baza 1 con la ventana de envido todavía abierta
   // (envido no resuelto y nadie tiró carta todavía o sólo algunos), el bot

@@ -82,7 +82,21 @@ export function useHablando(estado: EstadoJuego | null): {
       evento: ultimo.evento ?? null,
       sticker: esSticker ? ultimo.sticker : undefined
     });
-    if (tRef.current) clearTimeout(tRef.current);
+    if (tRef.current) {
+      clearTimeout(tRef.current);
+      tRef.current = null;
+    }
+    // Si la burbuja es de un canto (envido/truco) y todavía no se
+    // resolvió, NO le ponemos timer: tiene que quedar hasta que el rival
+    // conteste. Así el "Truco" del compañero no desaparece a los 4s y
+    // dejás de saber qué te están preguntando. Cuando llega la respuesta,
+    // ese mensaje se vuelve el "ultimo" y reemplaza la burbuja.
+    const cantoPendiente =
+      ultimo.evento === "canto" &&
+      !!estado.manoActual &&
+      (!!estado.manoActual.envidoCantoActivo ||
+        !!estado.manoActual.trucoCantoActivo);
+    if (cantoPendiente) return;
     const ms = esSticker
       ? DURACION_STICKER_MS
       : calcularDuracion(ultimo.texto) + DURACION_MS / 4;

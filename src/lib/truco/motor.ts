@@ -4,6 +4,7 @@ import {
   calcularEnvido,
   comparar,
   crearMazo,
+  jerarquia,
   mezclar,
   nombreCarta
 } from "./cartas";
@@ -221,6 +222,26 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
   const baza = mano.bazas[mano.bazas.length - 1];
   baza.jugadas.push({ jugadorId: jugador.id, carta });
   anuncio(estado, jugador.id, `Tira ${nombreCarta(carta)}`, "carta");
+
+  // Atajo: si tira el ancho de espada (jerarquía 14, imbatible) y su
+  // equipo ya ganó una baza anterior, esta baza ya está definida — no
+  // tiene sentido seguir tirando cartas. Cerramos la mano de una.
+  // (Sólo aplica desde la baza 2 en adelante; en la 1ra el ancho gana
+  // la baza pero la mano sigue.)
+  const bazaIdx = mano.bazas.length - 1;
+  const esAncho = jerarquia(carta) === 14;
+  if (esAncho && bazaIdx >= 1) {
+    const bazasGanadasAntes = mano.bazas
+      .slice(0, bazaIdx)
+      .filter((b) => b.ganadorEquipo === jugador.equipo).length;
+    if (bazasGanadasAntes >= 1) {
+      baza.ganadorEquipo = jugador.equipo;
+      baza.pardada = false;
+      cerrarMano(estado, jugador.equipo, "Truco");
+      estado.version++;
+      return { ok: true, estado };
+    }
+  }
 
   // Si todos los jugadores tiraron en esta baza, resolverla.
   if (baza.jugadas.length === estado.jugadores.length) {
