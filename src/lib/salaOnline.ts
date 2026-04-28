@@ -55,11 +55,35 @@ async function invocar<T = SalaResp>(
 ): Promise<T> {
   const sb = tryGetSupabase();
   if (!sb) return { ok: false, error: ERROR_CONFIG } as unknown as T;
-  const { data, error } = await sb.functions.invoke(fn, { body });
-  if (error) {
-    return { ok: false, error: error.message } as unknown as T;
+  try {
+    const { data, error } = await sb.functions.invoke(fn, { body });
+    if (error) {
+      // supabase-js v2 envuelve los 4xx/5xx en un FunctionsHttpError con
+      // mensaje genérico "Edge Function returned a non-2xx status code".
+      // El cuerpo real de la respuesta (con el `error` específico que
+      // devuelve nuestra function) vive en error.context (un Response).
+      // Lo leemos para mostrarle al usuario un mensaje accionable.
+      let msg = error.message || "Error desconocido";
+      try {
+        const ctx = (error as { context?: Response }).context;
+        if (ctx && typeof ctx.clone === "function") {
+          const cuerpo = await ctx.clone().json();
+          if (cuerpo && typeof cuerpo === "object" && cuerpo.error) {
+            msg = `${fn}: ${String(cuerpo.error)}`;
+          }
+        }
+      } catch {
+        /* ignore parse errors — usamos el msg genérico */
+      }
+      console.error(`[supabase] ${fn} error:`, msg, error);
+      return { ok: false, error: msg } as unknown as T;
+    }
+    return data as T;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error(`[supabase] ${fn} excepción:`, msg, e);
+    return { ok: false, error: `${fn}: ${msg}` } as unknown as T;
   }
-  return data as T;
 }
 
 export async function crearSalaOnline(payload: {
