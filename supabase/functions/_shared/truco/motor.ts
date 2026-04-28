@@ -1,5 +1,5 @@
 // Motor del juego: aplica acciones, calcula bazas, resuelve envido y truco.
-// Versión Deno-friendly: imports con .ts y nanoid via npm:.
+// Versión Deno-friendly: imports con sufijo .ts y nanoid via npm:.
 import { nanoid } from "npm:nanoid@5";
 import {
   calcularEnvido,
@@ -20,6 +20,8 @@ import type {
   Mano,
   ResolucionEnvido
 } from "./types.ts";
+import { fraseAleatoria, fraseCanonica } from "./frases.ts";
+import type { CategoriaFrase } from "./frases.ts";
 
 const ENVIDO_VALORES = {
   envido: { quiero: 2, no_quiero: 1 },
@@ -169,6 +171,11 @@ export function aplicarAccion(estado: EstadoJuego, accion: Accion): ResultadoAcc
   if (!estado.manoActual) {
     return { ok: false, error: "No hay mano activa.", estado };
   }
+  // `iniciar_prox_mano` no necesita jugador asociado — la dispara el cliente
+  // automáticamente tras el delay del resumen.
+  if (accion.tipo === "iniciar_prox_mano") {
+    return iniciarProxMano(estado);
+  }
   const mano = estado.manoActual;
   const jugador = jugadorPorId(estado, accion.jugadorId);
   if (!jugador) return { ok: false, error: "Jugador inválido.", estado };
@@ -286,64 +293,48 @@ function resolverBaza(estado: EstadoJuego, baza: Baza) {
  */
 function evaluarFinDeMano(estado: EstadoJuego) {
   const mano = estado.manoActual!;
-  const ganadores = mano.bazas.map((b) => b.ganadorEquipo);
-  const gan0 = ganadores.filter((g) => g === 0).length;
-  const gan1 = ganadores.filter((g) => g === 1).length;
-
+  const bazas = mano.bazas;
   let ganador: Equipo | null = null;
 
-  // Reglas de truco para definir el ganador con pardas.
-  // Si en una baza hay parda, gana la siguiente (regla simplificada habitual):
-  //  - Parda en 1ra: gana quien gane la 2da; si 2da también es parda, gana quien gane la 3ra; si las tres pardas, gana el mano.
-  //  - 1ra ganada por X, 2da parda: gana X.
-  //  - 1ra parda, 2da X, 3ra parda: gana X.
-  //  - 1ra X, 2da Y, 3ra parda: gana 1ra (X).
-  if (mano.bazas.length >= 1) {
-    const b1 = mano.bazas[0];
-    if (mano.bazas.length === 1 && !b1.pardada && (gan0 === 1 || gan1 === 1)) {
-      // primer baza ganada, esperar 2da
+  // Reglas estándar del truco:
+  //  - 1ra X, 2da X         → gana X
+  //  - 1ra X, 2da parda     → gana X (no se juega 3ra)
+  //  - 1ra parda, 2da X     → gana X (no se juega 3ra)
+  //  - 1ra X, 2da Y         → 1-1, va a la 3ra
+  //  - 1ra parda, 2da parda → va a la 3ra
+  //  - 3ra decidida         → gana esa
+  //  - 3ra parda con 1-1    → gana el de la 1ra
+  //  - 3ra parda con parda-X → gana X
+  //  - Las tres pardas      → gana el equipo que es mano
+  if (bazas.length >= 2) {
+    const b1 = bazas[0];
+    const b2 = bazas[1];
+
+    if (!b1.pardada && !b2.pardada) {
+      if (b1.ganadorEquipo === b2.ganadorEquipo) ganador = b1.ganadorEquipo;
+      // si distintos → 1-1, seguimos a la 3ra
+    } else if (!b1.pardada && b2.pardada) {
+      ganador = b1.ganadorEquipo;
+    } else if (b1.pardada && !b2.pardada) {
+      ganador = b2.ganadorEquipo;
     }
-    if (mano.bazas.length >= 2) {
-      const b2 = mano.bazas[1];
-      const ganaUno = (b: Baza) => b.ganadorEquipo;
+    // ambas pardas → seguimos a la 3ra
+  }
 
-      if (!b1.pardada && !b2.pardada && b1.ganadorEquipo === b2.ganadorEquipo) {
-        ganador = b1.ganadorEquipo;
-      } else if (b1.pardada && !b2.pardada && mano.bazas.length === 2) {
-        // Parda 1ra, espera 3ra... salvo que ya no quede.
-      } else if (!b1.pardada && b2.pardada) {
-        // 1ra ganada, 2da parda → si la 3ra es parda también, gana 1ra. Si no, gana la 3ra...
-        // Simplificación: con 2 bazas (1ra X, 2da parda) seguimos a 3ra.
-      } else if (b1.pardada && b2.pardada) {
-        // Esperamos 3ra; si la 3ra es parda, gana el mano.
-      } else if (!b1.pardada && !b2.pardada && b1.ganadorEquipo !== b2.ganadorEquipo) {
-        // Una a una, vamos a la 3ra. Gana quien gane la 3ra; si es parda, gana la 1ra.
-      }
+  if (ganador === null && bazas.length === 3) {
+    const b1 = bazas[0];
+    const b2 = bazas[1];
+    const b3 = bazas[2];
 
-      if (mano.bazas.length === 3) {
-        const b3 = mano.bazas[2];
-        if (b1.pardada && !b2.pardada && b3.pardada) {
-          ganador = b2.ganadorEquipo;
-        } else if (b1.pardada && b2.pardada && !b3.pardada) {
-          ganador = b3.ganadorEquipo;
-        } else if (b1.pardada && b2.pardada && b3.pardada) {
-          ganador = mano.manoEquipo;
-        } else if (!b1.pardada && b2.pardada && !b3.pardada) {
-          ganador = b1.ganadorEquipo;
-        } else if (!b1.pardada && b2.pardada && b3.pardada) {
-          ganador = b1.ganadorEquipo;
-        } else if (!b1.pardada && !b2.pardada && !b3.pardada) {
-          // 1-1-1 imposible; es 2-1.
-          if (b1.ganadorEquipo === b3.ganadorEquipo) ganador = b1.ganadorEquipo;
-          else if (b2.ganadorEquipo === b3.ganadorEquipo) ganador = b2.ganadorEquipo;
-          else ganador = b3.ganadorEquipo;
-        } else if (!b1.pardada && !b2.pardada && b3.pardada) {
-          if (b1.ganadorEquipo === b2.ganadorEquipo) ganador = b1.ganadorEquipo;
-          else ganador = b1.ganadorEquipo; // 1-1 con parda al final: gana la primera
-        } else if (b1.pardada && !b2.pardada && !b3.pardada) {
-          ganador = b3.ganadorEquipo;
-        }
-      }
+    if (!b3.pardada) {
+      ganador = b3.ganadorEquipo;
+    } else if (!b1.pardada) {
+      // 1-1 (o X-parda imposible aquí porque hubiera cerrado antes) → gana 1ra.
+      ganador = b1.ganadorEquipo;
+    } else if (!b2.pardada) {
+      ganador = b2.ganadorEquipo;
+    } else {
+      ganador = mano.manoEquipo;
     }
   }
 
@@ -373,15 +364,68 @@ function cerrarMano(estado: EstadoJuego, equipoGanador: Equipo, motivo: string) 
     "mano"
   );
 
-  if (chequearFinPartida(estado)) return;
+  // Reacciones humanas: un jugador del equipo ganador chicanea, uno del
+  // perdedor lamenta. Son evento "respuesta" para que el motor de audio
+  // los reproduzca como cualquier otro canto y la burbuja del avatar los
+  // muestre encima del que habla.
+  emitirReaccionMano(estado, equipoGanador);
 
-  // Próxima mano: rota el mano al siguiente jugador.
+  // Chequea fin de partida.
+  if (chequearFinPartida(estado)) {
+    emitirReaccionPartida(estado, estado.ganadorPartida!);
+    estado.version++;
+    return;
+  }
+  estado.version++;
+
+  // En el server (online), repartimos la próxima mano DE INMEDIATO. El
+  // cliente (solo) usa salaLocal para pausar 3.5s y mostrar el resumen
+  // antes; en online no podemos hacer esa pausa server-side y cualquier
+  // cliente despachando iniciar_prox_mano abre una race condition. Es
+  // más simple repartir acá y que el cliente animate las cartas
+  // entrantes con el reparto-anim mientras el banner ResultadoMano
+  // sigue visible 3.5s.
+  iniciarProxMano(estado);
+}
+
+function emitirReaccionMano(estado: EstadoJuego, equipoGanador: Equipo) {
+  // Todos los jugadores reaccionan: ganadores chicanean, perdedores putean.
+  // En 2v2 esto da 4 audios casi simultáneos — el reproductor los manda
+  // en paralelo con stagger random para que se oiga como una mesa real.
+  // En 1v1 son sólo 2 (yo y el rival).
+  for (const j of estado.jugadores) {
+    const cat = j.equipo === equipoGanador ? "gane_mano" : "perdio_mano";
+    anuncio(estado, j.id, fraseAleatoria(cat), "respuesta");
+  }
+}
+
+function emitirReaccionPartida(estado: EstadoJuego, equipoGanador: Equipo) {
+  for (const j of estado.jugadores) {
+    const cat = j.equipo === equipoGanador ? "gane_partida" : "perdio_partida";
+    anuncio(estado, j.id, fraseAleatoria(cat), "respuesta");
+  }
+}
+
+/**
+ * Pasa de la mano "terminada" actual al reparto de la siguiente. Sólo válido
+ * si la mano terminó y la partida sigue en juego. El cliente la dispara tras
+ * el delay del resumen de mano.
+ */
+export function iniciarProxMano(estado: EstadoJuego): ResultadoAccion {
+  if (estado.ganadorPartida !== null) {
+    return { ok: false, error: "La partida ya terminó.", estado };
+  }
+  const mano = estado.manoActual;
+  if (!mano || mano.fase !== "terminada") {
+    return { ok: false, error: "La mano todavía no terminó.", estado };
+  }
+  estado.historialManos.push(mano);
   const proxAsiento = siguienteAsiento(
     estado,
     jugadorPorId(estado, mano.manoJugadorId)!.asiento
   );
-  estado.historialManos.push(mano);
   repartirNuevaMano(estado, jugadorPorAsiento(estado, proxAsiento).id);
+  return { ok: true, estado };
 }
 
 function chequearFinPartida(estado: EstadoJuego): boolean {
@@ -404,6 +448,7 @@ function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
   // Si hay envido pendiente y se va al mazo, perdés envido (1) + truco (valor actual).
   const eq = jugador.equipo;
   const otro = equipoContrario(eq);
+  anuncio(estado, jugador.id, fraseAleatoria("ir_al_mazo"), "respuesta");
   if (mano.envidoCantoActivo) {
     estado.puntos[otro] += 1;
     mano.puntosOtorgados.push({
@@ -463,20 +508,38 @@ function cantarEnvido(
   mano.envidoEstado = nivelNuevo as any;
   // Le pasamos el "turno de responder" a alguien del otro equipo.
   mano.turnoJugadorId = primerJugadorDeEquipo(estado, equipoContrario(jugador.equipo));
-  anuncio(estado, jugador.id, cantoTexto(nivelNuevo), "canto");
+  anuncio(estado, jugador.id, fraseDeCanto(nivelNuevo, cadena), "canto");
   estado.version++;
   return { ok: true, estado };
 }
 
 function cantoTexto(nivel: string): string {
-  return {
-    envido: "¡Envido!",
-    real_envido: "¡Real envido!",
-    falta_envido: "¡Falta envido!",
-    truco: "¡Truco!",
-    retruco: "¡Quiero retruco!",
-    vale4: "¡Vale cuatro!"
-  }[nivel] || nivel;
+  // Texto canónico (variante 1) para motivos en breakdowns y logs.
+  // Para anuncios al chat, usar fraseDeCanto que pica una variante random.
+  return fraseCanonica(nivelACategoria(nivel));
+}
+
+function nivelACategoria(nivel: string): CategoriaFrase {
+  // El motor usa "vale4" internamente, las frases usan "vale_cuatro".
+  if (nivel === "vale4") return "vale_cuatro";
+  return nivel as CategoriaFrase;
+}
+
+/** Texto cantado al chat — pica una variante random según el nivel.
+ *  Para envido, si la cadena tiene dos envidos seguidos, usa la categoría
+ *  envido_envido (que tiene frases dedicadas). */
+function fraseDeCanto(
+  nivel: string,
+  cadena?: ("envido" | "real_envido" | "falta_envido")[]
+): string {
+  if (
+    nivel === "envido" &&
+    cadena &&
+    cadena.filter((c) => c === "envido").length >= 2
+  ) {
+    return fraseAleatoria("envido_envido");
+  }
+  return fraseAleatoria(nivelACategoria(nivel));
 }
 
 function primerJugadorDeEquipo(estado: EstadoJuego, eq: Equipo): string {
@@ -520,7 +583,7 @@ function cantarTruco(
   };
   // Le pasamos el turno de responder al otro equipo.
   mano.turnoJugadorId = primerJugadorDeEquipo(estado, equipoContrario(jugador.equipo));
-  anuncio(estado, jugador.id, cantoTexto(subir), "canto");
+  anuncio(estado, jugador.id, fraseDeCanto(subir), "canto");
   estado.version++;
   return { ok: true, estado };
 }
@@ -581,7 +644,7 @@ function resolverEnvido(
       puntos: puntosOtorgados,
       motivo: `Envido no querido (+${puntosOtorgados})`
     });
-    anuncio(estado, jugador.id, "No quiero", "respuesta");
+    anuncio(estado, jugador.id, fraseAleatoria("no_quiero"), "respuesta");
     anuncio(
       estado,
       "",
@@ -591,9 +654,17 @@ function resolverEnvido(
     mano.envidoResuelto = true;
     mano.envidoEstado = "ninguno";
     mano.envidoCantoActivo = null;
+    mano.envidoResolucion = {
+      ganadorEquipo: eqGanador,
+      puntos: puntosOtorgados,
+      detalle: `Envido no querido. Equipo ${eqGanador + 1} +${puntosOtorgados}.`
+    };
     // Devuelvo el turno al "mano" o a quien le tocaba jugar carta.
     devolverTurnoAJugar(estado);
-    if (chequearFinPartida(estado)) return { ok: true, estado };
+    if (chequearFinPartida(estado)) {
+      emitirReaccionPartida(estado, estado.ganadorPartida!);
+      return { ok: true, estado };
+    }
     estado.version++;
     return { ok: true, estado };
   }
@@ -640,7 +711,11 @@ function resolverEnvido(
     puntos: puntosOtorgados,
     motivo: `Envido querido (+${puntosOtorgados})`
   });
-  anuncio(estado, jugador.id, "¡Quiero!", "respuesta");
+  anuncio(estado, jugador.id, fraseAleatoria("quiero"), "respuesta");
+  // Cada equipo canta su tanto en orden: el "mano" primero, después el
+  // otro. La capa de audio detecta el número y reproduce el clip de
+  // envido_puntos correspondiente con la voz del jugador.
+  declararTantos(estado, eq0, eq1);
   anuncio(estado, "", detalle, "puntos");
   anuncio(
     estado,
@@ -651,9 +726,45 @@ function resolverEnvido(
   mano.envidoEstado = "ninguno";
   mano.envidoCantoActivo = null;
   devolverTurnoAJugar(estado);
-  if (chequearFinPartida(estado)) return { ok: true, estado };
+  if (chequearFinPartida(estado)) {
+    emitirReaccionPartida(estado, estado.ganadorPartida!);
+    return { ok: true, estado };
+  }
   estado.version++;
   return { ok: true, estado };
+}
+
+/** Anuncia el tanto de cada equipo en orden — el "mano" primero, después
+ *  el otro. Si el segundo tiene menos, dice "Son buenas". Si tiene más,
+ *  declara su número. La capa de audio detecta el "Tengo N." y reproduce
+ *  el clip de envido_puntos/<N>.mp3 con la voz del jugador. */
+function declararTantos(
+  estado: EstadoJuego,
+  eq0: { jugadorId: string; puntos: number },
+  eq1: { jugadorId: string; puntos: number }
+) {
+  const mano = estado.manoActual!;
+  const eqMano = mano.manoEquipo;
+  const declMano = eqMano === 0 ? eq0 : eq1;
+  const declOtro = eqMano === 0 ? eq1 : eq0;
+
+  anuncio(estado, declMano.jugadorId, `Tengo ${declMano.puntos}.`, "respuesta");
+
+  if (declOtro.puntos > declMano.puntos) {
+    anuncio(
+      estado,
+      declOtro.jugadorId,
+      `Tengo ${declOtro.puntos}.`,
+      "respuesta"
+    );
+  } else {
+    anuncio(
+      estado,
+      declOtro.jugadorId,
+      fraseAleatoria("son_buenas"),
+      "respuesta"
+    );
+  }
 }
 
 function mejorEnvidoPorEquipo(estado: EstadoJuego) {
@@ -730,7 +841,7 @@ function resolverTrucoRespuesta(
       puntos: valorAnterior,
       motivo: `${cantoTexto(canto.nivel)} no querido (+${valorAnterior})`
     });
-    anuncio(estado, jugador.id, "No quiero", "respuesta");
+    anuncio(estado, jugador.id, fraseAleatoria("no_quiero"), "respuesta");
     cerrarMano(estado, canto.equipoQueCanto, "Truco no querido");
     mano.trucoCantoActivo = null;
     return { ok: true, estado };
@@ -740,7 +851,7 @@ function resolverTrucoRespuesta(
   mano.equipoConTruco = canto.equipoQueCanto;
   mano.valorMano =
     canto.nivel === "truco" ? 2 : canto.nivel === "retruco" ? 3 : 4;
-  anuncio(estado, jugador.id, "¡Quiero!", "respuesta");
+  anuncio(estado, jugador.id, fraseAleatoria("quiero"), "respuesta");
   mano.trucoCantoActivo = null;
   devolverTurnoAJugar(estado);
   estado.version++;
@@ -772,6 +883,17 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
     const n = mano.trucoCantoActivo.nivel;
     if (n === "truco") out.push("cantar_retruco");
     else if (n === "retruco") out.push("cantar_vale4");
+    // "El envido está primero": cuando el rival canta truco antes de que se
+    // haya jugado/resuelto el envido en la primera baza, el equipo que debe
+    // responder puede cortarlo cantando envido. El motor resuelve primero el
+    // envido y después se vuelve a contestar al truco.
+    if (
+      !mano.envidoResuelto &&
+      mano.bazas.length === 1 &&
+      mano.bazas[0].jugadas.length < estado.jugadores.length
+    ) {
+      out.push("cantar_envido", "cantar_real_envido", "cantar_falta_envido");
+    }
     return out;
   }
 
