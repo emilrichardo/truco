@@ -83,42 +83,36 @@ export function ResultadoMano({
 
   if (!data) return null;
 
-  const colorBorde = data.yoGane ? "border-dorado" : "border-red";
-  const colorTexto = data.yoGane ? "text-dorado" : "text-red";
-  const titulo = data.yoGane ? "¡Te llevaste la mano!" : "Perdiste la mano";
+  const colorAcento = data.yoGane ? "var(--dorado)" : "var(--rojo-fernet)";
+  const titulo = data.yoGane ? "Te la llevaste" : "Perdiste";
 
+  // Toast compacto que entra desde arriba. Pinned al top de la mesa,
+  // pointer-events-none para no bloquear la mesa que sigue debajo.
   return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none px-4">
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-30 pointer-events-none envido-pop">
       <div
-        className={`papel border-t-4 ${colorBorde} px-6 py-4 text-center max-w-sm shadow-2xl envido-pop`}
+        className="flex items-center gap-2 bg-carbon/95 backdrop-blur-sm border-2 px-3 py-1.5 rounded-full shadow-lg"
+        style={{ borderColor: colorAcento }}
       >
-        <div
-          className="subtitulo-claim text-[10px] mb-1"
-          style={{ color: "var(--azul-criollo)" }}
+        <span
+          className="text-[9px] uppercase tracking-widest font-bold leading-none"
+          style={{ color: "var(--text-dim)" }}
         >
-          ✦ Mano {data.numero} resuelta ✦
-        </div>
-        <div
-          className={`titulo-marca text-2xl mb-1 ${colorTexto}`}
-          style={{ textShadow: "1px 1px 0 rgba(0,0,0,0.15)" }}
+          Mano {data.numero}
+        </span>
+        <span className="w-px h-3 bg-crema/20" />
+        <span
+          className="text-xs font-bold leading-none"
+          style={{ color: colorAcento }}
         >
           {titulo}
-        </div>
-        <div
-          className="font-display text-4xl leading-none my-2"
-          style={{ color: "var(--carbon)" }}
+        </span>
+        <span
+          className="font-display text-base leading-none"
+          style={{ color: colorAcento }}
         >
-          +{data.puntos}{" "}
-          <span className="text-base align-middle font-bold uppercase tracking-wider">
-            {data.puntos === 1 ? "pto" : "ptos"}
-          </span>
-        </div>
-        <div
-          className="text-xs mt-1"
-          style={{ color: "var(--madera-oscura)" }}
-        >
-          {data.motivo}
-        </div>
+          +{data.puntos}
+        </span>
       </div>
     </div>
   );
