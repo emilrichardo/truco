@@ -401,6 +401,13 @@ function BotonDropdown({
   acentuado?: boolean;
 }) {
   const tieneVarias = opciones.length > 1;
+  // Cuando queda una sola opción legal, mostramos el label/icono real de
+  // esa opción (ej. "Falta envido") en vez del título genérico ("Envido").
+  // Si no, el usuario ve "Envido" y tapea pero canta falta envido — confuso.
+  const labelMostrado =
+    tieneVarias || !opciones[0] ? label : opciones[0].label;
+  const iconoMostrado =
+    tieneVarias || !opciones[0] ? icono : opciones[0].icono ?? icono;
   const onTap = () => {
     if (tieneVarias) onToggle();
     else if (opciones.length === 1) onElegir(opciones[0].tipo);
@@ -413,7 +420,7 @@ function BotonDropdown({
         aria-haspopup={tieneVarias ? "menu" : undefined}
         aria-expanded={tieneVarias ? abierto : undefined}
       >
-        {icono} {label}
+        {iconoMostrado} {labelMostrado}
         {tieneVarias && <ChevronArriba />}
       </button>
       {abierto && tieneVarias && (

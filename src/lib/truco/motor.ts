@@ -451,16 +451,21 @@ function cantarEnvido(
   const nivelNuevo = tipo === "cantar_envido" ? "envido" : tipo === "cantar_real_envido" ? "real_envido" : "falta_envido";
   let cadena = mano.envidoCantoActivo ? mano.envidoCantoActivo.cadena.slice() : [];
 
-  // Validación de orden: envido(s) → real_envido → falta_envido. Permitimos hasta 2 envidos seguidos.
+  // Validación de orden: envido(s) → real_envido → falta_envido.
+  //  - Hasta 2 envidos seguidos.
+  //  - Real envido sólo escala desde envido (1 o 2). No se puede cantar
+  //    real envido después de real envido — ya está en ese nivel, sólo
+  //    puede subir a falta envido.
+  //  - Falta envido siempre puede cerrar la cadena.
   if (cadena.length === 0) {
     cadena.push(nivelNuevo);
   } else {
     const ultimo = cadena[cadena.length - 1];
     if (nivelNuevo === "envido" && ultimo === "envido" && cadena.filter((c) => c === "envido").length < 2) {
       cadena.push("envido");
-    } else if (nivelNuevo === "real_envido" && (ultimo === "envido" || ultimo === "real_envido")) {
+    } else if (nivelNuevo === "real_envido" && ultimo === "envido") {
       cadena.push("real_envido");
-    } else if (nivelNuevo === "falta_envido") {
+    } else if (nivelNuevo === "falta_envido" && ultimo !== "falta_envido") {
       cadena.push("falta_envido");
     } else {
       return { ok: false, error: "Canto inválido en este momento.", estado };
@@ -903,9 +908,13 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
     out.push("responder_quiero", "responder_no_quiero");
     const cadena = mano.envidoCantoActivo.cadena;
     const ultimo = cadena[cadena.length - 1];
+    // Envido sólo se puede repetir hasta 2 veces, y sólo si el último
+    // canto también fue envido.
     if (ultimo === "envido" && cadena.filter((c) => c === "envido").length < 2)
       out.push("cantar_envido");
-    if (ultimo === "envido" || ultimo === "real_envido") out.push("cantar_real_envido");
+    // Real envido sólo escala desde envido. Después de real envido el
+    // único paso arriba es falta envido.
+    if (ultimo === "envido") out.push("cantar_real_envido");
     if (ultimo !== "falta_envido") out.push("cantar_falta_envido");
     return out;
   }
