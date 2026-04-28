@@ -6,7 +6,11 @@ import { CartaEspanola } from "./CartaEspanola";
 import { JugadorPanel } from "./JugadorPanel";
 import { useHablando } from "@/lib/useHablando";
 
-type Posicion = "arriba" | "abajo" | "izquierda" | "derecha";
+type Posicion =
+  | "abajo-izquierda"
+  | "derecha-medio"
+  | "arriba-derecha"
+  | "arriba-izquierda";
 
 type JugadaEnMesa = {
   jugadorId: string;
@@ -49,15 +53,21 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   const orden = ordenAlrededorDeMesa(estado.jugadores, me);
   const total = estado.jugadores.length;
 
+  // Layout asimétrico pedido por el diseño:
+  //   yo (idx 0) → BL
+  //   siguiente (idx 1) → mid-right
+  //   compañero (idx 2 en 2v2) → TR
+  //   último rival (idx 3 en 2v2) → TL
+  // Para 1v1 dejamos al rival diagonal opuesto (TR) para balancear.
   const posiciones: Record<number, Posicion> = {};
   if (total === 2) {
-    posiciones[0] = "abajo";
-    posiciones[1] = "arriba";
+    posiciones[0] = "abajo-izquierda";
+    posiciones[1] = "arriba-derecha";
   } else if (total === 4) {
-    posiciones[0] = "abajo";
-    posiciones[1] = "izquierda";
-    posiciones[2] = "arriba";
-    posiciones[3] = "derecha";
+    posiciones[0] = "abajo-izquierda";
+    posiciones[1] = "derecha-medio";
+    posiciones[2] = "arriba-derecha";
+    posiciones[3] = "arriba-izquierda";
   }
 
   const numeroDeBaza = estado.manoActual?.bazas.length || 0;
@@ -76,8 +86,43 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
   );
 
   return (
-    <div className="relative w-full h-full">
-      <div className="absolute inset-1 sm:inset-2 tapete" />
+    <div
+      className="relative w-full h-full"
+      style={{ perspective: "1400px", perspectiveOrigin: "center 70%" }}
+    >
+      {/* Plano 3D de la mesa: tapete + cartas tiradas viven acá adentro
+       *  y se inclinan en bloque (rotateX). Avatares y mini-manos quedan
+       *  AFUERA de este plano para que no se distorsionen. */}
+      <div
+        className="absolute inset-0"
+        style={{
+          transform: "rotateX(12deg)",
+          transformOrigin: "center 65%",
+          transformStyle: "preserve-3d"
+        }}
+      >
+        <div className="absolute inset-1 sm:inset-2 tapete" />
+        {/* Cartas jugadas: cada jugador en su arm desde el centro */}
+        {orden.map((j, idx) => {
+          const pos = posiciones[idx];
+          if (!pos) return null;
+          const jugadas = jugadasPorJugador.get(j.id) || [];
+          if (jugadas.length === 0) return null;
+          const jugadasConGanador = jugadas.map((jg) => {
+            const baza = estado.manoActual?.bazas[jg.bazaIdx];
+            const gano = !!baza && baza.ganadorEquipo === j.equipo;
+            return { ...jg, gano };
+          });
+          return (
+            <CartasJugadas
+              key={`cards-${j.id}`}
+              pos={pos}
+              jugadas={jugadasConGanador}
+              numeroDeBaza={numeroDeBaza}
+            />
+          );
+        })}
+      </div>
 
       {/* La meta info (Mano · Baza y Vale X) se renderea abajo para no pisar
        *  las cartas tiradas. */}
@@ -133,31 +178,6 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
         );
       })}
 
-      {/* Cartas jugadas: cada jugador en su arm de la cruz desde el centro */}
-      {orden.map((j, idx) => {
-        const pos = posiciones[idx];
-        if (!pos) return null;
-        const jugadas = jugadasPorJugador.get(j.id) || [];
-        if (jugadas.length === 0) return null;
-        // Para cada jugada calculamos si la carta ganó la baza
-        // (ganadorEquipo === equipo del jugador). El render usa esto
-        // para subir el z-index — la carta ganadora queda por encima
-        // de las perdedoras dentro del pile del jugador.
-        const jugadasConGanador = jugadas.map((jg) => {
-          const baza = estado.manoActual?.bazas[jg.bazaIdx];
-          const gano = !!baza && baza.ganadorEquipo === j.equipo;
-          return { ...jg, gano };
-        });
-        return (
-          <CartasJugadas
-            key={`cards-${j.id}`}
-            pos={pos}
-            jugadas={jugadasConGanador}
-            numeroDeBaza={numeroDeBaza}
-          />
-        );
-      })}
-
       {totalJugadas === 0 && (
         <div
           className="absolute left-1/2 top-1/2 -translate-x-1/2 translate-y-20 text-crema/85 italic text-xs subtitulo-claim z-10 parpadeo"
@@ -207,23 +227,41 @@ function PuestoJugador({
   hablandoSticker?: string | null;
 }) {
   const cartasOcultas = !esCompañero || !mostrarCompañero;
-  const alineacion =
-    pos === "arriba" || pos === "izquierda" ? "items-start" : "items-end";
-  // Lado de la burbuja: que apunte hacia adentro (centro de la mesa) para
-  // que el rabito quede pegado a la foto y el texto se lea sobre el tapete.
+  const enLadoIzquierdo =
+    pos === "abajo-izquierda" || pos === "arriba-izquierda";
+  const enLadoSuperior =
+    pos === "arriba-derecha" || pos === "arriba-izquierda";
+  // Alineación interna: items-start si el puesto vive contra el borde
+  // izquierdo (avatar+nombre crecen hacia el centro); items-end si vive
+  // contra el borde derecho.
+  const alineacion = enLadoIzquierdo ? "items-start" : "items-end";
+  // Nombre del lado interior de la pantalla: si el avatar está sobre el
+  // borde izq, el pill va a la derecha del avatar. Y al revés.
+  const ladoNombre: "izquierda" | "derecha" = enLadoIzquierdo
+    ? "derecha"
+    : "izquierda";
+  // Burbuja arriba/abajo del avatar para no pisar el pill del nombre
+  // (que está al costado interior).
   const ladoBurbuja: "izquierda" | "derecha" | "arriba" | "abajo" =
-    pos === "arriba"
-      ? "abajo"
-      : pos === "abajo"
-        ? "arriba"
-        : pos === "izquierda"
-          ? "derecha"
-          : "izquierda";
+    enLadoSuperior ? "abajo" : "arriba";
+  // Anclaje horizontal de la burbuja: si el avatar vive contra el borde
+  // izq, la burbuja crece hacia la derecha (anclada a izq). Y al revés.
+  // Antes la burbuja se centraba sobre el avatar y se cortaba contra el
+  // borde de la pantalla cuando el puesto vivía en una esquina.
+  const alineacionBurbujaH: "izq" | "der" = enLadoIzquierdo ? "izq" : "der";
+
+  // Para los puestos de abajo, la mini-hand va ARRIBA del avatar
+  // (flex-col-reverse) — si no, se sale por debajo de la pantalla cuando
+  // el avatar vive contra el borde inferior.
+  const enLadoInferior =
+    pos === "abajo-izquierda" || pos === "derecha-medio";
+  const direccionFlex = enLadoInferior ? "flex-col-reverse" : "flex-col";
 
   return (
     <div
       className={clsx(
-        "absolute z-20 flex flex-col gap-1",
+        "absolute z-20 flex gap-1",
+        direccionFlex,
         alineacion,
         clasePosicionPuesto(pos)
       )}
@@ -241,6 +279,8 @@ function PuestoJugador({
         hablandoEvento={hablandoEvento}
         hablandoSticker={hablandoSticker}
         ladoBurbuja={ladoBurbuja}
+        ladoNombre={ladoNombre}
+        alineacionBurbujaH={alineacionBurbujaH}
       />
       {!esYo && cartasEnMano.length > 0 && (
         <ManoOculta
@@ -267,22 +307,21 @@ function CartasJugadas({
   jugadas: (JugadaEnMesa & { gano: boolean })[];
   numeroDeBaza: number;
 }) {
-  // Cada cuadrante apunta a la esquina del avatar correspondiente.
-  // arriba → TL, abajo → BR, izquierda → BL, derecha → TR.
-  const dirX = pos === "arriba" || pos === "izquierda" ? -1 : 1;
-  const dirY = pos === "arriba" || pos === "derecha" ? -1 : 1;
-  // Inclinación base sutil: cada carta apunta hacia su dueño. Cards en el
-  // lado izquierdo (TL/BL) inclinan negativo (top hacia la izq); en el
-  // derecho (TR/BR) inclinan positivo.
-  const rotBase = pos === "arriba" || pos === "izquierda" ? -12 : 12;
+  // Las cartas sucesivas se desplazan hacia la esquina del dueño.
+  const enLadoIzquierdo =
+    pos === "abajo-izquierda" || pos === "arriba-izquierda";
+  const enLadoSuperior =
+    pos === "arriba-derecha" || pos === "arriba-izquierda";
+  const dirX = enLadoIzquierdo ? -1 : 1;
+  const dirY = enLadoSuperior ? -1 : 1;
+  // Inclinación: cards del lado izq inclinan -12, del lado der +12.
+  const rotBase = enLadoIzquierdo ? -12 : 12;
 
   return (
-    // Sin z-index en el wrapper — antes z-15 creaba un stacking context
-    // por jugador y los z-index internos no podían comparar entre cartas
-    // de distintos jugadores. Ahora los hijos comparten el stacking
-    // context del padre (Mesa) y la carta ganadora de la baza queda por
-    // encima de las cartas perdedoras de la MISMA baza, sin importar de
-    // qué jugador sean.
+    // Sin transform/perspective propios — viven dentro del plano 3D que
+    // envuelve todo el tapete (definido en el wrapper de <Mesa>). Así
+    // todas las pilas comparten una sola inclinación de mesa, en lugar
+    // de tener cada una su propia rotación independiente.
     <div className={clsx("absolute", clasePosicionArm(pos))}>
       {jugadas.map((j, i) => {
         // Cartas sucesivas se desplazan un poco hacia la esquina del jugador.
@@ -308,7 +347,7 @@ function CartasJugadas({
           >
             <CartaEspanola
               carta={j.carta}
-              tamanio="md"
+              tamanio="lg"
               resaltada={esUltimaBaza}
             />
           </div>
@@ -382,52 +421,42 @@ function ManoOculta({
   );
 }
 
-/** Offset desde donde "vuela" cada carta hacia su destino, según en qué
- *  esquina está el puesto. Como el centro está en el medio del tablero,
- *  para un puesto en TL la carta viene desde abajo-derecha (offset +X +Y). */
+/** Offset desde donde "vuela" cada carta hacia su destino. Cada cuadrante
+ *  tiene como origen la esquina opuesta del tablero. */
 function repartoOffset(pos?: Posicion): { x: string; y: string } {
   switch (pos) {
-    case "arriba":    return { x: "300%", y: "300%" };  // viene desde BR
-    case "abajo":     return { x: "-300%", y: "-300%" }; // viene desde TL
-    case "izquierda": return { x: "300%", y: "-300%" };  // viene desde TR
-    case "derecha":   return { x: "-300%", y: "300%" };  // viene desde BL
-    default:          return { x: "0", y: "300%" };
+    case "abajo-izquierda":  return { x: "300%", y: "-300%" };  // viene desde TR
+    case "derecha-medio":    return { x: "-300%", y: "0%" };    // viene desde la izq
+    case "arriba-derecha":   return { x: "-300%", y: "300%" };  // viene desde BL
+    case "arriba-izquierda": return { x: "300%", y: "300%" };   // viene desde BR
+    default:                 return { x: "0", y: "300%" };
   }
 }
 
-/** Posición del puesto pegado a la esquina (inset 2 = 0.5rem). Antes
- *  estaba a 2rem del borde y le robaba mucho espacio al tapete. */
+/** Posición del puesto pegada a su esquina con un poco de aire. El
+ *  "derecha-medio" en realidad ahora vive abajo-derecha (el usuario
+ *  pidió que baje "mucho más" — los 4 puestos quedan en las 4 esquinas
+ *  de la pantalla, simétricos). El nombre se mantiene por compat. */
 function clasePosicionPuesto(pos: Posicion): string {
   switch (pos) {
-    case "abajo":
-      return "right-2 bottom-2"; // (no se usa: yo voy por MiAvatarBR)
-    case "arriba":
-      return "left-2 top-2"; // top-left
-    case "izquierda":
-      return "left-2 bottom-2"; // bottom-left (rival 2v2)
-    case "derecha":
-      return "right-2 top-2"; // top-right (rival 2v2)
+    case "abajo-izquierda":  return "left-4 bottom-4";
+    // Cholo (BR) un poco más arriba que el rincón pleno — el usuario
+    // pidió que suba "un poco más" porque se sentía muy abajo.
+    case "derecha-medio":    return "right-4 bottom-[12%]";
+    case "arriba-derecha":   return "right-4 top-4";
+    case "arriba-izquierda": return "left-4 top-4";
   }
 }
 
-/** Anchor del pile de cartas jugadas en cruz cardinal. Cada arm tiene un
- *  leve desplazamiento hacia la esquina del dueño:
- *    - top arm  (arriba)    → desplazado a la izquierda (avatar TL)
- *    - bottom arm (abajo)   → desplazado a la derecha (yo en BR)
- *    - left arm (izquierda) → desplazado hacia abajo (avatar BL)
- *    - right arm (derecha)  → desplazado hacia arriba (avatar TR)
- *  Así cada pila queda visualmente más cerca de su jugador sin perder la
- *  forma de cruz. */
+/** Anchor de la pila de cartas tiradas: 4 cuadrantes pegados al centro
+ *  de la mesa. Las cartas casi se tocan entre sí — antes estaban
+ *  separadas en cada esquina y la mesa se veía vacía. */
 function clasePosicionArm(pos: Posicion): string {
   switch (pos) {
-    case "arriba":
-      return "top-[28%] left-[38%]"; // arm vertical superior, sesgado a izq
-    case "abajo":
-      return "bottom-[28%] right-[44%]"; // arm vertical inferior, levemente sesgado a der
-    case "izquierda":
-      return "left-[28%] bottom-[38%]"; // arm horizontal izq, sesgado abajo
-    case "derecha":
-      return "right-[28%] top-[38%]"; // arm horizontal der, sesgado arriba
+    case "abajo-izquierda":  return "bottom-[36%] left-[36%]";
+    case "derecha-medio":    return "bottom-[36%] right-[36%]";
+    case "arriba-derecha":   return "top-[36%] right-[36%]";
+    case "arriba-izquierda": return "top-[36%] left-[36%]";
   }
 }
 

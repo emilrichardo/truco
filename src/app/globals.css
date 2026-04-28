@@ -487,10 +487,9 @@ body {
   box-shadow:
     inset 0 0 30px rgba(0, 0, 0, 0.35),
     0 6px 18px rgba(0, 0, 0, 0.6);
-  /* Perspectiva sutil. Solo el tapete se inclina; cards y avatares quedan
-   * planos (son hermanos, no hijos). */
-  transform: perspective(2000px) rotateX(4deg);
-  transform-origin: center 75%;
+  /* La perspectiva ahora la pone el plano 3D del wrapper de Mesa
+   * (perspective + rotateX en JS). El tapete vive adentro de ese plano
+   * y se inclina junto con las cartas tiradas. */
 }
 
 /* Vignette muy sutil sobre la textura. Dejamos que el PNG sea protagonista. */
@@ -521,10 +520,12 @@ body {
     0 1px 2px rgba(0, 0, 0, 0.35),
     0 4px 10px rgba(0, 0, 0, 0.4);
 }
-/* Recorta un poco hacia adentro el blanco/borde sobrante de la imagen.
- * Usamos selector descendiente porque next/image envuelve el <img>. */
+/* Antes hacíamos scale(1.06) para "esconder" el blanco perimetral del
+ * naipe original. Eso terminaba comiéndose unos pixeles del diseño
+ * (números y borde negro). Lo bajamos a 1.0 para mostrar el naipe
+ * entero. */
 .es-card img {
-  transform: scale(1.06);
+  transform: scale(1.04);
   transform-origin: center;
 }
 /* Lomo de las cartas: imagen completa de la marca (sello "TRUCO ENTRE

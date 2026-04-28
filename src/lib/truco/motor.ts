@@ -885,18 +885,23 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
     return out;
   }
 
+  // Envido cantable en baza 1 por CUALQUIER jugador (esté en turno o no),
+  // siempre que la baza no haya terminado y nadie haya cantado todavía.
+  // Esta es la regla de truco argentino — el pie puede cortar la mano
+  // antes de que el contrario juegue, sin esperar su turno.
+  const envidoCantableEnBaza1 =
+    !mano.envidoResuelto &&
+    !mano.envidoCantoActivo &&
+    mano.bazas.length === 1 &&
+    mano.bazas[0].jugadas.length < estado.jugadores.length;
+  if (envidoCantableEnBaza1) {
+    out.push("cantar_envido", "cantar_real_envido", "cantar_falta_envido");
+  }
+
   // Si es su turno y no hay cantos pendientes:
   if (mano.turnoJugadorId === j.id) {
     out.push("jugar_carta");
     out.push("ir_al_mazo");
-    // Envido solo en primera baza.
-    if (!mano.envidoResuelto && mano.bazas.length === 1) {
-      const haJugado = mano.bazas[0].jugadas.length > 0;
-      out.push("cantar_envido", "cantar_real_envido", "cantar_falta_envido");
-      if (!haJugado) {
-        // tranquilamente.
-      }
-    }
     if (
       mano.trucoEstado === "ninguno" ||
       (mano.trucoEstado === "truco" && mano.equipoConTruco !== j.equipo) ||

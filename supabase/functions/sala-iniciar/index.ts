@@ -1,6 +1,9 @@
-// Inicia una partida online. Modo "humanos only" — falla si la sala no está
-// completa. (Los bots solo se usan en modo Solo, que es 100% client-side.)
-// Sólo el creador (asiento 0) puede iniciar; si llega `jugador_id` se valida.
+// Inicia una partida online. Acepta humanos + bots (los bots los agrega el
+// host vía sala-agregar-bot). Solo el creador (asiento 0) puede iniciar.
+//
+// Si llega `mezclar_equipos: true`, antes de arrancar mezclamos los
+// asientos al azar — así los compañeros no quedan determinados por el
+// orden de llegada.
 import { admin, fail, ok, preflight, readJson } from "../_shared/lib.ts";
 import { iniciarPartida } from "../_shared/truco/motor.ts";
 import type { EstadoJuego } from "../_shared/truco/types.ts";
@@ -8,6 +11,7 @@ import type { EstadoJuego } from "../_shared/truco/types.ts";
 interface Payload {
   sala_id: string;
   jugador_id?: string;
+  mezclar_equipos?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -38,6 +42,20 @@ Deno.serve(async (req) => {
     return fail(
       `faltan_jugadores: requeridos ${requeridos}, hay ${estado.jugadores.length}`
     );
+  }
+
+  // Mezclar asientos antes de iniciar. El creador (asiento 0) puede caer
+  // en cualquier asiento; los equipos se recalculan por asiento%2.
+  if (body.mezclar_equipos) {
+    const asientos = estado.jugadores.map((j) => j.asiento);
+    for (let i = asientos.length - 1; i > 0; i--) {
+      const k = Math.floor(Math.random() * (i + 1));
+      [asientos[i], asientos[k]] = [asientos[k], asientos[i]];
+    }
+    estado.jugadores.forEach((j, idx) => {
+      j.asiento = asientos[idx];
+      j.equipo = (asientos[idx] % 2) as 0 | 1;
+    });
   }
 
   iniciarPartida(estado);

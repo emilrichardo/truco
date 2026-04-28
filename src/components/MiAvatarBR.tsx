@@ -1,7 +1,9 @@
 "use client";
-// Avatar del jugador local, fijo a la esquina inferior derecha de la pantalla.
-// Vive fuera de la Mesa para que no interfiera con el layout de la cruz de
-// cartas y siempre quede visible en el corner.
+// Avatar del jugador local, fijo a la esquina inferior IZQUIERDA de la
+// pantalla. (El nombre del componente quedó como "BR" por historia — antes
+// vivía abajo-derecha. Lo dejamos así para no romper imports.) Vive fuera
+// de la Mesa para que no interfiera con el plano 3D de cartas y siempre
+// quede visible en el corner.
 import { JugadorPanel } from "./JugadorPanel";
 import { useHablando } from "@/lib/useHablando";
 import type { EstadoJuego } from "@/lib/truco/types";
@@ -26,12 +28,7 @@ export function MiAvatarBR({
   const esMano = estado.manoActual?.manoJugadorId === me.id;
   const yoHablo = hablandoId === me.id;
   return (
-    // absolute (no fixed) para que se apoye contra el contenedor del mesa
-    // y quede ENCIMA del PanelAcciones (no chocando con el chat).
-    // compacto=false → más grande que el resto de los avatares.
-    // pointer-events-auto sólo donde hace falta — la burbuja queda
-    // por encima a la izquierda apuntando hacia mi foto.
-    <div className="absolute bottom-2 right-2 z-30 pointer-events-none">
+    <div className="absolute bottom-4 left-4 z-30 pointer-events-none">
       <JugadorPanel
         jugador={me}
         esTurno={!!esTurno}
@@ -42,7 +39,9 @@ export function MiAvatarBR({
         hablandoTexto={yoHablo ? hablandoTexto : null}
         hablandoEvento={yoHablo ? hablandoEvento : null}
         hablandoSticker={yoHablo ? hablandoSticker : null}
-        ladoBurbuja="izquierda"
+        ladoBurbuja="arriba"
+        ladoNombre="derecha"
+        ocultarNombre
       />
     </div>
   );

@@ -379,13 +379,24 @@ function elegirCarta(ctx: ContextoCanto): Accion {
     .slice()
     .sort((a, b) => jerarquia(a) - jerarquia(b));
 
-  // Mejor carta del rival ya tirada en esta baza.
+  // Mejor carta del rival y del compañero ya tiradas en esta baza.
   let mejorRivalEnBaza = -1;
+  let mejorAliadoEnBaza = -1;
   for (const j of baza.jugadas) {
     const jug = estado.jugadores.find((p) => p.id === j.jugadorId)!;
-    if (jug.equipo === yo.equipo) continue;
     const v = jerarquia(j.carta);
-    if (v > mejorRivalEnBaza) mejorRivalEnBaza = v;
+    if (jug.equipo === yo.equipo) {
+      if (jug.id !== jugadorId && v > mejorAliadoEnBaza) mejorAliadoEnBaza = v;
+    } else {
+      if (v > mejorRivalEnBaza) mejorRivalEnBaza = v;
+    }
+  }
+  // Si mi compañero ya está ganando la baza, no necesito gastar — tiro la
+  // más chica (sacrificio) y reservo cartas para las próximas bazas.
+  const aliadoYaGanando =
+    mejorAliadoEnBaza >= 0 && mejorAliadoEnBaza > mejorRivalEnBaza;
+  if (aliadoYaGanando) {
+    return { tipo: "jugar_carta", jugadorId, cartaId: ordenadas[0].id };
   }
 
   const bazasGanadas = mano.bazas

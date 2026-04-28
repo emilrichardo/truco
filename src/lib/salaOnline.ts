@@ -118,9 +118,24 @@ export async function unirseSalaOnline(payload: {
 
 export async function iniciarPartidaOnline(
   salaId: string,
+  jugadorId?: string,
+  mezclarEquipos = false
+): Promise<SalaResp> {
+  return invocar("sala-iniciar", {
+    sala_id: salaId,
+    jugador_id: jugadorId,
+    mezclar_equipos: mezclarEquipos
+  });
+}
+
+export async function agregarBotOnline(
+  salaId: string,
   jugadorId?: string
 ): Promise<SalaResp> {
-  return invocar("sala-iniciar", { sala_id: salaId, jugador_id: jugadorId });
+  return invocar("sala-agregar-bot", {
+    sala_id: salaId,
+    jugador_id: jugadorId
+  });
 }
 
 export async function cerrarSalaOnline(

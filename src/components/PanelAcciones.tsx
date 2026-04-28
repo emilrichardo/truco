@@ -223,227 +223,19 @@ export function PanelAcciones({
         </div>
       )}
 
-      {/* Botoneras agrupadas por contexto.
-       *  - Respondiendo truco: una sola fila con Quiero · No quiero ·
-       *    Retruco/Vale 4. Si "el envido está primero" sigue vigente, va
-       *    una segunda fila con los cantos de envido.
-       *  - Respondiendo envido: una sola fila con Quiero · No quiero +
-       *    subir envido (envido / real / falta).
-       *  - En tu turno (sin canto pendiente): filas separadas para envido
-       *    y truco; el mazo siempre va aparte. */}
-      <div className="flex flex-col gap-1.5">
-        {debeResponderTruco && (
-          <GrupoBotones titulo="Responder truco">
-            {puedo("responder_quiero") && (
-              <button
-                className="btn btn-primary"
-                onClick={() => enviar({ tipo: "responder_quiero", jugadorId: miId })}
-              >
-                Quiero
-              </button>
-            )}
-            {puedo("responder_no_quiero") && (
-              <button
-                className="btn btn-danger"
-                onClick={() =>
-                  enviar({ tipo: "responder_no_quiero", jugadorId: miId })
-                }
-              >
-                No quiero
-              </button>
-            )}
-            {puedo("cantar_retruco") && (
-              <button
-                className="btn"
-                onClick={() => enviar({ tipo: "cantar_retruco", jugadorId: miId })}
-              >
-                Retruco
-              </button>
-            )}
-            {puedo("cantar_vale4") && (
-              <button
-                className="btn"
-                onClick={() => enviar({ tipo: "cantar_vale4", jugadorId: miId })}
-              >
-                Vale 4
-              </button>
-            )}
-          </GrupoBotones>
-        )}
-
-        {debeResponderTruco &&
-          (puedo("cantar_envido") ||
-            puedo("cantar_real_envido") ||
-            puedo("cantar_falta_envido")) && (
-            <GrupoBotones titulo="Envido primero">
-              {puedo("cantar_envido") && (
-                <button
-                  className="btn"
-                  onClick={() => enviar({ tipo: "cantar_envido", jugadorId: miId })}
-                >
-                  Envido
-                </button>
-              )}
-              {puedo("cantar_real_envido") && (
-                <button
-                  className="btn"
-                  onClick={() =>
-                    enviar({ tipo: "cantar_real_envido", jugadorId: miId })
-                  }
-                >
-                  Real envido
-                </button>
-              )}
-              {puedo("cantar_falta_envido") && (
-                <button
-                  className="btn"
-                  onClick={() =>
-                    enviar({ tipo: "cantar_falta_envido", jugadorId: miId })
-                  }
-                >
-                  Falta envido
-                </button>
-              )}
-            </GrupoBotones>
-          )}
-
-        {debeResponderEnvido && (
-          <GrupoBotones titulo="Responder envido">
-            {puedo("responder_quiero") && (
-              <button
-                className="btn btn-primary"
-                onClick={() => enviar({ tipo: "responder_quiero", jugadorId: miId })}
-              >
-                Quiero
-              </button>
-            )}
-            {puedo("responder_no_quiero") && (
-              <button
-                className="btn btn-danger"
-                onClick={() =>
-                  enviar({ tipo: "responder_no_quiero", jugadorId: miId })
-                }
-              >
-                No quiero
-              </button>
-            )}
-            {puedo("cantar_envido") && (
-              <button
-                className="btn"
-                onClick={() => enviar({ tipo: "cantar_envido", jugadorId: miId })}
-              >
-                Envido
-              </button>
-            )}
-            {puedo("cantar_real_envido") && (
-              <button
-                className="btn"
-                onClick={() =>
-                  enviar({ tipo: "cantar_real_envido", jugadorId: miId })
-                }
-              >
-                Real envido
-              </button>
-            )}
-            {puedo("cantar_falta_envido") && (
-              <button
-                className="btn"
-                onClick={() =>
-                  enviar({ tipo: "cantar_falta_envido", jugadorId: miId })
-                }
-              >
-                Falta envido
-              </button>
-            )}
-          </GrupoBotones>
-        )}
-
-        {/* En tu turno (sin canto pendiente) los grupos van sin rótulo —
-         *  los botones se distinguen entre sí por color/borde dorado (truco)
-         *  vs neutros (envido). Cada canto lleva su ícono. */}
-        {!debeResponderEnvido &&
-          !debeResponderTruco &&
-          (puedo("cantar_envido") ||
-            puedo("cantar_real_envido") ||
-            puedo("cantar_falta_envido")) && (
-            <GrupoBotones>
-              {puedo("cantar_envido") && (
-                <button
-                  className="btn"
-                  onClick={() => enviar({ tipo: "cantar_envido", jugadorId: miId })}
-                >
-                  <IconoEnvido /> Envido
-                </button>
-              )}
-              {puedo("cantar_real_envido") && (
-                <button
-                  className="btn"
-                  onClick={() =>
-                    enviar({ tipo: "cantar_real_envido", jugadorId: miId })
-                  }
-                >
-                  <IconoRealEnvido /> Real envido
-                </button>
-              )}
-              {puedo("cantar_falta_envido") && (
-                <button
-                  className="btn"
-                  onClick={() =>
-                    enviar({ tipo: "cantar_falta_envido", jugadorId: miId })
-                  }
-                >
-                  <IconoFaltaEnvido /> Falta envido
-                </button>
-              )}
-            </GrupoBotones>
-          )}
-
-        {!debeResponderEnvido &&
-          !debeResponderTruco &&
-          (puedo("cantar_truco") ||
-            puedo("cantar_retruco") ||
-            puedo("cantar_vale4") ||
-            puedo("ir_al_mazo")) && (
-            <GrupoBotones>
-              {puedo("cantar_truco") && (
-                <button
-                  className="btn btn-primary"
-                  onClick={() => enviar({ tipo: "cantar_truco", jugadorId: miId })}
-                >
-                  <IconoCanto /> Truco
-                </button>
-              )}
-              {puedo("cantar_retruco") && (
-                <button
-                  className="btn"
-                  style={{ borderColor: "var(--dorado-oscuro)" }}
-                  onClick={() =>
-                    enviar({ tipo: "cantar_retruco", jugadorId: miId })
-                  }
-                >
-                  <IconoCanto /> Retruco
-                </button>
-              )}
-              {puedo("cantar_vale4") && (
-                <button
-                  className="btn"
-                  style={{ borderColor: "var(--dorado-oscuro)" }}
-                  onClick={() => enviar({ tipo: "cantar_vale4", jugadorId: miId })}
-                >
-                  <IconoCanto /> Vale 4
-                </button>
-              )}
-              {puedo("ir_al_mazo") && (
-                <button
-                  className="btn"
-                  onClick={() => enviar({ tipo: "ir_al_mazo", jugadorId: miId })}
-                >
-                  <IconoMazo /> Ir al mazo
-                </button>
-              )}
-            </GrupoBotones>
-          )}
-      </div>
+      {/* Botonera única en una sola fila con menús expandibles para
+       *  Envido y Truco. Las opciones del menú se computan según el
+       *  contexto (en tu turno vs. respondiendo a un canto del rival,
+       *  envido está primero, etc.) — si una opción no es legal, no
+       *  aparece. Cuando hay un solo item disponible, el tap dispara la
+       *  acción directo sin abrir popover. */}
+      <BotoneraMenu
+        miId={miId}
+        enviar={enviar}
+        puedo={puedo}
+        debeResponderEnvido={debeResponderEnvido}
+        debeResponderTruco={debeResponderTruco}
+      />
 
       {legales.length === 0 && estado.ganadorPartida === null && (
         <div className="text-center text-text-dim text-xs py-1 italic">
@@ -454,23 +246,212 @@ export function PanelAcciones({
   );
 }
 
-/** Fila etiquetada con los botones de una categoría (respuesta, envido,
- *  truco, mazo). El rótulo de la izquierda ancla el grupo visualmente y
- *  evita que el jugador confunda un canto de envido con uno de truco
- *  cuando aparecen ambos a la vez (el envido está primero). */
-function GrupoBotones({
-  titulo: _titulo,
-  children
+type Opcion = {
+  tipo: Accion["tipo"];
+  label: string;
+  icono?: React.ReactNode;
+};
+
+/** Botonera única en una sola fila con menús dropdown para Envido y
+ *  Truco. Cuando estás respondiendo a un canto del rival, también
+ *  aparecen Quiero / No quiero como botones primarios. */
+function BotoneraMenu({
+  miId,
+  enviar,
+  puedo,
+  debeResponderEnvido,
+  debeResponderTruco
 }: {
-  titulo?: string;
-  children: React.ReactNode;
+  miId: string;
+  enviar: (a: Accion) => void;
+  puedo: (t: Accion["tipo"]) => boolean;
+  debeResponderEnvido: boolean;
+  debeResponderTruco: boolean;
 }) {
-  // Saqué el rótulo lateral — desalineaba todo en mobile y el banner
-  // "TE CANTARON TRUCO" arriba ya da contexto. La fila se centra
-  // horizontalmente debajo de las cartas. El prop `titulo` se mantiene
-  // por compatibilidad pero no se renderiza.
+  const [menuAbierto, setMenuAbierto] = useState<"envido" | "truco" | null>(
+    null
+  );
+  const refContenedor = useRef<HTMLDivElement>(null);
+
+  // Cierra el menú si el contexto cambia (canto resuelto, turno cambia, etc.)
+  useEffect(() => {
+    setMenuAbierto(null);
+  }, [debeResponderEnvido, debeResponderTruco]);
+
+  // Cierra el menú al tocar afuera.
+  useEffect(() => {
+    if (!menuAbierto) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (
+        refContenedor.current &&
+        !refContenedor.current.contains(e.target as Node)
+      ) {
+        setMenuAbierto(null);
+      }
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [menuAbierto]);
+
+  const opcionesEnvido: Opcion[] = [];
+  if (puedo("cantar_envido"))
+    opcionesEnvido.push({ tipo: "cantar_envido", label: "Envido", icono: <IconoEnvido /> });
+  if (puedo("cantar_real_envido"))
+    opcionesEnvido.push({
+      tipo: "cantar_real_envido",
+      label: "Real envido",
+      icono: <IconoRealEnvido />
+    });
+  if (puedo("cantar_falta_envido"))
+    opcionesEnvido.push({
+      tipo: "cantar_falta_envido",
+      label: "Falta envido",
+      icono: <IconoFaltaEnvido />
+    });
+
+  // Truco no necesita dropdown — solo una de [truco/retruco/vale4] es
+  // legal a la vez según el estado del canto. Mostramos un único botón
+  // con el label correspondiente.
+  let cantoTruco: Opcion | null = null;
+  if (puedo("cantar_truco"))
+    cantoTruco = { tipo: "cantar_truco", label: "Truco", icono: <IconoCanto /> };
+  else if (puedo("cantar_retruco"))
+    cantoTruco = { tipo: "cantar_retruco", label: "Retruco", icono: <IconoCanto /> };
+  else if (puedo("cantar_vale4"))
+    cantoTruco = { tipo: "cantar_vale4", label: "Vale 4", icono: <IconoCanto /> };
+
+  const disparar = (tipo: Accion["tipo"]) => {
+    setMenuAbierto(null);
+    enviar({ tipo, jugadorId: miId } as Accion);
+  };
+
   return (
-    <div className="flex flex-wrap gap-1.5 justify-center">{children}</div>
+    <div
+      ref={refContenedor}
+      className="flex flex-wrap gap-1.5 justify-center"
+    >
+      {(debeResponderEnvido || debeResponderTruco) &&
+        puedo("responder_quiero") && (
+          <button
+            className="btn btn-primary"
+            onClick={() => disparar("responder_quiero")}
+          >
+            Quiero
+          </button>
+        )}
+      {(debeResponderEnvido || debeResponderTruco) &&
+        puedo("responder_no_quiero") && (
+          <button
+            className="btn btn-danger"
+            onClick={() => disparar("responder_no_quiero")}
+          >
+            No quiero
+          </button>
+        )}
+
+      {opcionesEnvido.length > 0 && (
+        <BotonDropdown
+          icono={<IconoEnvido />}
+          label="Envido"
+          opciones={opcionesEnvido}
+          abierto={menuAbierto === "envido"}
+          onToggle={() =>
+            setMenuAbierto((m) => (m === "envido" ? null : "envido"))
+          }
+          onElegir={(t) => disparar(t)}
+        />
+      )}
+
+      {cantoTruco && (
+        <button
+          className="btn btn-primary"
+          onClick={() => disparar(cantoTruco!.tipo)}
+        >
+          {cantoTruco.icono} {cantoTruco.label}
+        </button>
+      )}
+
+      {!debeResponderEnvido && !debeResponderTruco && puedo("ir_al_mazo") && (
+        <button className="btn" onClick={() => disparar("ir_al_mazo")}>
+          <IconoMazo /> Mazo
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Botón con menú dropdown que se abre HACIA ARRIBA. Si hay una sola
+ *  opción, el tap dispara la acción directo sin abrir popover (una
+ *  alternativa más rápida cuando no hay ambigüedad). */
+function BotonDropdown({
+  icono,
+  label,
+  opciones,
+  abierto,
+  onToggle,
+  onElegir,
+  acentuado
+}: {
+  icono: React.ReactNode;
+  label: string;
+  opciones: Opcion[];
+  abierto: boolean;
+  onToggle: () => void;
+  onElegir: (tipo: Accion["tipo"]) => void;
+  acentuado?: boolean;
+}) {
+  const tieneVarias = opciones.length > 1;
+  const onTap = () => {
+    if (tieneVarias) onToggle();
+    else if (opciones.length === 1) onElegir(opciones[0].tipo);
+  };
+  return (
+    <div className="relative">
+      <button
+        className={acentuado ? "btn btn-primary" : "btn"}
+        onClick={onTap}
+        aria-haspopup={tieneVarias ? "menu" : undefined}
+        aria-expanded={tieneVarias ? abierto : undefined}
+      >
+        {icono} {label}
+        {tieneVarias && <ChevronArriba />}
+      </button>
+      {abierto && tieneVarias && (
+        <div
+          role="menu"
+          className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 flex flex-col gap-1 bg-carbon/95 backdrop-blur-sm border border-dorado/40 rounded-lg p-1 shadow-xl z-[600] min-w-[150px]"
+        >
+          {opciones.map((op) => (
+            <button
+              key={op.tipo}
+              role="menuitem"
+              className="btn whitespace-nowrap"
+              onClick={() => onElegir(op.tipo)}
+            >
+              {op.icono} {op.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ChevronArriba() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="10"
+      height="10"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polyline points="6 15 12 9 18 15" />
+    </svg>
   );
 }
 

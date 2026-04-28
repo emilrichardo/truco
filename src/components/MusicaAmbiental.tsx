@@ -21,6 +21,28 @@ import { Howl, Howler } from "howler";
 const STORAGE_KEY = "truco:musica:v1";
 const VOLUMEN_DEFAULT = 0.15;
 
+// Estado externo para esconder el UI del player desde otros componentes
+// (por ejemplo, en la pantalla de espera de sala donde el player se
+// superpone con el botón de Compartir). El audio sigue corriendo, solo
+// se oculta el botón.
+let uiOculto = false;
+const subsUiOculto = new Set<() => void>();
+export function setMusicaUIOculta(oculto: boolean) {
+  uiOculto = oculto;
+  subsUiOculto.forEach((fn) => fn());
+}
+function useMusicaUIOculta(): boolean {
+  const [, set] = useState(0);
+  useEffect(() => {
+    const fn = () => set((n) => n + 1);
+    subsUiOculto.add(fn);
+    return () => {
+      subsUiOculto.delete(fn);
+    };
+  }, []);
+  return uiOculto;
+}
+
 interface Estado {
   silenciado: boolean;
   volumen: number;
@@ -209,102 +231,40 @@ export function MusicaAmbiental() {
     if (estado.silenciado) setEstado({ silenciado: false });
   };
 
-  if (!hidratado || pistas.length === 0) return null;
+  const ocultoExterno = useMusicaUIOculta();
+  if (!hidratado || pistas.length === 0 || ocultoExterno) return null;
 
+  // Único UI: un botón compacto fijo arriba a la derecha (en partida) o
+  // abajo a la izquierda (en home). Solo togglea silencio. Antes había
+  // skip y volumen — los sacamos para no ensuciar el header. El volumen
+  // queda en su default y el skip se puede agregar más adelante si se
+  // pide.
+  const claseFija = enPartida
+    ? "fixed top-1.5 right-2 z-50"
+    : "fixed bottom-2 left-2 z-50";
   return (
-    <div
-      className={
-        enPartida
-          ? "fixed top-1.5 right-2 z-50 flex items-center gap-1 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-0.5 pr-1.5 py-0.5 shadow-lg"
-          : "fixed bottom-2 left-2 z-50 flex items-center gap-1 bg-surface/80 backdrop-blur-sm border border-border rounded-full pl-0.5 pr-1.5 py-0.5 shadow-lg"
-      }
-      style={
-        enPartida
-          ? undefined
-          : { paddingBottom: "max(0.125rem, env(safe-area-inset-bottom))" }
-      }
+    <button
+      type="button"
+      onClick={() => setEstado({ silenciado: !estado.silenciado })}
+      className={`${claseFija} w-9 h-9 rounded-full bg-surface/80 backdrop-blur-sm border border-border hover:bg-surface-2 flex items-center justify-center transition shadow-lg`}
+      title={estado.silenciado ? "Activar música" : "Silenciar música"}
+      aria-label={estado.silenciado ? "Activar música" : "Silenciar música"}
     >
-      <button
-        type="button"
-        onClick={() => setEstado({ silenciado: !estado.silenciado })}
-        className="w-7 h-7 rounded-full hover:bg-surface-2 flex items-center justify-center transition leading-none text-text"
-        title={estado.silenciado ? "Activar música" : "Silenciar música"}
-        aria-label={estado.silenciado ? "Activar música" : "Silenciar música"}
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={`w-4 h-4 ${estado.silenciado ? "text-text-dim" : "text-dorado"}`}
+        aria-hidden
       >
-        {estado.silenciado ? (
-          // Speaker mute SVG
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4 text-text-dim"
-            aria-hidden
-          >
-            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-            <line x1="23" y1="9" x2="17" y2="15" />
-            <line x1="17" y1="9" x2="23" y2="15" />
-          </svg>
-        ) : (
-          // Music note SVG
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4 text-dorado"
-            aria-hidden
-          >
-            <path d="M9 18V5l12-2v13" />
-            <circle cx="6" cy="18" r="3" />
-            <circle cx="18" cy="16" r="3" />
-          </svg>
-        )}
-      </button>
-
-      <button
-        type="button"
-        onClick={cambiarPista}
-        disabled={pistas.length <= 1}
-        className="w-7 h-7 rounded-full hover:bg-surface-2 flex items-center justify-center transition disabled:opacity-30 disabled:cursor-not-allowed"
-        title="Cambiar de tema"
-        aria-label="Cambiar de tema"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-4 h-4 text-text-dim"
-          aria-hidden
-        >
-          <polygon points="5 4 15 12 5 20 5 4" />
-          <line x1="19" y1="5" x2="19" y2="19" />
-        </svg>
-      </button>
-
-      <input
-        type="range"
-        min={0}
-        max={0.5}
-        step={0.01}
-        value={estado.volumen}
-        onChange={(e) =>
-          setEstado({
-            volumen: parseFloat(e.target.value),
-            silenciado: false
-          })
-        }
-        className="w-14 accent-[var(--dorado)] cursor-pointer"
-        title={`Volumen: ${Math.round(estado.volumen * 100)}%`}
-        aria-label="Volumen"
-      />
-    </div>
+        <path d="M9 18V5l12-2v13" />
+        <circle cx="6" cy="18" r="3" />
+        <circle cx="18" cy="16" r="3" />
+        {estado.silenciado && <line x1="3" y1="3" x2="21" y2="21" />}
+      </svg>
+    </button>
   );
 }

@@ -4,6 +4,7 @@ import { urlPersonaje } from "@/data/jugadores";
 import type { CategoriaEvento, Jugador } from "@/lib/truco/types";
 
 type LadoBurbuja = "izquierda" | "derecha" | "arriba" | "abajo";
+type LadoNombre = "izquierda" | "derecha";
 
 export function JugadorPanel({
   jugador,
@@ -17,7 +18,10 @@ export function JugadorPanel({
   hablandoTexto,
   hablandoEvento,
   hablandoSticker,
-  ladoBurbuja = "derecha"
+  ladoBurbuja = "derecha",
+  ladoNombre = "derecha",
+  ocultarNombre,
+  alineacionBurbujaH
 }: {
   jugador: Jugador;
   esTurno: boolean;
@@ -39,6 +43,16 @@ export function JugadorPanel({
   hablandoSticker?: string | null;
   /** Lado del avatar donde apoyar la burbuja. */
   ladoBurbuja?: LadoBurbuja;
+  /** De qué lado del avatar va el pill con el nombre. Apuntar siempre al
+   *  lado interior de la pantalla así no se sale por el borde. */
+  ladoNombre?: LadoNombre;
+  /** Si está prendido, no muestra el pill con el nombre. Útil para mi
+   *  avatar (ya sé cómo me llamo). */
+  ocultarNombre?: boolean;
+  /** Para burbujas arriba/abajo: anclar al borde izq/der del avatar
+   *  en vez de centrar. Evita que se salga de pantalla cuando el
+   *  avatar vive en una esquina. */
+  alineacionBurbujaH?: "izq" | "der" | "centro";
 }) {
   // Avatares rectangulares (aspect 3/4) para usar mejor el espacio en mobile.
   const tam = compacto
@@ -52,8 +66,40 @@ export function JugadorPanel({
       : hablando
         ? "hablando"
         : null;
+  // Layout horizontal: avatar + pill del nombre del lado interior. La
+  // dirección del flex se invierte cuando el nombre va a la izquierda.
+  const flexDir = ladoNombre === "izquierda" ? "flex-row-reverse" : "flex-row";
+  const nombrePill = (
+    <div
+      className={clsx(
+        "bg-carbon/85 backdrop-blur-sm border border-border rounded-md px-2 py-0.5 leading-tight max-w-[100px] sm:max-w-[140px]",
+        "flex flex-col items-start gap-0.5"
+      )}
+    >
+      <div
+        className={clsx(
+          "text-[11px] sm:text-xs font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] truncate w-full",
+          esYo ? "text-dorado" : "text-crema"
+        )}
+        title={jugador.nombre}
+      >
+        {jugador.nombre}
+        {esYo && (
+          <span className="text-[9px] ml-1 acento-azul font-bold">(vos)</span>
+        )}
+      </div>
+      {jugador.esBot && (
+        <span
+          className="bg-transparent text-crema/60 text-[8px] uppercase font-bold tracking-wider leading-none"
+          title="Bot"
+        >
+          bot
+        </span>
+      )}
+    </div>
+  );
   return (
-    <div className="flex flex-col items-center gap-1">
+    <div className={clsx("flex items-center gap-1.5", flexDir)}>
       <div className="relative">
         <div
           key={hablandoKey || "estatico"}
@@ -89,35 +135,11 @@ export function JugadorPanel({
             lado={ladoBurbuja}
             destacado={hablandoEvento === "respuesta"}
             keyAnim={hablandoKey || ""}
+            alineacionH={alineacionBurbujaH}
           />
         )}
       </div>
-      {/* BOT label como flex item separado (antes era absolute -bottom-1
-       * y se superponía con la imagen). */}
-      {jugador.esBot && (
-        <span
-          className="bg-carbon text-crema/80 border border-dorado/50 rounded text-[8px] px-1.5 py-0.5 uppercase font-bold tracking-wider leading-none"
-          title="Bot"
-        >
-          bot
-        </span>
-      )}
-      <div className="text-center leading-tight">
-        <div
-          className={clsx(
-            "text-sm sm:text-base font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]",
-            esYo ? "text-dorado" : "text-crema"
-          )}
-        >
-          {jugador.nombre}
-          {esYo && (
-            <span className="text-[10px] ml-1 acento-azul font-bold">(vos)</span>
-          )}
-        </div>
-        <div className="text-[10px] text-crema/60 uppercase tracking-wider font-bold">
-          Eq {jugador.equipo + 1}
-        </div>
-      </div>
+      {!ocultarNombre && nombrePill}
     </div>
   );
 }
@@ -131,14 +153,29 @@ function BurbujaCanto({
   sticker,
   lado,
   destacado,
-  keyAnim
+  keyAnim,
+  alineacionH
 }: {
   texto: string;
   sticker?: string;
   lado: LadoBurbuja;
   destacado?: boolean;
   keyAnim: string;
+  /** Para lado="arriba"/"abajo": de qué lado del avatar se ancla
+   *  horizontalmente. Por defecto centrado. */
+  alineacionH?: "izq" | "der" | "centro";
 }) {
+  // Para burbujas arriba/abajo, el caller puede pedir que se ancle al
+  // borde izq o der del avatar para que no se salga de pantalla cuando
+  // el avatar vive en una esquina.
+  const claseAnclajeH =
+    (lado === "arriba" || lado === "abajo")
+      ? alineacionH === "izq"
+        ? "left-0"
+        : alineacionH === "der"
+          ? "right-0"
+          : "left-1/2 -translate-x-1/2"
+      : "";
   return (
     <div
       key={keyAnim}
@@ -146,7 +183,8 @@ function BurbujaCanto({
         // z-[400] para quedar por encima de las cartas tiradas en mesa
         // (que llegan a z-index 350 con la lógica de bazas).
         "absolute z-[400] pointer-events-none envido-pop",
-        clasePosicion(lado)
+        clasePosicion(lado),
+        claseAnclajeH
       )}
     >
       <div
@@ -201,9 +239,11 @@ function clasePosicion(lado: LadoBurbuja): string {
     case "derecha":
       return "left-full ml-3 top-1/2 -translate-y-1/2";
     case "arriba":
-      return "bottom-full mb-3 left-1/2 -translate-x-1/2";
+      // Sin -translate-x-1/2 — la pos horizontal la decide el caller
+      // anclando left-0 o right-0 (ver alineacionH).
+      return "bottom-full mb-3";
     case "abajo":
-      return "top-full mt-3 left-1/2 -translate-x-1/2";
+      return "top-full mt-3";
   }
 }
 

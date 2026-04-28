@@ -77,27 +77,56 @@ export function ChatFlotante({
 
   return (
     <div
-      // En desktop ya hay un panel de chat lateral siempre visible, así
-      // que escondemos el botón flotante. Sólo aparece en mobile.
-      className="md:hidden fixed z-40 right-2 bottom-2 flex flex-col items-end gap-1.5 pointer-events-none"
-      style={{
-        // Respetar safe-area en mobiles con notch / barra inferior.
-        paddingBottom: "max(0px, env(safe-area-inset-bottom))",
-        paddingRight: "max(0px, env(safe-area-inset-right))"
-      }}
+      // En desktop ya hay un panel lateral siempre visible, pero igual
+      // mostramos el botón en el header — al lado del reproductor de
+      // música — para que el acceso al chat sea consistente en todos los
+      // tamaños. El sheet se abre solo en mobile (en md+ el panel ya
+      // ocupa la columna lateral).
+      className="fixed z-50 top-1.5 right-[52px] flex flex-col items-end gap-1 pointer-events-none"
     >
+      <button
+        type="button"
+        onClick={abrir}
+        aria-label={`Abrir chat${sinVer > 0 ? ` (${sinVer} sin ver)` : ""}`}
+        className={clsx(
+          // Mismo estilo que el botón de música — botón neutral
+          // (surface) en vez del dorado anterior, así son simétricos
+          // visualmente. El badge de sin-ver sigue agregando color
+          // cuando hay mensajes nuevos.
+          "pointer-events-auto relative w-9 h-9 rounded-full",
+          "bg-surface/80 backdrop-blur-sm border border-border",
+          "hover:bg-surface-2 transition shadow-lg",
+          "flex items-center justify-center",
+          sinVer > 0 && "ring-2 ring-dorado/60 animate-pulse"
+        )}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={clsx("w-4 h-4", sinVer > 0 ? "text-dorado" : "text-text-dim")}
+          aria-hidden
+        >
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+        {sinVer > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red text-crema text-[10px] font-bold rounded-full flex items-center justify-center border border-carbon shadow-md">
+            {sinVer > 9 ? "9+" : sinVer}
+          </span>
+        )}
+      </button>
       {previewVisible && ultimo && (
         <div
           className={clsx(
-            "md:hidden max-w-[60vw] sm:max-w-[260px] rounded-xl px-3 py-1.5 text-xs leading-snug shadow-lg backdrop-blur-sm border pointer-events-none",
+            "max-w-[60vw] sm:max-w-[260px] rounded-xl px-3 py-1.5 text-xs leading-snug shadow-lg backdrop-blur-sm border pointer-events-none",
             esYoUltimo
               ? "bg-dorado/90 text-carbon border-dorado-oscuro"
               : "bg-carbon/85 text-crema border-azul-criollo/50"
           )}
-          style={{
-            // Cola de la burbuja apuntando al botón (abajo-derecha).
-            borderBottomRightRadius: "4px"
-          }}
+          style={{ borderTopRightRadius: "4px" }}
         >
           {ultimo.sticker ? (
             <div className="flex items-center gap-1.5">
@@ -126,39 +155,6 @@ export function ChatFlotante({
           )}
         </div>
       )}
-
-      <button
-        type="button"
-        onClick={abrir}
-        aria-label={`Abrir chat${sinVer > 0 ? ` (${sinVer} sin ver)` : ""}`}
-        className={clsx(
-          // Tamaño reducido (era 68px) y opacidad baja por defecto para
-          // no estorbar sobre los botones de acción. Se ilumina cuando
-          // hay mensajes sin ver.
-          "pointer-events-auto relative w-[44px] h-[44px] rounded-full",
-          "bg-gradient-to-br from-dorado-claro via-dorado to-dorado-oscuro",
-          "border-2 border-carbon",
-          "shadow-[0_2px_8px_rgba(0,0,0,0.5)]",
-          "active:scale-95 hover:brightness-110 transition",
-          "flex items-center justify-center",
-          sinVer === 0 && "opacity-50",
-          sinVer > 0 && "ring-2 ring-dorado/60 animate-pulse"
-        )}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          className="w-5 h-5 text-carbon"
-          aria-hidden
-        >
-          <path d="M12 3C6.48 3 2 6.92 2 11.5c0 2.08.93 3.97 2.46 5.4L3 21l4.6-1.45c1.32.62 2.84.95 4.4.95 5.52 0 10-3.92 10-8.5S17.52 3 12 3zm-4 9.5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm4 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm4 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
-        </svg>
-        {sinVer > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red text-crema text-[10px] font-bold rounded-full flex items-center justify-center border border-carbon shadow-md">
-            {sinVer > 9 ? "9+" : sinVer}
-          </span>
-        )}
-      </button>
     </div>
   );
 }

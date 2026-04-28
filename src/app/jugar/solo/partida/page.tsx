@@ -109,7 +109,7 @@ function PartidaSoloInterno() {
   return (
     <main className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-bg">
       <PrecargaCartas />
-      <header className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
+      <header className="relative flex items-center px-2 py-1.5 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
         <button
           onClick={() => setConfirmSalir(true)}
           className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs shrink-0"
@@ -118,11 +118,11 @@ function PartidaSoloInterno() {
           ←
         </button>
 
-        {/* Marcador prominente al centro del header. Reservamos un slot
-         *  vacío a la derecha (140px) para que los controles de música
-         *  flotantes (fixed top-right) no tapen el score. */}
-        <div className="flex-1 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
+        {/* Marcador absolutamente centrado en el header — los íconos
+         *  flotan fixed sobre la esquina derecha y no le quitan espacio
+         *  al score. */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider pointer-events-none">
+          <div className="flex items-center gap-1.5">
             <span className="text-dorado truncate max-w-[90px]">
               {tituloNos}
             </span>
@@ -134,7 +134,7 @@ function PartidaSoloInterno() {
             </span>
           </div>
           <span className="text-dorado/60 text-base">—</span>
-          <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5">
             <span
               className="font-display text-lg text-crema leading-none"
               style={{ minWidth: "1.4em", textAlign: "left" }}
@@ -146,12 +146,6 @@ function PartidaSoloInterno() {
             </span>
           </div>
         </div>
-
-        {/* Reserva derecha para no chocar con MusicaAmbiental (fixed
-         *  top-1.5 right-2 z-50, ~170-180px reales con padding y safe-
-         *  area). Antes era 140px y la pill de música tapaba el score.
-         *  El widget flota fixed encima de este slot vacío. */}
-        <div className="w-[180px] shrink-0" aria-hidden />
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -219,7 +213,7 @@ function PartidaSoloInterno() {
 
         {confirmSalir && estado.ganadorPartida === null && (
           <div
-            className="absolute inset-0 sheet-bg flex items-center justify-center z-50 p-4"
+            className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4"
             onClick={() => setConfirmSalir(false)}
           >
             <div
@@ -272,7 +266,7 @@ function PartidaSoloInterno() {
               ]
             : [];
           return (
-            <div className="absolute inset-0 sheet-bg flex items-center justify-center z-40 p-4 overflow-y-auto">
+            <div className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4 overflow-y-auto">
               <div className="papel p-5 text-center max-w-sm w-full my-4">
                 {yoGane && <div className="text-5xl mb-1">🏆</div>}
                 <div

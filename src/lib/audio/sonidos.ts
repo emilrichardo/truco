@@ -34,7 +34,10 @@ export type CategoriaCanto =
 // voz distinta determinísticamente.
 const VOCES = ["lalo", "juan", "manuel", "agustin"] as const;
 type Voz = (typeof VOCES)[number];
-const VARIANTES_POR_CANTO = 5;
+
+function totalVariantes(canto: CategoriaCanto): number {
+  return FRASES[canto]?.length ?? 1;
+}
 
 function hashStr(s: string): number {
   let h = 0;
@@ -145,7 +148,7 @@ export function reproducirCanto(
   const idx =
     opts.variante && opts.variante >= 1
       ? opts.variante
-      : 1 + Math.floor(Math.random() * VARIANTES_POR_CANTO);
+      : 1 + Math.floor(Math.random() * totalVariantes(canto));
   const archivo = String(idx).padStart(2, "0") + ".mp3";
   const src = `/audio/voces/${voz}/${canto}/${archivo}`;
   console.debug("[truco] canto", { canto, voz, src, jugadorId: opts.jugadorId });
@@ -177,7 +180,7 @@ export function reproducirReaccion(
   const idx =
     opts.variante && opts.variante >= 1
       ? opts.variante
-      : 1 + Math.floor(Math.random() * VARIANTES_POR_CANTO);
+      : 1 + Math.floor(Math.random() * totalVariantes(canto));
   const archivo = String(idx).padStart(2, "0") + ".mp3";
   const src = `/audio/voces/${voz}/${canto}/${archivo}`;
 
@@ -271,10 +274,8 @@ export function identificarCanto(texto: string): CantoIdentificado | null {
 }
 
 /** Precarga TODOS los clips de las voces que efectivamente van a jugar
- *  esta partida. Total ~85 clips por voz × 1-5 voces = 85-425 archivos
- *  pequeños (~15-50KB cada uno). Browser los pide en paralelo (limita
- *  a 6 por host) y quedan en cache. La primera reproducción de cualquier
- *  canto sale instantáneo después de la precarga. */
+ *  esta partida. La cantidad por categoría sale de FRASES (cada frase
+ *  tiene su clip), así no pedimos archivos que no existen. */
 export function precargarVoces(jugadorIds: string[]) {
   if (typeof window === "undefined") return;
   const vocesUsadas = new Set(jugadorIds.map(vozDeJugador));
@@ -286,8 +287,8 @@ export function precargarVoces(jugadorIds: string[]) {
   ];
   for (const voz of vocesUsadas) {
     for (const canto of cantos) {
-      // Hasta 8 variantes (las reacciones tienen más). Los 404 son baratos.
-      for (let i = 1; i <= 8; i++) {
+      const total = FRASES[canto]?.length ?? 0;
+      for (let i = 1; i <= total; i++) {
         const url = `/audio/voces/${voz}/${canto}/${String(i).padStart(2, "0")}.mp3`;
         fetch(url, { cache: "force-cache" }).catch(() => {});
       }

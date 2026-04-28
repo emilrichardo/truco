@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   abandonarSalaOnline,
+  agregarBotOnline,
   cerrarSalaOnline,
   enviarAccionOnline,
   enviarChatOnline,
@@ -25,6 +26,7 @@ import { MenuCompartir } from "@/components/MenuCompartir";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { HeaderMarca } from "@/components/HeaderMarca";
 import { MiAvatarBR } from "@/components/MiAvatarBR";
+import { setMusicaUIOculta } from "@/components/MusicaAmbiental";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 
 export default function SalaPage() {
@@ -119,9 +121,20 @@ export default function SalaPage() {
     },
     [salaId, miId]
   );
-  const iniciar = useCallback(async () => {
-    const r = await iniciarPartidaOnline(salaId, miId ?? undefined);
-    if (!r.ok) setError(r.error || "No se pudo iniciar.");
+  const iniciar = useCallback(
+    async (mezclarEquipos: boolean) => {
+      const r = await iniciarPartidaOnline(
+        salaId,
+        miId ?? undefined,
+        mezclarEquipos
+      );
+      if (!r.ok) setError(r.error || "No se pudo iniciar.");
+    },
+    [salaId, miId]
+  );
+  const sumarBot = useCallback(async () => {
+    const r = await agregarBotOnline(salaId, miId ?? undefined);
+    if (!r.ok) setError(r.error || "No se pudo agregar bot.");
   }, [salaId, miId]);
   const cerrarSala = useCallback(async () => {
     if (cerrando) return;
@@ -152,6 +165,14 @@ export default function SalaPage() {
 
   // Detectar abandonos: si la lista de jugadores se achica o uno pasa a
   // desconectado, mostramos un cartel arriba con quién se fue.
+  // En la pantalla de espera (sala creada pero partida no iniciada) el
+  // botón de música se solapa con "Compartir enlace" del header. Lo
+  // ocultamos hasta que arranque la partida.
+  useEffect(() => {
+    setMusicaUIOculta(!estado?.iniciada);
+    return () => setMusicaUIOculta(false);
+  }, [estado?.iniciada]);
+
   useEffect(() => {
     if (!estado) return;
     const actuales = estado.jugadores.map((j) => ({
@@ -252,10 +273,11 @@ export default function SalaPage() {
         {!estado.iniciada && (
           <button
             onClick={() => setMenuCompartir(true)}
-            className="btn btn-primary !px-3 !py-1.5 !min-h-0 text-xs flex items-center gap-1.5"
+            className="btn btn-primary !px-2 !py-1 !min-h-0 text-[11px] flex items-center gap-1 shrink-0"
+            title="Compartir enlace"
           >
             <span aria-hidden>📤</span>
-            <span>Compartir enlace</span>
+            <span className="hidden sm:inline">Compartir</span>
           </button>
         )}
         {estado.iniciada && (
@@ -314,6 +336,7 @@ export default function SalaPage() {
           estado={estado}
           miId={miId}
           onIniciar={iniciar}
+          onSumarBot={sumarBot}
           onCerrar={() => setConfirmSalir(true)}
           cerrando={cerrando}
         />
@@ -414,7 +437,7 @@ export default function SalaPage() {
 
           {/* Modal ganador */}
           {estado.ganadorPartida !== null && (
-            <div className="absolute inset-0 sheet-bg flex items-center justify-center z-40 p-4">
+            <div className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4">
               <div className="papel p-6 text-center max-w-sm">
                 <div className="text-5xl mb-2">🏆</div>
                 <div className="titulo-marca text-2xl mb-1" style={{ color: "var(--carbon)", textShadow: "1px 1px 0 rgba(217,164,65,0.5)" }}>
@@ -444,7 +467,7 @@ export default function SalaPage() {
       {/* Confirmación cerrar sala */}
       {confirmSalir && (
         <div
-          className="fixed inset-0 sheet-bg flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 sheet-bg flex items-center justify-center z-[1000] p-4"
           onClick={() => setConfirmSalir(false)}
         >
           <div
@@ -488,22 +511,25 @@ function SalaEspera({
   miId,
   onIniciar,
   onCerrar,
+  onSumarBot,
   cerrando
 }: {
   estado: EstadoJuego;
   miId: string | null;
-  onIniciar: () => void;
+  onIniciar: (mezclarEquipos: boolean) => void;
   onCerrar: () => void;
+  onSumarBot?: () => void;
   cerrando: boolean;
 }) {
   const total = estado.modo === "2v2" ? 4 : 2;
   const slots = Array.from({ length: total }).map((_, i) => {
-    const j = estado.jugadores.find((x) => x.asiento === i && !x.esBot);
+    const j = estado.jugadores.find((x) => x.asiento === i);
     return { i, j };
   });
   const ocupados = slots.filter((s) => !!s.j).length;
   const faltan = total - ocupados;
   const todosListos = faltan === 0;
+  const [mezclarEquipos, setMezclarEquipos] = useState(false);
 
   // Grid: 2 cols × 1 fila (1v1) o 2 cols × 2 filas (2v2).
   const gridCls = total === 4 ? "grid-cols-2 grid-rows-2" : "grid-cols-2 grid-rows-1";
@@ -512,9 +538,29 @@ function SalaEspera({
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className={`flex-1 grid ${gridCls} gap-3 p-3 sm:p-4`}>
         {slots.map(({ i, j }) => (
-          <SlotEspera key={i} asiento={i} jugador={j} esYo={j?.id === miId} />
+          <SlotEspera
+            key={i}
+            asiento={i}
+            jugador={j}
+            esYo={j?.id === miId}
+            onSumarBot={!j && onSumarBot ? onSumarBot : undefined}
+          />
         ))}
       </div>
+      {/* Toggle: solo en 2v2, donde tiene sentido sortear compañeros */}
+      {total === 4 && (
+        <div className="px-3 sm:px-4 py-2 flex items-center justify-center">
+          <label className="flex items-center gap-2 text-xs text-text-dim cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={mezclarEquipos}
+              onChange={(e) => setMezclarEquipos(e.target.checked)}
+              className="accent-[var(--dorado)] w-4 h-4"
+            />
+            <span>Sortear compañeros al azar</span>
+          </label>
+        </div>
+      )}
       <div className="border-t border-border bg-surface/40 p-3 flex items-center gap-2">
         <button
           onClick={onCerrar}
@@ -533,7 +579,7 @@ function SalaEspera({
           )}
         </div>
         <button
-          onClick={onIniciar}
+          onClick={() => onIniciar(mezclarEquipos)}
           disabled={!todosListos}
           className="btn btn-primary flex-1 sm:flex-initial sm:px-6"
           title={todosListos ? "Empezar partida" : "Esperá a que se sienten todos"}
@@ -548,11 +594,13 @@ function SalaEspera({
 function SlotEspera({
   asiento,
   jugador,
-  esYo
+  esYo,
+  onSumarBot
 }: {
   asiento: number;
   jugador?: Jugador;
   esYo: boolean;
+  onSumarBot?: () => void;
 }) {
   const equipo = (asiento % 2) as 0 | 1;
   const colorEquipo = equipo === 0 ? "border-dorado" : "border-azul-criollo";
@@ -582,6 +630,11 @@ function SlotEspera({
                 vos
               </span>
             )}
+            {jugador.esBot && (
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-carbon border border-dorado/50 text-crema/80 text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded">
+                bot
+              </span>
+            )}
           </div>
           <div className="text-center">
             <div className="font-display text-base sm:text-lg leading-tight truncate max-w-[140px]">
@@ -597,6 +650,16 @@ function SlotEspera({
           <div className="text-center text-text-dim/70 text-xs italic subtitulo-claim">
             Esperando primo
           </div>
+          {onSumarBot && (
+            <button
+              type="button"
+              onClick={onSumarBot}
+              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-[10px] mt-1"
+              title="Llenar este lugar con un bot"
+            >
+              + Sumar bot
+            </button>
+          )}
         </>
       )}
     </div>

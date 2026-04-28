@@ -104,7 +104,9 @@
       "Bash(md5 /Volumes/Emil/neuraz/projects/trucoprimos/truco-appweb/public/texturas/textura-mesa.png)",
       "Bash(md5 /tmp/textura.png)",
       "Bash(awk '{print $1}')",
-      "Bash(npx tsx *)"
+      "Bash(npx tsx *)",
+      "Read(//private/tmp/**)",
+      "Bash(pkill -f \"generar-voces\")"
     ],
     "additionalDirectories": [
       "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"
