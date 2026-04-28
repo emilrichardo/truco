@@ -37,12 +37,15 @@ function hashStr(s: string): number {
 
 function personalidadDe(jugadorId: string): Personalidad {
   const h = hashStr(jugadorId);
-  // 4 valores 0..1, distribuidos a partir del hash. Cada bot tiene su perfil.
+  // 4 valores con piso ~0.45 y techo 1.0 — eliminamos los bots demasiado
+  // pasivos. Cada uno sigue teniendo perfil distinto pero todos juegan
+  // con un mínimo de carácter.
+  const norm = (byte: number) => 0.45 + ((byte & 0xff) / 255) * 0.55;
   return {
-    agresion: ((h >> 0) & 0xff) / 255,
-    bluff: ((h >> 8) & 0xff) / 255,
-    riesgo: ((h >> 16) & 0xff) / 255,
-    cautela: ((h >> 24) & 0xff) / 255
+    agresion: norm(h >> 0),
+    bluff:    norm(h >> 8),
+    riesgo:   norm(h >> 16),
+    cautela:  norm(h >> 24) * 0.7 // amortiguado: nadie demasiado tímido
   };
 }
 
@@ -153,35 +156,36 @@ function decidirEnvido(ctx: ContextoCanto): Accion | null {
   const voyPerdiendo = miPunt < otroPunt;
   const distancia = Math.abs(miPunt - otroPunt);
 
-  // Threshold base para querer: 27 (mediano).
-  // Ajustes por personalidad y contexto.
-  let threshold = 27 - p.riesgo * 4 - p.agresion * 2;
-  if (voyPerdiendo && distancia > 5) threshold -= 3; // más agresivo si pierdo
-  if (distancia > 10 && !voyPerdiendo) threshold += 2; // más cauto si gano cómodo
-  if (cadena.length >= 2) threshold += 2; // sube apuesta = más exigente
+  // Threshold base para querer: 24 (más agresivo que antes, era 27).
+  // El bot acepta envidos con 24+ → 4-5 puntos por debajo del rango fuerte
+  // pero suficiente para meter presión.
+  let threshold = 24 - p.riesgo * 4 - p.agresion * 3;
+  if (voyPerdiendo && distancia > 5) threshold -= 4; // más agresivo si pierdo
+  if (distancia > 10 && !voyPerdiendo) threshold += 1; // más cauto si gano cómodo
+  if (cadena.length >= 2) threshold += 1; // subida = un poco más exigente
+  if (valorAcumulado >= 5) threshold += 2; // mucha plata en juego
 
   const aceptar = miEnvido >= threshold;
 
-  // ¿Subir? Necesita envido alto + agresión alta + acción legal.
+  // ¿Subir? Necesita envido alto + acción legal. Bajamos thresholds.
   const puedeSubirReal =
     legales.includes("cantar_real_envido") && ultimoCanto !== "real_envido";
   const puedeSubirFalta = legales.includes("cantar_falta_envido");
 
-  if (puedeSubirReal && miEnvido >= 30 + (1 - p.agresion) * 3) {
+  if (puedeSubirReal && miEnvido >= 28 + (1 - p.agresion) * 2) {
     return { tipo: "cantar_real_envido", jugadorId };
   }
-  if (
-    puedeSubirFalta &&
-    miEnvido >= 32 + (1 - p.agresion) * 2 &&
-    voyPerdiendo
-  ) {
+  if (puedeSubirFalta && miEnvido >= 31 + (1 - p.agresion) * 2) {
+    return { tipo: "cantar_falta_envido", jugadorId };
+  }
+  // Falta envido oportunista: si voy perdiendo y tengo mano decente.
+  if (puedeSubirFalta && miEnvido >= 28 && voyPerdiendo && distancia > 8) {
     return { tipo: "cantar_falta_envido", jugadorId };
   }
 
-  // Bluff: ocasionalmente subir con mano débil para presionar.
-  // Probabilidad escala con bluff y inversamente con cadena length.
-  if (puedeSubirReal && miEnvido < 24 && p.bluff > 0.6) {
-    const probBluff = p.bluff * 0.18 - cadena.length * 0.05;
+  // Bluff: subir con mano débil para presionar. Más frecuente que antes.
+  if (puedeSubirReal && miEnvido < 24) {
+    const probBluff = p.bluff * 0.25 - cadena.length * 0.05;
     if (Math.random() < probBluff) {
       return { tipo: "cantar_real_envido", jugadorId };
     }
@@ -220,42 +224,40 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
   const valorEnJuego =
     nivel === "truco" ? 2 : nivel === "retruco" ? 3 : 4;
 
-  // Threshold para aceptar — depende de fuerza + bazas + personalidad.
-  // Score base: 38 (mano media). Bajamos si tenemos ventaja en bazas o agresión.
-  let umbral = 38 - p.riesgo * 6 - ventajaBazas * 8;
-  // Si vamos perdiendo, somos más agresivos (queremos puntos).
-  if (distancia < -4) umbral -= 4;
-  // Si subimos a vale 4 ya estamos en territorio peligroso.
-  if (nivel === "vale4") umbral += 8;
+  // Threshold para aceptar — bajado: el bot pelea más manos.
+  let umbral = 32 - p.riesgo * 8 - ventajaBazas * 10;
+  if (distancia < -4) umbral -= 5;       // pierdo, juego
+  if (nivel === "vale4") umbral += 6;    // vale 4 = más exigente
+  if (valorEnJuego >= 3) umbral += 2;
 
   const aceptar =
-    fuerza >= umbral || (expBazas >= 2 && ventajaBazas >= 0);
+    fuerza >= umbral || (expBazas >= 1.7 && ventajaBazas >= 0);
 
-  // ¿Subir? — Necesita fuerza importante + ventaja + agresión.
+  // ¿Subir? — bajado a 58 (era 65). El bot resube más seguido.
   const puedeSubir =
     (nivel === "truco" && legales.includes("cantar_retruco")) ||
     (nivel === "retruco" && legales.includes("cantar_vale4"));
 
-  if (puedeSubir && fuerza >= 65 + (1 - p.agresion) * 8 && ventajaBazas >= 0) {
+  if (puedeSubir && fuerza >= 58 + (1 - p.agresion) * 6 && ventajaBazas >= 0) {
     if (nivel === "truco") return { tipo: "cantar_retruco", jugadorId };
     if (nivel === "retruco") return { tipo: "cantar_vale4", jugadorId };
   }
 
-  // Bluff: subir con fuerza baja pero ventaja de bazas o riesgo alto.
-  if (puedeSubir && p.bluff > 0.55 && ventajaBazas >= 1) {
-    const probBluff = p.bluff * 0.2;
+  // Bluff: resubir con fuerza media pero ventaja en bazas. Más frecuente.
+  if (puedeSubir && ventajaBazas >= 1) {
+    const probBluff = p.bluff * 0.3;
     if (Math.random() < probBluff) {
       if (nivel === "truco") return { tipo: "cantar_retruco", jugadorId };
       if (nivel === "retruco") return { tipo: "cantar_vale4", jugadorId };
     }
   }
 
-  // Si voy perdiendo feo y la mano no es horrible, acepto al voleo (chance).
+  // Pucherazo: voy perdiendo y la mano no es basura → acepto al voleo.
   if (
     !aceptar &&
-    distancia < -7 &&
-    fuerza >= 30 &&
-    Math.random() < p.riesgo * 0.6
+    distancia < -6 &&
+    fuerza >= 28 &&
+    Math.random() < p.riesgo * 0.7
   ) {
     return { tipo: "responder_quiero", jugadorId };
   }
@@ -276,23 +278,28 @@ function intentarCantarEnvido(ctx: ContextoCanto): Accion | null {
   if (mano.envidoResuelto) return null;
   if (mano.bazas.length > 1) return null;
   if (mano.bazas[0].jugadas.length > 0) return null; // sólo antes de tirar
-  if (mano.manoJugadorId !== jugadorId) return null; // sólo el mano canta espontáneo
   if (!legales.includes("cantar_envido")) return null;
+  // OJO: antes restringíamos a sólo el mano. Cualquier jugador puede
+  // cantar envido en la primera baza si todavía no tiró carta.
 
   const miEnvido = calcularEnvido(vista.originales);
   const distancia = estado.puntos[yo.equipo] - estado.puntos[1 - yo.equipo];
 
-  // Threshold base 28; baja por riesgo, sube por cautela cuando se gana.
-  let umbral = 28 - p.riesgo * 4;
-  if (distancia > 8) umbral += 3;
-  if (distancia < -5) umbral -= 2;
+  // Threshold bajado a 26 (era 28). Bot canta envido más seguido.
+  let umbral = 26 - p.riesgo * 5 - p.agresion * 2;
+  if (distancia > 8) umbral += 2;
+  if (distancia < -5) umbral -= 3;
+
+  // Si tengo flor (3 del mismo palo) → casi siempre canto, es info ganada.
+  const palos = new Set(vista.originales.map((c) => c.palo));
+  if (palos.size === 1) umbral -= 4;
 
   if (miEnvido >= umbral) {
     return { tipo: "cantar_envido", jugadorId };
   }
 
-  // Bluff: ocasionalmente cantar envido con poco para sacar al rival.
-  if (p.bluff > 0.65 && Math.random() < p.bluff * 0.12) {
+  // Bluff más agresivo: cantar envido con poco para sacar al rival.
+  if (Math.random() < p.bluff * 0.18) {
     return { tipo: "cantar_envido", jugadorId };
   }
   return null;
@@ -307,22 +314,24 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   const bazasGanadas = mano.bazas.filter(
     (b) => b.ganadorEquipo === yo.equipo
   ).length;
+  const bazasPerdidas = mano.bazas.filter(
+    (b) => b.ganadorEquipo !== null && b.ganadorEquipo !== yo.equipo
+  ).length;
   const distancia = estado.puntos[yo.equipo] - estado.puntos[1 - yo.equipo];
 
-  // Threshold base 60 (fuerza). Ajustes contextuales.
-  let umbral = 60 - p.agresion * 12 - bazasGanadas * 10;
-  if (distancia < -7) umbral -= 6; // vengo perdiendo, juego más
-  if (distancia > 10) umbral += 4; // gano cómodo, juego seguro
+  // Threshold base bajado a 50 (era 60). El bot canta truco más seguido.
+  let umbral = 50 - p.agresion * 14 - bazasGanadas * 12;
+  if (distancia < -7) umbral -= 8; // vengo perdiendo, juego más fuerte
+  if (distancia > 10) umbral += 4; // gano cómodo, ahorro
+  if (bazasPerdidas >= 1 && bazasGanadas === 0) umbral += 6; // perdí 1ra, cuidado
 
   if (fuerza >= umbral) return { tipo: "cantar_truco", jugadorId };
 
-  // Bluff: cantar truco con mano floja para asustar.
-  // Sólo si gané la primera baza (o aún no se decidió) — más creíble.
+  // Bluff: cantar truco con mano floja para asustar. Más permisivo.
   const puedoBluff =
-    p.bluff > 0.5 &&
-    (bazasGanadas >= 1 || mano.bazas[0].jugadas.length === 0);
+    bazasGanadas >= 1 || mano.bazas[0].jugadas.length === 0;
   if (puedoBluff && fuerza < 50) {
-    if (Math.random() < p.bluff * 0.15) {
+    if (Math.random() < p.bluff * 0.22) {
       return { tipo: "cantar_truco", jugadorId };
     }
   }

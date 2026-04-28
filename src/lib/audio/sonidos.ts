@@ -190,8 +190,35 @@ export function identificarCanto(texto: string): CantoIdentificado | null {
   return { canto, variante: -1 };
 }
 
+/** Precarga clips críticos en el cache HTTP del browser para que la
+ *  primera reproducción no tenga delay de red. Pasa los IDs de los
+ *  jugadores en juego: precargamos sólo las voces que efectivamente
+ *  van a sonar. */
+export function precargarVoces(jugadorIds: string[]) {
+  if (typeof window === "undefined") return;
+  const vocesUsadas = new Set(jugadorIds.map(vozDeJugador));
+  // Cantos más comunes — los menos comunes (envido_envido, son_buenas)
+  // no los precargamos para no saturar los conexión slots del browser.
+  const cantosComunes: CategoriaCanto[] = [
+    "truco", "retruco", "vale_cuatro",
+    "envido", "real_envido", "falta_envido",
+    "quiero", "no_quiero", "ir_al_mazo",
+    "gane_mano", "perdio_mano"
+  ];
+  for (const voz of vocesUsadas) {
+    for (const canto of cantosComunes) {
+      // Variantes 1..3 (las más probables de salir).
+      for (let i = 1; i <= 3; i++) {
+        const url = `/audio/voces/${voz}/${canto}/${String(i).padStart(2, "0")}.mp3`;
+        // fetch warm cache; si falla, lazy-load lo cubre después.
+        fetch(url, { cache: "force-cache" }).catch(() => {});
+      }
+    }
+  }
+}
+
 export function precargarTodosLosClips() {
-  /* lazy-load: cada canto se carga la primera vez que se reproduce */
+  /* compatibilidad — usar precargarVoces() con los jugadorIds */
 }
 
 export function silenciarTodo() {

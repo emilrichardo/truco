@@ -7,7 +7,29 @@
 import { useEffect, useRef } from "react";
 import type { EstadoJuego, MensajeChat } from "@/lib/truco/types";
 import { despertarAudio, sonidoCarta, sonidoMazo, sonidoPuntos } from "./sfx";
-import { cortarReproduccion, identificarCanto, reproducirCanto } from "./sonidos";
+import {
+  cortarReproduccion,
+  identificarCanto,
+  precargarVoces,
+  reproducirCanto
+} from "./sonidos";
+
+// Lista canónica de cartas para precargar (40 webp). La inferimos del mismo
+// formato que usa CartaEspanola: /cartas/<palo>/<numero>.webp
+const PALOS_CARTAS = ["espada", "basto", "oro", "copa"] as const;
+const NUMEROS_CARTAS = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12] as const;
+
+function precargarCartas() {
+  if (typeof window === "undefined") return;
+  for (const palo of PALOS_CARTAS) {
+    for (const num of NUMEROS_CARTAS) {
+      const url = `/cartas/${palo}/${num}.webp`;
+      // Image() en JS dispara fetch → cache HTTP. No insertamos en el DOM.
+      const img = new Image();
+      img.src = url;
+    }
+  }
+}
 
 export function useAudioJuego(
   estado: EstadoJuego | null,
@@ -15,6 +37,7 @@ export function useAudioJuego(
 ) {
   const ultimoChatId = useRef<string | null>(null);
   const ultimoManoNum = useRef<number>(0);
+  const precargado = useRef(false);
 
   // Desbloquear AudioContext en el primer click (browser autoplay policy).
   useEffect(() => {
@@ -30,6 +53,18 @@ export function useAudioJuego(
       window.removeEventListener("touchstart", desbloquear);
     };
   }, []);
+
+  // Precarga: una sola vez por sesión, apenas tenemos la lista de
+  // jugadores. Cartas (40 webp) + voces de los jugadores en partida
+  // (cantos más comunes). Usa fetch con cache:force-cache para no
+  // bloquear el render — sólo calienta el cache HTTP del browser.
+  useEffect(() => {
+    if (precargado.current) return;
+    if (!estado || estado.jugadores.length === 0) return;
+    precargado.current = true;
+    precargarCartas();
+    precargarVoces(estado.jugadores.map((j) => j.id));
+  }, [estado]);
 
   // Cuando arranca una mano nueva (se reparten cartas), cortamos cualquier
   // canto/reacción rezagado de la mano anterior. Las reacciones de

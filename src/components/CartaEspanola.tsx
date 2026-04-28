@@ -1,6 +1,5 @@
 "use client";
 import clsx from "clsx";
-import Image from "next/image";
 import type { Carta } from "@/lib/truco/types";
 import { nombreCarta } from "@/lib/truco/cartas";
 
@@ -36,6 +35,11 @@ export function CartaEspanola({
       />
     );
   }
+  // Usamos <img> directo en vez de next/image para esquivar el pipeline
+  // de optimización de Vercel — las webp ya están comprimidas (~50-100KB)
+  // y no necesitamos resizing por viewport. Resultado: la carta aparece
+  // instantáneo apenas el browser termina el fetch de la webp, sin pasar
+  // por /_next/image.
   const src = `/cartas/${carta.palo}/${carta.numero}.webp`;
   return (
     <button
@@ -50,13 +54,13 @@ export function CartaEspanola({
         resaltada && "halo"
       )}
     >
-      <Image
+      <img
         src={src}
         alt={nombreCarta(carta)}
-        fill
-        sizes="(max-width: 640px) 160px, (max-width: 768px) 208px, 256px"
         draggable={false}
-        className="object-cover select-none"
+        decoding="async"
+        loading="eager"
+        className="absolute inset-0 w-full h-full object-cover select-none"
       />
     </button>
   );
