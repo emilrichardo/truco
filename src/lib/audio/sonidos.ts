@@ -25,11 +25,7 @@ export type CategoriaCanto =
   | "no_quiero"
   | "ir_al_mazo"
   | "son_buenas"
-  | "son_mejores"
-  | "gane_mano"
-  | "perdio_mano"
-  | "gane_partida"
-  | "perdio_partida";
+  | "son_mejores";
 
 // Voces disponibles: argentinas (locale=es-AR) generadas via ElevenLabs.
 // Cada jugador recibe una voz estable por hash(jugadorId) — Lucas siempre
@@ -187,15 +183,12 @@ export function reproducirReaccion(
   }, delay);
 }
 
-const REACCIONES = new Set<CategoriaCanto>([
-  "gane_mano",
-  "perdio_mano",
-  "gane_partida",
-  "perdio_partida"
-]);
-
-export function esReaccion(canto: CategoriaCanto): boolean {
-  return REACCIONES.has(canto);
+// Antes había una lista de reacciones (gane_mano / perdio_mano / etc.) que
+// se reproducían en paralelo al cierre de cada mano. Las saqué — ensuciaban
+// la mesa con un coro de voces simultáneas. Si vuelven, este helper se
+// puede ampliar.
+export function esReaccion(_canto: CategoriaCanto): boolean {
+  return false;
 }
 
 /** Canta el "tanto" (puntaje del envido) con la voz del jugador. */
@@ -272,8 +265,7 @@ export function precargarVoces(jugadorIds: string[]) {
     "envido", "envido_envido", "real_envido", "falta_envido",
     "truco", "retruco", "vale_cuatro",
     "quiero", "no_quiero", "ir_al_mazo",
-    "son_buenas", "son_mejores",
-    "gane_mano", "perdio_mano", "gane_partida", "perdio_partida"
+    "son_buenas", "son_mejores"
   ];
   for (const voz of vocesUsadas) {
     for (const canto of cantos) {

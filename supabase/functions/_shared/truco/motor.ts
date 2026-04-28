@@ -364,46 +364,20 @@ function cerrarMano(estado: EstadoJuego, equipoGanador: Equipo, motivo: string) 
     "mano"
   );
 
-  // Reacciones humanas: un jugador del equipo ganador chicanea, uno del
-  // perdedor lamenta. Son evento "respuesta" para que el motor de audio
-  // los reproduzca como cualquier otro canto y la burbuja del avatar los
-  // muestre encima del que habla.
-  emitirReaccionMano(estado, equipoGanador);
-
-  // Chequea fin de partida.
+  // SIN reacciones simultáneas — antes emitíamos gane_mano/perdio_mano
+  // para todos los jugadores y se escuchaba un coro caótico al cierre
+  // de cada mano. Ahora el banner ResultadoMano marca el cierre y la
+  // mesa queda en silencio hasta el próximo canto.
   if (chequearFinPartida(estado)) {
-    emitirReaccionPartida(estado, estado.ganadorPartida!);
     estado.version++;
     return;
   }
   estado.version++;
-
-  // En el server (online), repartimos la próxima mano DE INMEDIATO. El
-  // cliente (solo) usa salaLocal para pausar 3.5s y mostrar el resumen
-  // antes; en online no podemos hacer esa pausa server-side y cualquier
-  // cliente despachando iniciar_prox_mano abre una race condition. Es
-  // más simple repartir acá y que el cliente animate las cartas
-  // entrantes con el reparto-anim mientras el banner ResultadoMano
-  // sigue visible 3.5s.
+  // En el server (online) repartimos la próxima mano de inmediato — no
+  // hay nadie que pueda despachar iniciar_prox_mano client-side sin
+  // race conditions entre clientes. El cliente solo (salaLocal) sigue
+  // pausando 3.5s antes de iniciarProxMano vía dispatch.
   iniciarProxMano(estado);
-}
-
-function emitirReaccionMano(estado: EstadoJuego, equipoGanador: Equipo) {
-  // Todos los jugadores reaccionan: ganadores chicanean, perdedores putean.
-  // En 2v2 esto da 4 audios casi simultáneos — el reproductor los manda
-  // en paralelo con stagger random para que se oiga como una mesa real.
-  // En 1v1 son sólo 2 (yo y el rival).
-  for (const j of estado.jugadores) {
-    const cat = j.equipo === equipoGanador ? "gane_mano" : "perdio_mano";
-    anuncio(estado, j.id, fraseAleatoria(cat), "respuesta");
-  }
-}
-
-function emitirReaccionPartida(estado: EstadoJuego, equipoGanador: Equipo) {
-  for (const j of estado.jugadores) {
-    const cat = j.equipo === equipoGanador ? "gane_partida" : "perdio_partida";
-    anuncio(estado, j.id, fraseAleatoria(cat), "respuesta");
-  }
 }
 
 /**
@@ -662,7 +636,6 @@ function resolverEnvido(
     // Devuelvo el turno al "mano" o a quien le tocaba jugar carta.
     devolverTurnoAJugar(estado);
     if (chequearFinPartida(estado)) {
-      emitirReaccionPartida(estado, estado.ganadorPartida!);
       return { ok: true, estado };
     }
     estado.version++;
@@ -727,7 +700,6 @@ function resolverEnvido(
   mano.envidoCantoActivo = null;
   devolverTurnoAJugar(estado);
   if (chequearFinPartida(estado)) {
-    emitirReaccionPartida(estado, estado.ganadorPartida!);
     return { ok: true, estado };
   }
   estado.version++;

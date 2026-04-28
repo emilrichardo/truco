@@ -363,38 +363,12 @@ function cerrarMano(estado: EstadoJuego, equipoGanador: Equipo, motivo: string) 
     "mano"
   );
 
-  // Reacciones humanas: un jugador del equipo ganador chicanea, uno del
-  // perdedor lamenta. Son evento "respuesta" para que el motor de audio
-  // los reproduzca como cualquier otro canto y la burbuja del avatar los
-  // muestre encima del que habla.
-  emitirReaccionMano(estado, equipoGanador);
-
-  // Chequea fin de partida — si terminó, no hay próxima mano.
-  // Si NO terminó, dejamos `manoActual` en fase "terminada" sin repartir.
-  // El cliente despacha la accion `iniciar_prox_mano` tras el delay del
-  // resumen para que se vea el banner antes de las cartas nuevas.
-  if (chequearFinPartida(estado)) {
-    emitirReaccionPartida(estado, estado.ganadorPartida!);
-  }
+  // SIN reacciones simultáneas — antes emitíamos gane_mano/perdio_mano
+  // para todos los jugadores y se escuchaba un coro caótico al cierre
+  // de cada mano. Ahora el banner ResultadoMano marca el cierre y la
+  // mesa queda en silencio hasta el próximo canto.
+  chequearFinPartida(estado);
   estado.version++;
-}
-
-function emitirReaccionMano(estado: EstadoJuego, equipoGanador: Equipo) {
-  // Todos los jugadores reaccionan: ganadores chicanean, perdedores putean.
-  // En 2v2 esto da 4 audios casi simultáneos — el reproductor los manda
-  // en paralelo con stagger random para que se oiga como una mesa real.
-  // En 1v1 son sólo 2 (yo y el rival).
-  for (const j of estado.jugadores) {
-    const cat = j.equipo === equipoGanador ? "gane_mano" : "perdio_mano";
-    anuncio(estado, j.id, fraseAleatoria(cat), "respuesta");
-  }
-}
-
-function emitirReaccionPartida(estado: EstadoJuego, equipoGanador: Equipo) {
-  for (const j of estado.jugadores) {
-    const cat = j.equipo === equipoGanador ? "gane_partida" : "perdio_partida";
-    anuncio(estado, j.id, fraseAleatoria(cat), "respuesta");
-  }
 }
 
 /**
@@ -653,7 +627,6 @@ function resolverEnvido(
     // Devuelvo el turno al "mano" o a quien le tocaba jugar carta.
     devolverTurnoAJugar(estado);
     if (chequearFinPartida(estado)) {
-      emitirReaccionPartida(estado, estado.ganadorPartida!);
       return { ok: true, estado };
     }
     estado.version++;
@@ -718,7 +691,6 @@ function resolverEnvido(
   mano.envidoCantoActivo = null;
   devolverTurnoAJugar(estado);
   if (chequearFinPartida(estado)) {
-    emitirReaccionPartida(estado, estado.ganadorPartida!);
     return { ok: true, estado };
   }
   estado.version++;

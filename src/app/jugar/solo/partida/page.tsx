@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
+import { CartaEspanola } from "@/components/CartaEspanola";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
 import { Marcador } from "@/components/Marcador";
@@ -219,55 +220,126 @@ function PartidaSoloInterno() {
           </div>
         )}
 
-        {estado.ganadorPartida !== null && (
-          <div className="absolute inset-0 sheet-bg flex items-center justify-center z-40 p-4">
-            <div className="papel p-6 text-center max-w-sm">
-              <div className="text-5xl mb-2">🏆</div>
-              <div
-                className="titulo-marca text-2xl mb-1"
-                style={{
-                  color: "var(--carbon)",
-                  textShadow: "1px 1px 0 rgba(217,164,65,0.5)"
-                }}
-              >
-                Equipo{" "}
-                <span
-                  className="acento"
-                  style={{ color: "var(--azul-criollo)" }}
-                >
-                  {estado.ganadorPartida + 1}
-                </span>
-              </div>
-              <p
-                className="text-sm mb-4 subtitulo-claim text-[10px]"
-                style={{ color: "var(--madera-oscura)" }}
-              >
-                {miEquipoEs0 === (estado.ganadorPartida === 0)
-                  ? "¡Ganaste!"
-                  : "Perdiste."}
-              </p>
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => {
-                    // Hard reload para garantizar que el motor empiece
-                    // de cero con un nuevo reparto contra el mismo oponente.
-                    borrarSnapshotLocal();
-                    window.location.href = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}`;
+        {estado.ganadorPartida !== null && (() => {
+          const yoGane = miEquipoEs0 === (estado.ganadorPartida === 0);
+          const miEquipoIdx = miEquipoEs0 ? 0 : 1;
+          const rivalEquipoIdx = miEquipoEs0 ? 1 : 0;
+          const miPuntaje = estado.puntos[miEquipoIdx];
+          const rivalPuntaje = estado.puntos[rivalEquipoIdx];
+          // Última mano: la que cerró la partida. Si la partida cerró por
+          // envido sin cerrar la mano, manoActual sigue siendo la activa
+          // (con cartas todavía en hand). Si cerró por truco, está en
+          // historialManos. Tomamos la más reciente disponible.
+          const ultimaMano =
+            estado.historialManos[estado.historialManos.length - 1] ||
+            estado.manoActual;
+          const rival = estado.jugadores.find((j) => j.id !== miId);
+          const cartasRival = ultimaMano && rival
+            ? [
+                ...(ultimaMano.cartasPorJugador[rival.id] || []),
+                ...ultimaMano.bazas.flatMap((b) =>
+                  b.jugadas
+                    .filter((j) => j.jugadorId === rival.id)
+                    .map((j) => j.carta)
+                )
+              ]
+            : [];
+          return (
+            <div className="absolute inset-0 sheet-bg flex items-center justify-center z-40 p-4 overflow-y-auto">
+              <div className="papel p-5 text-center max-w-sm w-full my-4">
+                <div className="text-5xl mb-1">{yoGane ? "🏆" : "🪦"}</div>
+                <div
+                  className="titulo-marca text-2xl mb-1"
+                  style={{
+                    color: "var(--carbon)",
+                    textShadow: "1px 1px 0 rgba(217,164,65,0.5)"
                   }}
-                  className="btn btn-primary w-full"
                 >
-                  Revancha
-                </button>
-                <Link href="/jugar/solo" className="btn w-full">
-                  Cambiar de oponente
-                </Link>
-                <Link href="/" className="btn btn-ghost w-full text-xs">
-                  Volver al inicio
-                </Link>
+                  {yoGane ? "¡Ganaste!" : "Perdiste"}
+                </div>
+                <p
+                  className="text-[10px] mb-4 subtitulo-claim"
+                  style={{ color: "var(--madera-oscura)" }}
+                >
+                  Equipo {(estado.ganadorPartida ?? 0) + 1} se llevó la
+                  partida
+                </p>
+
+                {/* Marcador final */}
+                <div
+                  className="grid grid-cols-2 gap-2 mb-4 px-2 py-3 rounded border-2"
+                  style={{ borderColor: "var(--dorado-oscuro)" }}
+                >
+                  <div className="text-center">
+                    <div
+                      className="text-[10px] uppercase tracking-widest font-bold mb-0.5"
+                      style={{ color: "var(--azul-criollo)" }}
+                    >
+                      Nosotros
+                    </div>
+                    <div
+                      className="text-3xl font-display"
+                      style={{ color: "var(--carbon)" }}
+                    >
+                      {miPuntaje}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div
+                      className="text-[10px] uppercase tracking-widest font-bold mb-0.5"
+                      style={{ color: "var(--rojo-fernet)" }}
+                    >
+                      Ellos
+                    </div>
+                    <div
+                      className="text-3xl font-display"
+                      style={{ color: "var(--carbon)" }}
+                    >
+                      {rivalPuntaje}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cartas del rival de la última mano */}
+                {cartasRival.length > 0 && rival && (
+                  <div className="mb-4">
+                    <div
+                      className="text-[10px] uppercase tracking-widest font-bold mb-2"
+                      style={{ color: "var(--madera-oscura)" }}
+                    >
+                      Cartas de {rival.nombre} en la última mano
+                    </div>
+                    <div className="flex justify-center gap-1">
+                      {cartasRival.slice(0, 3).map((c) => (
+                        <CartaEspanola key={c.id} carta={c} tamanio="sm" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => {
+                      // Hard reload para garantizar que el motor empiece
+                      // de cero con un nuevo reparto contra el mismo oponente.
+                      borrarSnapshotLocal();
+                      window.location.href = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}`;
+                    }}
+                    className="btn btn-primary w-full"
+                  >
+                    Revancha
+                  </button>
+                  <Link href="/jugar/solo" className="btn w-full">
+                    Cambiar de oponente
+                  </Link>
+                  <Link href="/" className="btn btn-ghost w-full text-xs">
+                    Volver al inicio
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
     </main>
   );
