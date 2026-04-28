@@ -1,6 +1,6 @@
 "use client";
 // Preload de imágenes en background para que cuando se renderizan ya están
-// en cache del browser. Las imágenes se sirven en WebP (~50-150KB cada una).
+// en cache del browser.
 import { useEffect } from "react";
 
 const PALOS = ["espada", "basto", "oro", "copa"] as const;
@@ -33,7 +33,7 @@ export function precargarAvatares(slugs: string[]) {
   if (typeof window === "undefined") return;
   for (const s of slugs) {
     const img = new Image();
-    img.src = `/jugadores/${s}.webp`;
+    img.src = `/jugadores/${s}.png`;
   }
 }
 

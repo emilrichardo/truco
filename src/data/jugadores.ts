@@ -1,7 +1,5 @@
 // Catálogo de personajes "primos". Para reemplazar uno: pisá la imagen
-// /public/jugadores/<slug>.webp y, si querés, ajustá el nombre acá.
-// Las imágenes se sirven en WebP @ ~600px (≈150 KB) en vez de los PNG
-// originales de 3 MB que paralizaban la primera carga.
+// /public/jugadores/<slug>.png y, si querés, ajustá el nombre acá.
 
 export interface PersonajeMeta {
   slug: string;
@@ -27,5 +25,5 @@ export function getPersonaje(slug: string): PersonajeMeta | undefined {
 }
 
 export function urlPersonaje(slug: string): string {
-  return `/jugadores/${slug}.webp`;
+  return `/jugadores/${slug}.png`;
 }
