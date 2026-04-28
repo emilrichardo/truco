@@ -132,26 +132,29 @@ export function ChatFlotante({
         onClick={abrir}
         aria-label={`Abrir chat${sinVer > 0 ? ` (${sinVer} sin ver)` : ""}`}
         className={clsx(
-          "pointer-events-auto relative w-[68px] h-[68px] rounded-full",
+          // Tamaño reducido (era 68px) y opacidad baja por defecto para
+          // no estorbar sobre los botones de acción. Se ilumina cuando
+          // hay mensajes sin ver.
+          "pointer-events-auto relative w-[44px] h-[44px] rounded-full",
           "bg-gradient-to-br from-dorado-claro via-dorado to-dorado-oscuro",
-          "border-[3px] border-carbon",
-          "shadow-[0_4px_16px_rgba(0,0,0,0.55),0_0_0_2px_rgba(217,164,65,0.35)]",
+          "border-2 border-carbon",
+          "shadow-[0_2px_8px_rgba(0,0,0,0.5)]",
           "active:scale-95 hover:brightness-110 transition",
           "flex items-center justify-center",
-          // Anillo ámbar pulsante cuando hay mensajes sin ver
-          sinVer > 0 && "ring-4 ring-dorado/60 animate-pulse"
+          sinVer === 0 && "opacity-50",
+          sinVer > 0 && "ring-2 ring-dorado/60 animate-pulse"
         )}
       >
         <svg
           viewBox="0 0 24 24"
           fill="currentColor"
-          className="w-9 h-9 text-carbon drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]"
+          className="w-5 h-5 text-carbon"
           aria-hidden
         >
           <path d="M12 3C6.48 3 2 6.92 2 11.5c0 2.08.93 3.97 2.46 5.4L3 21l4.6-1.45c1.32.62 2.84.95 4.4.95 5.52 0 10-3.92 10-8.5S17.52 3 12 3zm-4 9.5a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm4 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm4 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z" />
         </svg>
         {sinVer > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[22px] h-[22px] px-1 bg-red text-crema text-[11px] font-bold rounded-full flex items-center justify-center border-2 border-carbon shadow-md">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-red text-crema text-[10px] font-bold rounded-full flex items-center justify-center border border-carbon shadow-md">
             {sinVer > 9 ? "9+" : sinVer}
           </span>
         )}

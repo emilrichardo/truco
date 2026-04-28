@@ -55,8 +55,16 @@ export function PanelAcciones({
   const [ordenLocal, setOrdenLocal] = useState<string[]>(() =>
     misCartas.map((c) => c.id)
   );
+  // Animación de reparto: sólo activa durante 1.5s después de que el
+  // motor reparte una mano nueva. Reordenar cartas (drag horizontal) NO
+  // debe re-disparar la animación — antes la animación se reseteaba en
+  // cada cambio de orden y se veía mal en desktop.
+  const [recienRepartido, setRecienRepartido] = useState(true);
   useEffect(() => {
     setOrdenLocal(misCartas.map((c) => c.id));
+    setRecienRepartido(true);
+    const t = window.setTimeout(() => setRecienRepartido(false), 1500);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey]);
 
@@ -200,13 +208,15 @@ export function PanelAcciones({
                 onPointerCancel={(e) => onPointerUp(e, c.id)}
               >
                 <div
-                  className="reparto-anim"
+                  className={recienRepartido ? "reparto-anim" : undefined}
                   style={
-                    {
-                      "--reparto-from-x": "0",
-                      "--reparto-from-y": "-300%",
-                      "--reparto-delay": `${i * 90 + 200}ms`
-                    } as React.CSSProperties
+                    recienRepartido
+                      ? ({
+                          "--reparto-from-x": "0",
+                          "--reparto-from-y": "-300%",
+                          "--reparto-delay": `${i * 90 + 200}ms`
+                        } as React.CSSProperties)
+                      : undefined
                   }
                 >
                   <CartaEspanola
@@ -463,32 +473,18 @@ export function PanelAcciones({
  *  evita que el jugador confunda un canto de envido con uno de truco
  *  cuando aparecen ambos a la vez (el envido está primero). */
 function GrupoBotones({
-  titulo,
+  titulo: _titulo,
   children
 }: {
   titulo?: string;
   children: React.ReactNode;
 }) {
-  // Sin título: la fila se centra horizontalmente debajo de las cartas.
-  // Se usa para los grupos en turno propio (envido / truco) donde la
-  // diferencia ya la marca el color del botón.
-  if (!titulo) {
-    return (
-      <div className="flex flex-wrap gap-1.5 justify-center">{children}</div>
-    );
-  }
+  // Saqué el rótulo lateral — desalineaba todo en mobile y el banner
+  // "TE CANTARON TRUCO" arriba ya da contexto. La fila se centra
+  // horizontalmente debajo de las cartas. El prop `titulo` se mantiene
+  // por compatibilidad pero no se renderiza.
   return (
-    <div className="flex items-stretch gap-1.5">
-      <div
-        className="shrink-0 flex items-center justify-end px-2 py-1.5 text-[10px] uppercase tracking-widest font-bold text-dorado border-l-2 border-dorado/60 w-[68px] sm:w-[80px] text-right leading-tight"
-        style={{ textShadow: "0 1px 0 rgba(0,0,0,0.6)" }}
-      >
-        {titulo}
-      </div>
-      <div className="flex flex-wrap gap-1.5 flex-1 justify-center">
-        {children}
-      </div>
-    </div>
+    <div className="flex flex-wrap gap-1.5 justify-center">{children}</div>
   );
 }
 
