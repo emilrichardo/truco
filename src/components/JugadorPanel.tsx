@@ -122,9 +122,10 @@ export function JugadorPanel({
   );
 }
 
-/** Burbuja de diálogo pegada al avatar, apuntando con su cola hacia la foto.
- *  Se posiciona a la izquierda/derecha/arriba/abajo según dónde tenga lugar
- *  en pantalla (lo decide el padre que sabe en qué borde está el puesto). */
+/** Burbuja de diálogo pegada al avatar. La cola apunta hacia la foto del
+ *  que habla. Borde sutil dorado y cola del MISMO crema que el cuerpo —
+ *  antes la cola tenía un borde rojo o dorado oscuro que se notaba como
+ *  parche separado. Ahora se ve como una sola pieza. */
 function BurbujaCanto({
   texto,
   sticker,
@@ -138,6 +139,10 @@ function BurbujaCanto({
   destacado?: boolean;
   keyAnim: string;
 }) {
+  // Color único para borde + cola. Si es respuesta destacada, sumamos un
+  // glow dorado pero NO cambiamos el color a rojo — la flecha siempre
+  // mantiene el color del globo.
+  const colorBorde = "rgba(160, 122, 46, 0.55)"; // dorado oscuro suave
   return (
     <div
       key={keyAnim}
@@ -148,16 +153,22 @@ function BurbujaCanto({
     >
       <div
         className={clsx(
-          "relative rounded-xl shadow-xl",
-          // Cuando hay sticker, fondo transparente y sin padding para que la
-          // imagen "respire" sin marco crema.
-          sticker ? "bg-transparent border-0 p-0" : "bg-crema border px-3 py-1.5",
-          !sticker &&
-            (destacado ? "border-rojo-rival" : "border-dorado-oscuro/70"),
+          "relative rounded-xl",
+          sticker ? "bg-transparent p-0" : "bg-crema px-3 py-1.5",
           sticker
             ? "max-w-[40vw] sm:max-w-[120px]"
             : "max-w-[70vw] sm:max-w-[260px] min-w-[140px]"
         )}
+        style={
+          sticker
+            ? undefined
+            : {
+                border: `1px solid ${colorBorde}`,
+                boxShadow: destacado
+                  ? "0 4px 14px rgba(0,0,0,0.35), 0 0 0 2px rgba(217,164,65,0.35)"
+                  : "0 4px 14px rgba(0,0,0,0.35)"
+              }
+        }
       >
         {sticker ? (
           <img
@@ -174,17 +185,19 @@ function BurbujaCanto({
           </div>
         )}
         {!sticker && (
+          // Cola: rombito (square 45deg) con bg-crema (idéntico al cuerpo)
+          // y sólo dos bordes (los "exteriores"). Los lados que tocan al
+          // cuerpo no tienen borde — así se ve como una continuación.
           <div
             aria-hidden
-            className={clsx("absolute w-3 h-3 rotate-45 bg-crema-2", colaPos(lado))}
+            className={clsx("absolute w-3 h-3 rotate-45 bg-crema", colaPos(lado))}
             style={{
               borderLeftWidth: colaBordes(lado).left,
               borderTopWidth: colaBordes(lado).top,
               borderRightWidth: colaBordes(lado).right,
               borderBottomWidth: colaBordes(lado).bottom,
-              borderColor: destacado
-                ? "var(--rojo-rival, #b8443a)"
-                : "var(--dorado-oscuro, #a07a2e)"
+              borderStyle: "solid",
+              borderColor: colorBorde
             }}
           />
         )}
