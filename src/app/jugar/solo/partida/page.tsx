@@ -11,7 +11,6 @@ import { CartaEspanola } from "@/components/CartaEspanola";
 import { PrecargaCartas } from "@/components/PrecargaCartas";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
-import { Marcador } from "@/components/Marcador";
 import { ChatFlotante } from "@/components/ChatFlotante";
 import { MiAvatarBR } from "@/components/MiAvatarBR";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
@@ -125,8 +124,35 @@ function PartidaSoloInterno() {
             className="h-7 w-auto opacity-90 hover:opacity-100 transition"
           />
         </Link>
-        <div className="flex-1 min-w-0 text-[11px] text-text-dim truncate subtitulo-claim">
+        <div className="hidden sm:block flex-1 min-w-0 text-[11px] text-text-dim truncate subtitulo-claim">
           🤖 vs máquina · {tamanio === 4 ? "2v2" : "1v1"} · a {puntos}
+        </div>
+        {/* Marcador compacto inline — visible en todas las pantallas, en
+         *  mobile reemplaza al título "vs máquina" para ahorrar lugar. */}
+        <div className="flex-1 sm:flex-none flex items-center justify-end gap-2 text-[11px] font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-1.5">
+            <span className="text-dorado truncate max-w-[80px] sm:max-w-[120px]">
+              {tituloNos}
+            </span>
+            <span
+              className="font-display text-base text-crema leading-none"
+              style={{ minWidth: "1.4em", textAlign: "right" }}
+            >
+              {miEquipoEs0 ? estado.puntos[0] : estado.puntos[1]}
+            </span>
+          </div>
+          <span className="text-text-dim/60">·</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-crema truncate max-w-[80px] sm:max-w-[120px]">
+              {tituloEllos}
+            </span>
+            <span
+              className="font-display text-base text-crema leading-none"
+              style={{ minWidth: "1.4em", textAlign: "right" }}
+            >
+              {miEquipoEs0 ? estado.puntos[1] : estado.puntos[0]}
+            </span>
+          </div>
         </div>
       </header>
 
@@ -137,22 +163,6 @@ function PartidaSoloInterno() {
             <ResultadoEnvido estado={estado} miId={miId} />
             <ResultadoMano estado={estado} miId={miId} />
             <MiAvatarBR estado={estado} miId={miId} />
-            <div
-              className={
-                estado.modo === "2v2"
-                  ? "absolute top-48 right-2 z-20 sm:top-52"
-                  : "absolute top-3 right-2 z-20"
-              }
-            >
-              <Marcador
-                puntosNos={estado.puntos[0]}
-                puntosEllos={estado.puntos[1]}
-                objetivo={estado.puntosObjetivo}
-                miEquipoEs0={miEquipoEs0}
-                tituloNos={tituloNos}
-                tituloEllos={tituloEllos}
-              />
-            </div>
             <ChatFlotante
               estado={estado}
               miId={miId}
