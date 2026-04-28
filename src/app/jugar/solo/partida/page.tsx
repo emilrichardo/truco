@@ -151,7 +151,7 @@ function PartidaSoloInterno() {
       <div className="flex-1 flex overflow-hidden relative">
         <div className="flex-1 flex flex-col overflow-hidden relative">
           <div className="flex-1 relative min-h-0">
-            <Mesa estado={estado} miId={miId} />
+              <Mesa estado={estado} miId={miId} enviarChat={enviarChat} />
             <ResultadoEnvido estado={estado} miId={miId} />
             <ResultadoMano estado={estado} miId={miId} />
             <MiAvatarBR estado={estado} miId={miId} />

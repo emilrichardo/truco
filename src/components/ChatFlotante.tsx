@@ -27,8 +27,15 @@ export function ChatFlotante({
   if (oculto) return null;
   // Mensajes humanos (no eventos del juego).
   const humanos = useMemo(
-    () => estado.chat.filter((m) => !m.evento),
-    [estado.chat]
+    () =>
+      estado.chat.filter(
+        (m) =>
+          !m.evento &&
+          (!m.destinatarioId ||
+            m.destinatarioId === miId ||
+            m.jugadorId === miId)
+      ),
+    [estado.chat, miId]
   );
   const ultimo = humanos[humanos.length - 1];
 

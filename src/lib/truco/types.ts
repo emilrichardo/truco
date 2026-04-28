@@ -99,10 +99,14 @@ export type CategoriaEvento =
 export interface MensajeChat {
   id: string;
   jugadorId: string;
+  /** Si está presente, el mensaje se muestra solo al emisor y destinatario. */
+  destinatarioId?: string;
   texto: string;
   reaccion?: string;
   /** URL pública del sticker (ej. "/brand/stickers/fernet.png"). */
   sticker?: string;
+  /** Marca visual para mensajes de seña entre compañeros. */
+  directo?: boolean;
   ts: number;
   /** Si está presente, es un evento del juego (no un mensaje humano). */
   evento?: CategoriaEvento;

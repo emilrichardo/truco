@@ -9,6 +9,7 @@ interface Payload {
   texto?: string;
   reaccion?: string;
   sticker?: string;
+  destinatario_id?: string;
 }
 
 Deno.serve(async (req) => {
@@ -28,12 +29,25 @@ Deno.serve(async (req) => {
   if (errSel || !sala) return fail("sala_no_encontrada", 404);
 
   const estado = sala.estado as EstadoJuego;
+  const jugador = estado.jugadores.find((j) => j.id === body.jugador_id);
+  const destinatario = body.destinatario_id
+    ? estado.jugadores.find((j) => j.id === body.destinatario_id)
+    : undefined;
+  if (body.destinatario_id && (!jugador || !destinatario)) {
+    return fail("destinatario_invalido", 400);
+  }
+  if (jugador && destinatario && jugador.equipo !== destinatario.equipo) {
+    return fail("solo_companiero", 403);
+  }
+  const directo = !!destinatario;
   estado.chat.push({
     id: crypto.randomUUID().slice(0, 8),
     jugadorId: body.jugador_id,
+    destinatarioId: directo ? destinatario.id : undefined,
     texto: (body.texto || "").slice(0, 200),
     reaccion: body.reaccion,
     sticker: body.sticker,
+    directo,
     ts: Date.now()
   });
   if (estado.chat.length > 200) estado.chat.shift();

@@ -248,14 +248,28 @@ export function registerSocket(io: any) {
         jugadorId: string;
         texto?: string;
         reaccion?: string;
+        sticker?: string;
+        destinatarioId?: string;
       }) => {
         const sala = salas.get(payload.salaId);
         if (!sala) return;
+        const jugador = sala.estado.jugadores.find(
+          (j) => j.id === payload.jugadorId
+        );
+        const destinatario = payload.destinatarioId
+          ? sala.estado.jugadores.find((j) => j.id === payload.destinatarioId)
+          : undefined;
+        if (payload.destinatarioId && (!jugador || !destinatario)) return;
+        if (jugador && destinatario && jugador.equipo !== destinatario.equipo) return;
+        const directo = !!destinatario;
         sala.estado.chat.push({
           id: nanoid(6),
           jugadorId: payload.jugadorId,
+          destinatarioId: directo ? destinatario.id : undefined,
           texto: (payload.texto || "").slice(0, 200),
           reaccion: payload.reaccion,
+          sticker: payload.sticker,
+          directo,
           ts: Date.now()
         });
         if (sala.estado.chat.length > 80) sala.estado.chat.shift();

@@ -170,14 +170,20 @@ export async function enviarAccionOnline(
 export async function enviarChatOnline(
   salaId: string,
   jugadorId: string,
-  msg: { texto?: string; reaccion?: string; sticker?: string }
+  msg: {
+    texto?: string;
+    reaccion?: string;
+    sticker?: string;
+    destinatarioId?: string;
+  }
 ): Promise<SalaResp> {
   return invocar("sala-chat", {
     sala_id: salaId,
     jugador_id: jugadorId,
     texto: msg.texto,
     reaccion: msg.reaccion,
-    sticker: msg.sticker
+    sticker: msg.sticker,
+    destinatario_id: msg.destinatarioId
   });
 }
 

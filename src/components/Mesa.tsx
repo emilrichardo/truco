@@ -5,6 +5,8 @@ import type { EstadoJuego, Jugador, Carta } from "@/lib/truco/types";
 import { CartaEspanola } from "./CartaEspanola";
 import { JugadorPanel } from "./JugadorPanel";
 import { useHablando } from "@/lib/useHablando";
+import { ICONOS_COMPANERO, ORDENES_COMPANERO } from "@/lib/chatRapido";
+import { urlPersonaje } from "@/data/jugadores";
 
 type Posicion =
   | "abajo-izquierda"
@@ -25,9 +27,26 @@ type JugadaEnMesa = {
  * lado. Yo voy abajo a la derecha (BR del tablero), los rivales/compañero
  * en arriba/izquierda/derecha.
  */
-export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
+export function Mesa({
+  estado,
+  miId,
+  enviarChat
+}: {
+  estado: EstadoJuego;
+  miId: string;
+  enviarChat?: (m: {
+    texto?: string;
+    reaccion?: string;
+    sticker?: string;
+    destinatarioId?: string;
+  }) => void;
+}) {
   // Toggle estable para "espiar" las cartas del compañero (solo en 2v2).
   const [verCompañero, setVerCompañero] = useState(false);
+  const [panelCompañero, setPanelCompañero] = useState<{
+    jugador: Jugador;
+    pos: Posicion;
+  } | null>(null);
   const toggleCompañero = useCallback(
     () => setVerCompañero((v) => !v),
     []
@@ -169,6 +188,11 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
             cartasEnMano={cartasEnMano}
             mostrarCompañero={verCompañero}
             onToggleCompañero={toggleCompañero}
+            onMensajeCompañero={
+              esCompañero && enviarChat
+                ? () => setPanelCompañero({ jugador: j, pos })
+                : undefined
+            }
             hablando={esQuienHabla}
             hablandoKey={esQuienHabla ? hablandoKey : null}
             hablandoTexto={esQuienHabla ? hablandoTexto : null}
@@ -177,6 +201,21 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
           />
         );
       })}
+
+      {panelCompañero && enviarChat && (
+        <PanelMensajeCompañero
+          jugador={panelCompañero.jugador}
+          pos={panelCompañero.pos}
+          onCerrar={() => setPanelCompañero(null)}
+          onEnviar={(m) => {
+            enviarChat({
+              ...m,
+              destinatarioId: panelCompañero.jugador.id
+            });
+            setPanelCompañero(null);
+          }}
+        />
+      )}
 
       {totalJugadas === 0 && (
         <div
@@ -204,6 +243,7 @@ function PuestoJugador({
   cartasEnMano,
   mostrarCompañero,
   onToggleCompañero,
+  onMensajeCompañero,
   hablando,
   hablandoKey,
   hablandoTexto,
@@ -220,6 +260,7 @@ function PuestoJugador({
   cartasEnMano: Carta[];
   mostrarCompañero: boolean;
   onToggleCompañero: () => void;
+  onMensajeCompañero?: () => void;
   hablando?: boolean;
   hablandoKey?: string | null;
   hablandoTexto?: string | null;
@@ -281,6 +322,12 @@ function PuestoJugador({
         ladoBurbuja={ladoBurbuja}
         ladoNombre={ladoNombre}
         alineacionBurbujaH={alineacionBurbujaH}
+        onAvatarClick={onMensajeCompañero}
+        avatarTitle={
+          onMensajeCompañero
+            ? `Mandarle una seña a ${jugador.nombre}`
+            : undefined
+        }
       />
       {!esYo && cartasEnMano.length > 0 && (
         <ManoOculta
@@ -291,6 +338,102 @@ function PuestoJugador({
           posReparto={pos}
         />
       )}
+    </div>
+  );
+}
+
+function PanelMensajeCompañero({
+  jugador,
+  pos,
+  onEnviar,
+  onCerrar
+}: {
+  jugador: Jugador;
+  pos: Posicion;
+  onEnviar: (m: { texto?: string; reaccion?: string }) => void;
+  onCerrar: () => void;
+}) {
+  const [texto, setTexto] = useState("");
+  return (
+    <div className="absolute inset-0 z-[90] pointer-events-none">
+      <div
+        className={clsx(
+          "absolute pointer-events-auto w-[min(20rem,calc(100vw-1.5rem))] rounded-md border border-dorado/60 bg-carbon/95 shadow-2xl backdrop-blur-sm p-2",
+          clasePosicionPanelCompañero(pos)
+        )}
+      >
+        <div className="flex items-center gap-2 pb-2 border-b border-border/70">
+          <img
+            src={urlPersonaje(jugador.personaje)}
+            alt=""
+            className="w-9 h-9 rounded-md object-cover object-top border border-dorado/60"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="text-[9px] uppercase tracking-widest text-dorado font-bold">
+              Seña rápida
+            </div>
+            <div className="text-xs text-crema truncate">{jugador.nombre}</div>
+          </div>
+          <button
+            type="button"
+            onClick={onCerrar}
+            className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
+            title="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1 mt-2">
+          {ORDENES_COMPANERO.map((o) => (
+            <button
+              key={o.texto}
+              type="button"
+              onClick={() => onEnviar({ texto: `${o.icono} ${o.texto}` })}
+              className="flex items-center gap-1.5 rounded border border-dorado/30 bg-surface/80 px-2 py-1.5 text-left text-[10px] uppercase tracking-wider text-crema hover:bg-dorado/15 transition font-bold"
+            >
+              <span className="text-sm leading-none">{o.icono}</span>
+              <span className="truncate">{o.texto}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-1 mt-2">
+          {ICONOS_COMPANERO.map((icono) => (
+            <button
+              key={icono}
+              type="button"
+              onClick={() => onEnviar({ reaccion: icono })}
+              className="text-xl active:scale-90 transition px-1.5 hover:bg-dorado/15 rounded border border-dorado/20"
+              title={`Enviar ${icono}`}
+            >
+              {icono}
+            </button>
+          ))}
+        </div>
+
+        <form
+          className="flex gap-1 mt-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!texto.trim()) return;
+            onEnviar({ texto: texto.trim() });
+            setTexto("");
+          }}
+        >
+          <input
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder="Mensaje privado…"
+            className="input-marca flex-1"
+            maxLength={200}
+            autoFocus
+          />
+          <button className="btn btn-primary !px-3 !py-2 text-xs">
+            Seña
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -445,6 +588,19 @@ function clasePosicionPuesto(pos: Posicion): string {
     case "derecha-medio":    return "right-4 bottom-[12%]";
     case "arriba-derecha":   return "right-4 top-4";
     case "arriba-izquierda": return "left-4 top-4";
+  }
+}
+
+function clasePosicionPanelCompañero(pos: Posicion): string {
+  switch (pos) {
+    case "arriba-derecha":
+      return "right-4 top-28";
+    case "arriba-izquierda":
+      return "left-4 top-28";
+    case "derecha-medio":
+      return "right-4 bottom-[30%]";
+    case "abajo-izquierda":
+      return "left-4 bottom-32";
   }
 }
 

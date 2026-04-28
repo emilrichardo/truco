@@ -51,6 +51,13 @@ export default function SalaPage() {
   const avisoTimerRef = useRef<number | null>(null);
 
   const { estado, salaMeta, error: errorSala } = useSalaOnline(salaId);
+  const chatVisibleCount = useMemo(() => {
+    if (!estado || !miId) return 0;
+    return estado.chat.filter(
+      (m) =>
+        !m.destinatarioId || m.destinatarioId === miId || m.jugadorId === miId
+    ).length;
+  }, [estado, miId]);
 
   // Audio del juego: cantos, cartas, reacciones.
   useAudioJuego(estado, miId);
@@ -72,14 +79,14 @@ export default function SalaPage() {
   useEffect(() => {
     if (!estado) return;
     if (chatAbierto) {
-      lastChatLen.current = estado.chat.length;
+      lastChatLen.current = chatVisibleCount;
       return;
     }
-    if (estado.chat.length > lastChatLen.current) {
-      setChatNoVisto((n) => n + (estado.chat.length - lastChatLen.current));
-      lastChatLen.current = estado.chat.length;
+    if (chatVisibleCount > lastChatLen.current) {
+      setChatNoVisto((n) => n + (chatVisibleCount - lastChatLen.current));
+      lastChatLen.current = chatVisibleCount;
     }
-  }, [estado?.chat.length, chatAbierto]);
+  }, [estado, chatVisibleCount, chatAbierto]);
 
   // Auto-unirse a la sala si ya tengo perfil pero no estoy en jugadores.
   useEffect(() => {
@@ -115,7 +122,12 @@ export default function SalaPage() {
     [salaId, miId]
   );
   const enviarChat = useCallback(
-    async (m: { texto?: string; reaccion?: string }) => {
+    async (m: {
+      texto?: string;
+      reaccion?: string;
+      sticker?: string;
+      destinatarioId?: string;
+    }) => {
       if (!miId) return;
       await enviarChatOnline(salaId, miId, m);
     },
@@ -348,7 +360,7 @@ export default function SalaPage() {
           {/* Columna principal */}
           <div className="flex-1 flex flex-col overflow-hidden relative">
             <div className="flex-1 relative min-h-0">
-              <Mesa estado={estado} miId={miId!} />
+              <Mesa estado={estado} miId={miId!} enviarChat={enviarChat} />
               {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
                * para que quede arriba de mi mano de cartas. */}
               <MiAvatarBR estado={estado} miId={miId!} />

@@ -21,7 +21,9 @@ export function JugadorPanel({
   ladoBurbuja = "derecha",
   ladoNombre = "derecha",
   ocultarNombre,
-  alineacionBurbujaH
+  alineacionBurbujaH,
+  onAvatarClick,
+  avatarTitle
 }: {
   jugador: Jugador;
   esTurno: boolean;
@@ -53,6 +55,9 @@ export function JugadorPanel({
    *  en vez de centrar. Evita que se salga de pantalla cuando el
    *  avatar vive en una esquina. */
   alineacionBurbujaH?: "izq" | "der" | "centro";
+  /** Click directo sobre la foto del jugador. */
+  onAvatarClick?: () => void;
+  avatarTitle?: string;
 }) {
   // Avatares rectangulares (aspect 3/4) para usar mejor el espacio en mobile.
   const tam = compacto
@@ -98,25 +103,41 @@ export function JugadorPanel({
       )}
     </div>
   );
+  const avatarClasses = clsx(
+    "aspect-[3/4] rounded-md overflow-hidden border-2 transition shadow-md",
+    tam,
+    esTurno ? "border-dorado halo" : borderColor,
+    !jugador.conectado && "grayscale opacity-60",
+    claseHablando,
+    onAvatarClick &&
+      "cursor-pointer hover:scale-105 focus:outline-none focus:ring-2 focus:ring-dorado focus:ring-offset-2 focus:ring-offset-carbon"
+  );
   return (
     <div className={clsx("flex items-center gap-1.5", flexDir)}>
       <div className="relative">
-        <div
-          key={hablandoKey || "estatico"}
-          className={clsx(
-            "aspect-[3/4] rounded-md overflow-hidden border-2 transition shadow-md",
-            tam,
-            esTurno ? "border-dorado halo" : borderColor,
-            !jugador.conectado && "grayscale opacity-60",
-            claseHablando
-          )}
-        >
-          <img
-            src={urlPersonaje(jugador.personaje)}
-            alt={jugador.nombre}
-            className="w-full h-full object-cover object-top"
-          />
-        </div>
+        {onAvatarClick ? (
+          <button
+            key={hablandoKey || "estatico"}
+            type="button"
+            onClick={onAvatarClick}
+            className={avatarClasses}
+            title={avatarTitle}
+          >
+            <img
+              src={urlPersonaje(jugador.personaje)}
+              alt={jugador.nombre}
+              className="w-full h-full object-cover object-top"
+            />
+          </button>
+        ) : (
+          <div key={hablandoKey || "estatico"} className={avatarClasses}>
+            <img
+              src={urlPersonaje(jugador.personaje)}
+              alt={jugador.nombre}
+              className="w-full h-full object-cover object-top"
+            />
+          </div>
+        )}
         {esMano && (
           <span
             className="badge-mano absolute -top-1.5 -left-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider z-10"
@@ -259,4 +280,3 @@ function colaPos(lado: LadoBurbuja): string {
       return "top-[-7px] left-1/2 -translate-x-1/2";
   }
 }
-

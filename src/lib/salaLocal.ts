@@ -244,14 +244,27 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   );
 
   const enviarChat = useCallback(
-    (m: { texto?: string; reaccion?: string; sticker?: string }) => {
+    (m: {
+      texto?: string;
+      reaccion?: string;
+      sticker?: string;
+      destinatarioId?: string;
+    }) => {
       if (!estado || !miId) return;
+      const destinatario = m.destinatarioId
+        ? estado.jugadores.find((j) => j.id === m.destinatarioId)
+        : undefined;
+      const yo = estado.jugadores.find((j) => j.id === miId);
+      const esCompaniero =
+        !!destinatario && !!yo && destinatario.equipo === yo.equipo;
       estado.chat.push({
         id: nuevoIdLocal().slice(6),
         jugadorId: miId,
+        destinatarioId: esCompaniero ? destinatario.id : undefined,
         texto: (m.texto || "").slice(0, 200),
         reaccion: m.reaccion,
         sticker: m.sticker,
+        directo: esCompaniero,
         ts: Date.now()
       });
       if (estado.chat.length > 80) estado.chat.shift();

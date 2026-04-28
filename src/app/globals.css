@@ -525,7 +525,7 @@ body {
  * (números y borde negro). Lo bajamos a 1.0 para mostrar el naipe
  * entero. */
 .es-card img {
-  transform: scale(1.04);
+  transform: scale(1.01, 1.07);
   transform-origin: center;
 }
 /* Lomo de las cartas: imagen completa de la marca (sello "TRUCO ENTRE
