@@ -1,5 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
+
+export const metadata: Metadata = {
+  title: "Reglas del truco argentino",
+  description:
+    "Cómo se juega al truco argentino: envido, real envido, falta envido, truco, retruco, vale cuatro y reglas de la mesa. Pensado para los primos que recién arrancan.",
+  alternates: { canonical: "/reglas" },
+  openGraph: {
+    title: "Reglas del truco argentino",
+    description:
+      "Envido, retruco, vale cuatro y todo lo que tenés que saber para no quedar pagando en la mesa.",
+    url: "/reglas"
+  }
+};
 
 export default function ReglasPage() {
   return (
