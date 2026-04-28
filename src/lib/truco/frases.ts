@@ -1,25 +1,17 @@
-// Frases para cantos y respuestas, en habla santiagueña / NOA.
-// Cada categoría tiene 5 variantes ordenadas por intensidad
-// (callandito → bravísimo). El motor pica una variante al azar al emitir
-// el evento, así el chat no se repite.
+// Frases para cantos y respuestas, en habla URBANA del norte argentino.
+// Cada categoría tiene 5 variantes (cantos) o 7-8 (reacciones), de menor
+// a mayor intensidad. El motor pica una al azar al emitir el evento.
 //
-// Estas mismas frases las consume `scripts/generar-voces.ts` para sintetizar
-// los MP3 con ElevenLabs, así audio y texto siempre quedan en sync.
+// Estas mismas frases las consume scripts/generar-voces.ts para
+// sintetizar MP3 con ElevenLabs — audio y chat siempre en sync.
 //
-// Decisiones de habla santiagueña / quichua santiagueño:
-//  - Vocativos típicos: "ckari" (varón, en quichua santiagueño),
-//    "primito", "hermanazo", "compay", "changoo" (joven), "paisano".
-//  - Quichuismos vivos en NOA: "achalay" (¡qué lindo!), "atatay"
-//    (¡qué horror!), "opa" (tonto), "wawa" (bebé).
-//  - Diminutivos a destajo: "callandito", "despacito", "primito" — no
-//    son sólo afectivos, marcan el ritmo de la frase.
-//  - "Pué" (pues) y "nomá'" (nomás) como muletillas suavizadoras.
-//  - Caída de "s" final (apostrofada) sólo en los gritos / nivel alto,
-//    para que el TTS le dé el quiebre santiagueño. En los tranquilos
-//    queda con "s" para que se entienda fino.
-//  - Verbos en voseo NOA: "tené'", "vení", "callate", "mostrá".
-//  - Construcciones de cantito: "achalay, achalay" (repetición),
-//    "atatay con vo'", "vení nomás".
+// Estilo: norteño urbano (Salta / Tucumán / Santiago capital), no del
+// monte profundo. Sin quichuismos heavy ("ckari" fuera, "achalay" sólo
+// como interjección breve). Vocativos: loco, primito, hermano,
+// hermanazo, primo, paisano, che. Groserías argentinas con buen gusto:
+// ura (puta), conchudo, culiao, qué lo parió, a la pucha, mierda,
+// carajo. Apóstrofo para caída de "s" sólo en gritos. "Pué" y "nomá'"
+// como muletillas norteñas pero sin abusar.
 
 export type CategoriaFrase =
   | "envido"
@@ -52,63 +44,63 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
   envido: [
     "Envido.",
     "Envido pué.",
-    "¡Envido, ckari!",
+    "¡Envido, loco!",
     "¡Envidoo, primito!",
     "¡Envidoo, conchudo!"
   ],
   envido_envido: [
     "Envido envido.",
     "Envido envido pué.",
-    "¡Envido envido, ckari!",
+    "¡Envido envido, loco!",
     "¡Envido envidoo, primito!",
     "¡Envido envidoo, ura!"
   ],
   real_envido: [
     "Real envido.",
     "Real envido pué.",
-    "¡Real envido, ckari!",
+    "¡Real envido, loco!",
     "¡Real envidoo, primito!",
     "¡Real envidoo, culiao!"
   ],
   falta_envido: [
     "Falta envido.",
     "Falta envido pué.",
-    "¡Falta envido, ckari!",
+    "¡Falta envido, loco!",
     "¡Falta envidoo, primito!",
     "¡Falta envidoo, qué lo parió!"
   ],
   truco: [
     "Truco.",
     "Truco pué.",
-    "¡Truco, ckari!",
+    "¡Truco, loco!",
     "¡Trucoo, primito!",
     "¡Trucoo, ura!"
   ],
   retruco: [
     "Quiero retruco.",
     "Retruco pué.",
-    "¡Retruco, ckari!",
+    "¡Retruco, loco!",
     "¡Retrucoo, primito!",
     "¡Quiero retrucoo, conchudo!"
   ],
   vale_cuatro: [
     "Vale cuatro.",
     "Vale cuatro pué.",
-    "¡Vale cuatro, ckari!",
+    "¡Vale cuatro, loco!",
     "¡Vale cuatroo, primito!",
     "¡Vale cuatroo, qué lo parió!"
   ],
 
   quiero: [
     "Quiero.",
-    "Quiero, ckari.",
+    "Quiero, loco.",
     "¡Quieroo, primito!",
     "¡Quieroo, hermanazo!",
     "¡Quieroo, culiao!"
   ],
   no_quiero: [
     "No quiero.",
-    "No quiero, ckari.",
+    "No quiero, loco.",
     "No quieroo, primito.",
     "¡No quiero, paisano!",
     "¡No quiero, ura!"
@@ -116,20 +108,20 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
   ir_al_mazo: [
     "Al mazo.",
     "Al mazo nomá'.",
-    "Me voy al mazo, ckari.",
+    "Me voy al mazo, loco.",
     "¡Al mazo, hermanazo!",
     "¡Al mazo, qué lo parió!"
   ],
   son_buenas: [
     "Son buenas.",
-    "Son buenas, ckari.",
+    "Son buenas, loco.",
     "Son buenas, primito.",
     "Son buena' che.",
     "¡Son buenas, hermano!"
   ],
   son_mejores: [
     "Son mejores.",
-    "Son mejores, ckari.",
+    "Son mejores, loco.",
     "¡Son mejores, primito!",
     "¡Son mejores, hermanazo!",
     "¡Son mejore', culiao!"
@@ -143,10 +135,10 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "¡Ahí está!",
     "¡Tomá pa' vó!",
     "¡Ja, la pucha!",
-    "¡Achalay, ckari!",
+    "¡Toma!",
     "¡Tomá, conchudo!",
     "¡Ja, ja, ja!",
-    "¡Uy, primito, qué linda!"
+    "¡Uy, qué linda!"
   ],
   perdio_mano: [
     "Uy.",
@@ -165,7 +157,7 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "¡Ja, ja, qué lo parió!",
     "¡A la pucha, conchudo!",
     "¡Ganamos, hermanazo!",
-    "¡Achalay, achalay!"
+    "¡Tomá, perdedor!"
   ],
   perdio_partida: [
     "Bueno...",

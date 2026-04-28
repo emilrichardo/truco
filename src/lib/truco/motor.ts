@@ -713,7 +713,10 @@ function resolverEnvido(
   mano.envidoEstado = "ninguno";
   mano.envidoCantoActivo = null;
   devolverTurnoAJugar(estado);
-  if (chequearFinPartida(estado)) return { ok: true, estado };
+  if (chequearFinPartida(estado)) {
+    emitirReaccionPartida(estado, estado.ganadorPartida!);
+    return { ok: true, estado };
+  }
   estado.version++;
   return { ok: true, estado };
 }

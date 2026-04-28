@@ -84,8 +84,7 @@ const VOCES: Voz[] = [
   { slug: "lalo",    id: "XmoCtjPCefjeLDu0eMSl", nombre: "Lalo"    },
   { slug: "juan",    id: "dGjL92Li0y7ZUQ3MESQW", nombre: "Juan"    },
   { slug: "manuel",  id: "L7pBVwjueW3IPcQt4Ej9", nombre: "Manuel"  },
-  { slug: "agustin", id: "D09EpJbk4um1HKSpeTSc", nombre: "Agustín" },
-  { slug: "niraj",   id: "zgqefOY5FPQ3bB7OZTVR", nombre: "Niraj"   }
+  { slug: "agustin", id: "D09EpJbk4um1HKSpeTSc", nombre: "Agustín" }
 ];
 
 // Frases por canto: importadas directamente del módulo del juego para no

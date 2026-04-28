@@ -34,7 +34,7 @@ export type CategoriaCanto =
 // Voces disponibles: argentinas (locale=es-AR) generadas via ElevenLabs.
 // Cada jugador recibe una voz estable por hash(jugadorId) — Lucas siempre
 // suena igual entre partidas, pero distinto a Richi.
-const VOCES = ["lalo", "juan", "manuel", "agustin", "niraj"] as const;
+const VOCES = ["lalo", "juan", "manuel", "agustin"] as const;
 type Voz = (typeof VOCES)[number];
 const VARIANTES_POR_CANTO = 5;
 
@@ -149,8 +149,10 @@ export function reproducirCanto(
  *  etc. Así se siente como una mesa real conversando, no como un coro
  *  unisono. Después de un período de silencio (>1.5s sin reacciones),
  *  se resetea el contador y la próxima reacción arranca de inmediato. */
-const ESPACIADO_REACCIONES_MS = 500;
-const RESETEO_REACCIONES_MS = 1500;
+// Bumpeado a 800ms para que reacciones cortas (~0.8-1s cada una) no se
+// solapen casi nada. Se siente como conversación de mesa con turnos.
+const ESPACIADO_REACCIONES_MS = 800;
+const RESETEO_REACCIONES_MS = 2500;
 let proximaReaccionT = 0;
 
 export function reproducirReaccion(
