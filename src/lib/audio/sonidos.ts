@@ -140,10 +140,19 @@ export function reproducirCanto(
 }
 
 /** Reproduce una reacción (gane_mano / perdio_mano / etc.) en paralelo —
- *  bypassa la cola de cantos. Cuando termina una mano, varios jugadores
- *  reaccionan a la vez (ganador chicanea, perdedor putea, compañeros
- *  celebran o se enojan). El stagger random hace que no salten todas
- *  exactamente al mismo milisegundo — se siente como una mesa real. */
+ *  bypassa la cola FIFO de cantos.
+ *
+ *  Timing: cada reacción se agenda con un delay incremental sobre la
+ *  anterior (~500ms entre cada arranque). Si llegan 4 reacciones juntas
+ *  al cierre de una mano 2v2, suenan en cadena: una arranca, ~500ms
+ *  después la siguiente (que se solapa con la primera todavía sonando),
+ *  etc. Así se siente como una mesa real conversando, no como un coro
+ *  unisono. Después de un período de silencio (>1.5s sin reacciones),
+ *  se resetea el contador y la próxima reacción arranca de inmediato. */
+const ESPACIADO_REACCIONES_MS = 500;
+const RESETEO_REACCIONES_MS = 1500;
+let proximaReaccionT = 0;
+
 export function reproducirReaccion(
   canto: CategoriaCanto,
   opts: OpcionesCanto & { variante?: number }
@@ -156,9 +165,19 @@ export function reproducirReaccion(
       : 1 + Math.floor(Math.random() * VARIANTES_POR_CANTO);
   const archivo = String(idx).padStart(2, "0") + ".mp3";
   const src = `/audio/voces/${voz}/${canto}/${archivo}`;
-  // Stagger 0..400ms para que las 2-4 reacciones simultáneas no salten
-  // alineadas y se oigan como una conversación natural.
-  const delay = Math.floor(Math.random() * 400);
+
+  const ahora = Date.now();
+  // Si pasaron >1.5s desde la última reacción, arrancamos de cero — ya
+  // pasó el "ráfaga" y la próxima cadena empieza fresca.
+  if (ahora - proximaReaccionT > RESETEO_REACCIONES_MS) {
+    proximaReaccionT = ahora;
+  }
+  const arrancarA = Math.max(ahora, proximaReaccionT);
+  // Pequeño jitter (±100ms) para que no sean exactos.
+  const jitter = Math.floor(Math.random() * 200) - 100;
+  const delay = Math.max(0, arrancarA - ahora + jitter);
+  proximaReaccionT = arrancarA + ESPACIADO_REACCIONES_MS;
+
   setTimeout(() => {
     if (muteado) return;
     const h = cargarHowl(src);
@@ -228,27 +247,26 @@ export function identificarCanto(texto: string): CantoIdentificado | null {
   return { canto, variante: -1 };
 }
 
-/** Precarga clips críticos en el cache HTTP del browser para que la
- *  primera reproducción no tenga delay de red. Pasa los IDs de los
- *  jugadores en juego: precargamos sólo las voces que efectivamente
- *  van a sonar. */
+/** Precarga TODOS los clips de las voces que efectivamente van a jugar
+ *  esta partida. Total ~85 clips por voz × 1-5 voces = 85-425 archivos
+ *  pequeños (~15-50KB cada uno). Browser los pide en paralelo (limita
+ *  a 6 por host) y quedan en cache. La primera reproducción de cualquier
+ *  canto sale instantáneo después de la precarga. */
 export function precargarVoces(jugadorIds: string[]) {
   if (typeof window === "undefined") return;
   const vocesUsadas = new Set(jugadorIds.map(vozDeJugador));
-  // Cantos más comunes — los menos comunes (envido_envido, son_buenas)
-  // no los precargamos para no saturar los conexión slots del browser.
-  const cantosComunes: CategoriaCanto[] = [
+  const cantos: CategoriaCanto[] = [
+    "envido", "envido_envido", "real_envido", "falta_envido",
     "truco", "retruco", "vale_cuatro",
-    "envido", "real_envido", "falta_envido",
     "quiero", "no_quiero", "ir_al_mazo",
-    "gane_mano", "perdio_mano"
+    "son_buenas", "son_mejores",
+    "gane_mano", "perdio_mano", "gane_partida", "perdio_partida"
   ];
   for (const voz of vocesUsadas) {
-    for (const canto of cantosComunes) {
-      // Variantes 1..3 (las más probables de salir).
-      for (let i = 1; i <= 3; i++) {
+    for (const canto of cantos) {
+      // Hasta 8 variantes (las reacciones tienen más). Los 404 son baratos.
+      for (let i = 1; i <= 8; i++) {
         const url = `/audio/voces/${voz}/${canto}/${String(i).padStart(2, "0")}.mp3`;
-        // fetch warm cache; si falla, lazy-load lo cubre después.
         fetch(url, { cache: "force-cache" }).catch(() => {});
       }
     }

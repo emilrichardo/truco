@@ -260,15 +260,29 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
 function quienActuaSiBot(estado: EstadoJuego): Jugador | undefined {
   const mano = estado.manoActual;
   if (!mano) return undefined;
+
+  // Para responder cantos: si el equipo defensor tiene un humano, dejar
+  // que el humano decida. El bot pareja NO responde por su compañero —
+  // antes los bots agarraban el "no quiero" antes de que el humano
+  // pudiera contestar con buen envido.
   if (mano.envidoCantoActivo) {
-    return estado.jugadores.find(
-      (j) => j.equipo === mano.envidoCantoActivo!.equipoQueDebeResponder && j.esBot
+    const eq = mano.envidoCantoActivo.equipoQueDebeResponder;
+    const tieneHumano = estado.jugadores.some(
+      (j) => j.equipo === eq && !j.esBot
     );
+    if (tieneHumano) return undefined;
+    return estado.jugadores.find((j) => j.equipo === eq && j.esBot);
   }
   if (mano.trucoCantoActivo) {
-    return estado.jugadores.find(
-      (j) => j.equipo === mano.trucoCantoActivo!.equipoQueDebeResponder && j.esBot
+    const eq = mano.trucoCantoActivo.equipoQueDebeResponder;
+    const tieneHumano = estado.jugadores.some(
+      (j) => j.equipo === eq && !j.esBot
     );
+    if (tieneHumano) return undefined;
+    return estado.jugadores.find((j) => j.equipo === eq && j.esBot);
   }
+
+  // Turno propio: el bot actúa cuando es SU turno (jugar carta o canto
+  // espontáneo). Si es turno del humano, esperamos.
   return estado.jugadores.find((j) => j.id === mano.turnoJugadorId && j.esBot);
 }
