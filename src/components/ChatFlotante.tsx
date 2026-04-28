@@ -89,7 +89,7 @@ export function ChatFlotante({
       // música — para que el acceso al chat sea consistente en todos los
       // tamaños. El sheet se abre solo en mobile (en md+ el panel ya
       // ocupa la columna lateral).
-      className="fixed z-50 top-1.5 right-[52px] flex flex-col items-end gap-1 pointer-events-none"
+      className="fixed z-[600] top-1.5 right-[52px] flex flex-col items-end gap-1 pointer-events-none"
     >
       <button
         type="button"

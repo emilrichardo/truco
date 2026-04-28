@@ -204,7 +204,7 @@ function PartidaSoloInterno() {
 
         {chatAbierto && (
           <div
-            className="fixed inset-0 sheet-bg z-40 md:hidden flex items-end"
+            className="fixed inset-0 sheet-bg z-[600] md:hidden flex items-end"
             onClick={() => setChatAbierto(false)}
           >
             <div
