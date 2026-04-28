@@ -28,7 +28,7 @@ interface Estado {
 
 function leerEstado(): Estado {
   if (typeof window === "undefined") {
-    return { silenciado: false, volumen: VOLUMEN_DEFAULT };
+    return { silenciado: true, volumen: VOLUMEN_DEFAULT };
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -42,7 +42,7 @@ function leerEstado(): Estado {
           : VOLUMEN_DEFAULT
     };
   } catch {
-    return { silenciado: false, volumen: VOLUMEN_DEFAULT };
+    return { silenciado: true, volumen: VOLUMEN_DEFAULT };
   }
 }
 
@@ -69,7 +69,7 @@ export function MusicaAmbiental() {
       pathname.startsWith("/jugar/sala/"));
   const [hidratado, setHidratado] = useState(false);
   const [estado, setEstadoLocal] = useState<Estado>({
-    silenciado: false,
+    silenciado: true,
     volumen: VOLUMEN_DEFAULT
   });
   const [pistas, setPistas] = useState<string[]>([]);
