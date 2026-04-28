@@ -279,8 +279,18 @@ function intentarCantarEnvido(ctx: ContextoCanto): Accion | null {
   if (mano.bazas.length > 1) return null;
   if (mano.bazas[0].jugadas.length > 0) return null; // sólo antes de tirar
   if (!legales.includes("cantar_envido")) return null;
-  // OJO: antes restringíamos a sólo el mano. Cualquier jugador puede
-  // cantar envido en la primera baza si todavía no tiró carta.
+
+  // Etiqueta trucera 2v2: si soy mano de mi equipo (el que juega
+  // primero) y tengo compañero HUMANO, no canto envido. El pie del
+  // equipo (el otro compañero, que juega después) es quien decide en
+  // base a la info disponible. Antes el bot pisaba al humano cantando
+  // envido sin que el humano pudiera evaluar.
+  const compañeros = estado.jugadores.filter(
+    (j) => j.equipo === yo.equipo && j.id !== jugadorId
+  );
+  const yoSoyManoDelEquipo = compañeros.every((c) => c.asiento > yo.asiento);
+  const tengoCompañeroHumano = compañeros.some((j) => !j.esBot);
+  if (yoSoyManoDelEquipo && tengoCompañeroHumano) return null;
 
   const miEnvido = calcularEnvido(vista.originales);
   const distancia = estado.puntos[yo.equipo] - estado.puntos[1 - yo.equipo];
