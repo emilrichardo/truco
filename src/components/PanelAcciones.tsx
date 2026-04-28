@@ -162,8 +162,10 @@ export function PanelAcciones({
 
       {/* Mis cartas en abanico — drag & drop: arrastrá hacia arriba para
        *  tirar a la mesa, o de lado para reordenar la mano. Tap simple
-       *  sigue jugando la carta directo. */}
-      <div className="flex justify-center items-end mb-2 min-h-[140px] sm:min-h-[170px]">
+       *  sigue jugando la carta directo. pb-3 deja un colchón abajo
+       *  para que las cartas con translateY positivo no se monten sobre
+       *  los botones de acción y roben clicks. */}
+      <div className="flex justify-center items-end mb-2 pb-3 min-h-[140px] sm:min-h-[170px]">
         {cartasOrdenadas.length === 0 ? (
           <span className="text-text-dim italic text-xs py-3 subtitulo-claim">
             {mano.fase === "terminada" ? "Repartiendo…" : "Sin cartas."}
@@ -172,7 +174,9 @@ export function PanelAcciones({
           cartasOrdenadas.map((c, i) => {
             const offset = i - centro;
             const rot = offset * 9;
-            const dy = Math.abs(offset) * 8;
+            // Cartas exteriores ya no bajan — antes con translateY(8px)
+            // se montaban sobre el área de los botones y robaban clicks.
+            const dy = 0;
             const isDragging = arrastrandoId === c.id;
             // Cuando arrastro: usamos transform inline con delta del
             // puntero + un leve scale-up para que se sienta "agarrada".

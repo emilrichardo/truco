@@ -59,6 +59,22 @@ export function useAudioJuego(
     };
   }, []);
 
+  // Cortar audio cuando la pestaña se esconde (cambio de tab, app en
+  // background, salida de Chrome). Howler con html5: true sigue
+  // reproduciendo en background si no lo paramos manualmente.
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const onHide = () => {
+      if (document.hidden) cortarReproduccion();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", cortarReproduccion);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", cortarReproduccion);
+    };
+  }, []);
+
   // Precarga: una sola vez por sesión, apenas tenemos la lista de
   // jugadores. Cartas (40 webp) + voces de los jugadores en partida
   // (cantos más comunes). Usa fetch con cache:force-cache para no
