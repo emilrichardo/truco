@@ -50,9 +50,10 @@ function PartidaSoloInterno() {
 
   const tamanio = (Number(params.get("tamanio")) === 4 ? 4 : 2) as 2 | 4;
   const puntos = (Number(params.get("puntos")) === 30 ? 30 : 15) as 15 | 30;
-  // Si la URL trae `?bot=<slug>`, fuerza al primer bot a ese personaje.
-  // Lo usa el botón "Revancha" para mantener al mismo oponente.
-  const botSlugParam = params.get("bot");
+  // Si la URL trae `?bots=slug1,slug2,slug3` (orden por asiento), forzamos
+  // a esos personajes. Lo usa el botón Revancha para mantener exactamente
+  // los mismos oponentes entre partidas.
+  const botsParam = params.get("bots");
 
   // Si no hay primo guardado, mandar al inicio.
   useEffect(() => {
@@ -67,9 +68,9 @@ function PartidaSoloInterno() {
       miPersonaje: miSlug,
       tamanio,
       puntosObjetivo: puntos,
-      botPersonaje: botSlugParam || undefined
+      botPersonajes: botsParam ? botsParam.split(",").filter(Boolean) : undefined
     };
-  }, [listoSlug, miSlug, tamanio, puntos, botSlugParam]);
+  }, [listoSlug, miSlug, tamanio, puntos, botsParam]);
 
   const { estado, miId, enviarAccion, enviarChat } = useSalaLocal(config);
 
@@ -339,12 +340,17 @@ function PartidaSoloInterno() {
                   <button
                     onClick={() => {
                       // Hard reload para garantizar que el motor empiece
-                      // de cero. Pasamos `?bot=<slug>` para preservar al
-                      // mismo oponente — antes la revancha pickeaba un
-                      // personaje al azar, sentía cambio de rival.
-                      const botSlug = rival?.personaje || "";
+                      // de cero. Pasamos `?bots=slug1,slug2,...` con TODOS
+                      // los bots ordenados por asiento — antes en 2v2 sólo
+                      // preservaba uno y los otros 2 cambiaban.
+                      const slugsBots = estado.jugadores
+                        .filter((j) => j.id !== miId)
+                        .sort((a, b) => a.asiento - b.asiento)
+                        .map((j) => j.personaje);
                       const url = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}${
-                        botSlug ? `&bot=${encodeURIComponent(botSlug)}` : ""
+                        slugsBots.length
+                          ? `&bots=${encodeURIComponent(slugsBots.join(","))}`
+                          : ""
                       }`;
                       borrarSnapshotLocal();
                       window.location.href = url;

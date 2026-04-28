@@ -139,10 +139,6 @@ function BurbujaCanto({
   destacado?: boolean;
   keyAnim: string;
 }) {
-  // Color único para borde + cola. Si es respuesta destacada, sumamos un
-  // glow dorado pero NO cambiamos el color a rojo — la flecha siempre
-  // mantiene el color del globo.
-  const colorBorde = "rgba(160, 122, 46, 0.55)"; // dorado oscuro suave
   return (
     <div
       key={keyAnim}
@@ -163,7 +159,6 @@ function BurbujaCanto({
           sticker
             ? undefined
             : {
-                border: `1px solid ${colorBorde}`,
                 boxShadow: destacado
                   ? "0 4px 14px rgba(0,0,0,0.35), 0 0 0 2px rgba(217,164,65,0.35)"
                   : "0 4px 14px rgba(0,0,0,0.35)"
@@ -185,20 +180,11 @@ function BurbujaCanto({
           </div>
         )}
         {!sticker && (
-          // Cola: rombito (square 45deg) con bg-crema (idéntico al cuerpo)
-          // y sólo dos bordes (los "exteriores"). Los lados que tocan al
-          // cuerpo no tienen borde — así se ve como una continuación.
+          // Cola: rombito (square 45deg) bg-crema sin borde — se funde
+          // con el cuerpo. La sombra del cuerpo ya da profundidad.
           <div
             aria-hidden
             className={clsx("absolute w-3 h-3 rotate-45 bg-crema", colaPos(lado))}
-            style={{
-              borderLeftWidth: colaBordes(lado).left,
-              borderTopWidth: colaBordes(lado).top,
-              borderRightWidth: colaBordes(lado).right,
-              borderBottomWidth: colaBordes(lado).bottom,
-              borderStyle: "solid",
-              borderColor: colorBorde
-            }}
           />
         )}
       </div>
@@ -232,15 +218,3 @@ function colaPos(lado: LadoBurbuja): string {
   }
 }
 
-function colaBordes(lado: LadoBurbuja) {
-  switch (lado) {
-    case "izquierda":
-      return { left: 0, top: 0, right: 2, bottom: 2 };
-    case "derecha":
-      return { left: 2, top: 2, right: 0, bottom: 0 };
-    case "arriba":
-      return { left: 0, top: 0, right: 2, bottom: 2 };
-    case "abajo":
-      return { left: 2, top: 2, right: 0, bottom: 0 };
-  }
-}
