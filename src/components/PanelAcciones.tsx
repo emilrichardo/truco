@@ -55,16 +55,11 @@ export function PanelAcciones({
   const [ordenLocal, setOrdenLocal] = useState<string[]>(() =>
     misCartas.map((c) => c.id)
   );
-  // Animación de reparto: sólo activa durante 1.5s después de que el
-  // motor reparte una mano nueva. Reordenar cartas (drag horizontal) NO
-  // debe re-disparar la animación — antes la animación se reseteaba en
-  // cada cambio de orden y se veía mal en desktop.
-  const [recienRepartido, setRecienRepartido] = useState(true);
+  // Sincronizamos ordenLocal cuando el motor reparte una mano nueva
+  // (cambia el set de IDs). Saqué la animación de reparto previa porque
+  // dejaba un salto raro al desactivarse a los 1.5s.
   useEffect(() => {
     setOrdenLocal(misCartas.map((c) => c.id));
-    setRecienRepartido(true);
-    const t = window.setTimeout(() => setRecienRepartido(false), 1500);
-    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey]);
 
@@ -207,24 +202,11 @@ export function PanelAcciones({
                 onPointerUp={(e) => onPointerUp(e, c.id)}
                 onPointerCancel={(e) => onPointerUp(e, c.id)}
               >
-                <div
-                  className={recienRepartido ? "reparto-anim" : undefined}
-                  style={
-                    recienRepartido
-                      ? ({
-                          "--reparto-from-x": "0",
-                          "--reparto-from-y": "-300%",
-                          "--reparto-delay": `${i * 90 + 200}ms`
-                        } as React.CSSProperties)
-                      : undefined
-                  }
-                >
-                  <CartaEspanola
-                    carta={c}
-                    jugable={puedeJugarCarta}
-                    tamanio="sm"
-                  />
-                </div>
+                <CartaEspanola
+                  carta={c}
+                  jugable={puedeJugarCarta}
+                  tamanio="sm"
+                />
               </div>
             );
           })
