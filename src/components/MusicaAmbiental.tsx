@@ -127,12 +127,14 @@ export function MusicaAmbiental() {
     };
   }, []);
 
-  // Crear Howl para la pista actual. NO usamos autoplay — iOS Safari y
-  // Chrome móvil bloquean cualquier audio con sonido hasta que haya un
-  // gesto del usuario. En su lugar, escuchamos el primer touch/click en
-  // toda la página y ahí mandamos h.play(). Una vez destrabado, el
-  // browser respeta los .play() siguientes.
+  // Crear Howl SÓLO cuando hay música activa (no silenciado). Cuando el
+  // usuario silencia, hacemos unload() completo: el `<audio>` element sale
+  // del DOM y iOS suelta la sesión de audio, así otras apps (Spotify,
+  // YouTube, etc.) recuperan su volumen normal. Si quedaba `pause()` la
+  // sesión se quedaba colgada y bajaba el volumen ajeno hasta cerrar la
+  // pestaña.
   useEffect(() => {
+    if (estado.silenciado) return;
     if (pistas.length === 0 || actualIdx < 0) return;
     const pista = pistas[actualIdx % pistas.length];
     const h = new Howl({
@@ -155,16 +157,14 @@ export function MusicaAmbiental() {
     });
     howlRef.current = h;
 
-    // Intento 1: tratar de arrancar de una (funciona en desktop sin
-    // restricciones).
-    if (!estado.silenciado) h.play();
+    // Intento 1: arrancar de una (desktop sin restricciones).
+    h.play();
 
     // Intento 2: si el browser bloquea, esperamos al primer gesto del
     // usuario (iOS / Chrome móvil) y disparamos play() ahí mismo. Tiene
     // que ejecutarse SÍNCRONAMENTE dentro del handler para que cuente
     // como "user gesture" en iOS.
     const arrancarConGesto = () => {
-      if (estado.silenciado) return;
       if (h.playing()) return;
       h.play();
     };
@@ -181,21 +181,15 @@ export function MusicaAmbiental() {
       h.unload();
       if (howlRef.current === h) howlRef.current = null;
     };
-    // No depende de silenciado/volumen — esos se aplican en otro effect.
+    // El volumen se aplica en otro effect sin recrear el Howl.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pistas, actualIdx]);
+  }, [pistas, actualIdx, estado.silenciado]);
 
-  // Aplicar cambios de silenciar/volumen sin recrear el Howl.
+  // Cambios de volumen — sin tocar el Howl si está silenciado (no existe).
   useEffect(() => {
     const h = howlRef.current;
-    if (!h) return;
-    h.volume(estado.volumen);
-    if (estado.silenciado) {
-      if (h.playing()) h.pause();
-    } else {
-      if (!h.playing()) h.play();
-    }
-  }, [estado.silenciado, estado.volumen]);
+    if (h) h.volume(estado.volumen);
+  }, [estado.volumen]);
 
   // Pausar al cambiar de pestaña / minimizar y retomar al volver.
   // No tocamos `estado.silenciado` para que la preferencia del usuario se

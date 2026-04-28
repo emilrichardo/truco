@@ -343,7 +343,7 @@ function PanelMensajeCompañero({
 }) {
   const [texto, setTexto] = useState("");
   return (
-    <div className="absolute inset-0 z-[90] pointer-events-none">
+    <div className="absolute inset-0 z-[700] pointer-events-none">
       <div
         className={clsx(
           "absolute pointer-events-auto w-[min(20rem,calc(100vw-1.5rem))] rounded-md border border-dorado/60 bg-carbon/95 shadow-2xl backdrop-blur-sm p-2",
