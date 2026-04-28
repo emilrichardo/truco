@@ -319,6 +319,15 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   const mano = estado.manoActual!;
   if (!legales.includes("cantar_truco")) return null;
 
+  // Si tengo compañero humano, NO canto truco por mi cuenta — la decisión
+  // de cantar es del humano. Misma regla que para envido: cuando hay un
+  // partner humano en el equipo, el bot juega su carta y nada más; el
+  // humano controla cuándo se sube la apuesta.
+  const tengoCompañeroHumano = estado.jugadores.some(
+    (j) => j.equipo === yo.equipo && j.id !== jugadorId && !j.esBot
+  );
+  if (tengoCompañeroHumano) return null;
+
   // Etiqueta trucera: en baza 1 con la ventana de envido todavía abierta
   // (envido no resuelto y nadie tiró carta todavía o sólo algunos), el bot
   // NO canta truco — el envido tiene que jugarse primero. Si la mano de
