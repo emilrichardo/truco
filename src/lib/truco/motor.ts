@@ -379,40 +379,21 @@ function cerrarMano(estado: EstadoJuego, equipoGanador: Equipo, motivo: string) 
   estado.version++;
 }
 
-function jugadorAleatorioDeEquipo(
-  estado: EstadoJuego,
-  equipo: Equipo
-): Jugador | null {
-  const jugadores = jugadoresEnEquipo(estado, equipo);
-  if (jugadores.length === 0) return null;
-  return jugadores[Math.floor(Math.random() * jugadores.length)];
-}
-
 function emitirReaccionMano(estado: EstadoJuego, equipoGanador: Equipo) {
-  const ganador = jugadorAleatorioDeEquipo(estado, equipoGanador);
-  const perdedor = jugadorAleatorioDeEquipo(
-    estado,
-    equipoContrario(equipoGanador)
-  );
-  if (ganador) {
-    anuncio(estado, ganador.id, fraseAleatoria("gane_mano"), "respuesta");
-  }
-  if (perdedor) {
-    anuncio(estado, perdedor.id, fraseAleatoria("perdio_mano"), "respuesta");
+  // Todos los jugadores reaccionan: ganadores chicanean, perdedores putean.
+  // En 2v2 esto da 4 audios casi simultáneos — el reproductor los manda
+  // en paralelo con stagger random para que se oiga como una mesa real.
+  // En 1v1 son sólo 2 (yo y el rival).
+  for (const j of estado.jugadores) {
+    const cat = j.equipo === equipoGanador ? "gane_mano" : "perdio_mano";
+    anuncio(estado, j.id, fraseAleatoria(cat), "respuesta");
   }
 }
 
 function emitirReaccionPartida(estado: EstadoJuego, equipoGanador: Equipo) {
-  const ganador = jugadorAleatorioDeEquipo(estado, equipoGanador);
-  const perdedor = jugadorAleatorioDeEquipo(
-    estado,
-    equipoContrario(equipoGanador)
-  );
-  if (ganador) {
-    anuncio(estado, ganador.id, fraseAleatoria("gane_partida"), "respuesta");
-  }
-  if (perdedor) {
-    anuncio(estado, perdedor.id, fraseAleatoria("perdio_partida"), "respuesta");
+  for (const j of estado.jugadores) {
+    const cat = j.equipo === equipoGanador ? "gane_partida" : "perdio_partida";
+    anuncio(estado, j.id, fraseAleatoria(cat), "respuesta");
   }
 }
 

@@ -135,34 +135,46 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "¡Son mejore', culiao!"
   ],
 
-  // Reacciones — todas cortísimas, espontáneas, una respiración.
+  // Reacciones — cortas, espontáneas. Suenan en paralelo cuando termina
+  // una mano: el ganador chicanea, el perdedor putea, los compañeros
+  // celebran o se enojan. Por eso variedades más amplias.
   gane_mano: [
     "¡Esa!",
-    "¡Ahí está, ckari!",
+    "¡Ahí está!",
     "¡Tomá pa' vó!",
     "¡Ja, la pucha!",
-    "¡Tomá, conchudo!"
+    "¡Achalay, ckari!",
+    "¡Tomá, conchudo!",
+    "¡Ja, ja, ja!",
+    "¡Uy, primito, qué linda!"
   ],
   perdio_mano: [
     "Uy.",
     "Atatay.",
+    "Uhh.",
     "¡Qué lo parió!",
     "¡A la pucha, ura!",
-    "¡Mierda, culiao!"
+    "¡Mierda, culiao!",
+    "¡Pero la concha!",
+    "Atatay con esto."
   ],
   gane_partida: [
     "¡Listo el pollo!",
     "¡La mesa es mía!",
     "¡A pagar el fernet!",
-    "¡Ja, qué lo parió!",
-    "¡A la pucha, conchudo!"
+    "¡Ja, ja, qué lo parió!",
+    "¡A la pucha, conchudo!",
+    "¡Ganamos, hermanazo!",
+    "¡Achalay, achalay!"
   ],
   perdio_partida: [
     "Bueno...",
     "Tuviste suerte.",
     "Ahora pagás vó'.",
     "¡Mierda, qué lo parió!",
-    "¡A la pucha, culiao!"
+    "¡A la pucha, culiao!",
+    "¡La concha del mazo!",
+    "Atatay, perdimos."
   ]
 };
 

@@ -130,13 +130,51 @@ export function reproducirCanto(
   // textual del chat con el array de FRASES), usamos esa. Si no, picamos
   // al azar — así igual funciona si el texto se modifica externamente.
   const idx =
-    opts.variante && opts.variante >= 1 && opts.variante <= VARIANTES_POR_CANTO
+    opts.variante && opts.variante >= 1
       ? opts.variante
       : 1 + Math.floor(Math.random() * VARIANTES_POR_CANTO);
   const archivo = String(idx).padStart(2, "0") + ".mp3";
   const src = `/audio/voces/${voz}/${canto}/${archivo}`;
   console.debug("[truco] canto", { canto, voz, src, jugadorId: opts.jugadorId });
   reproducirArchivo(src);
+}
+
+/** Reproduce una reacción (gane_mano / perdio_mano / etc.) en paralelo —
+ *  bypassa la cola de cantos. Cuando termina una mano, varios jugadores
+ *  reaccionan a la vez (ganador chicanea, perdedor putea, compañeros
+ *  celebran o se enojan). El stagger random hace que no salten todas
+ *  exactamente al mismo milisegundo — se siente como una mesa real. */
+export function reproducirReaccion(
+  canto: CategoriaCanto,
+  opts: OpcionesCanto & { variante?: number }
+) {
+  if (muteado) return;
+  const voz = vozDeJugador(opts.jugadorId);
+  const idx =
+    opts.variante && opts.variante >= 1
+      ? opts.variante
+      : 1 + Math.floor(Math.random() * VARIANTES_POR_CANTO);
+  const archivo = String(idx).padStart(2, "0") + ".mp3";
+  const src = `/audio/voces/${voz}/${canto}/${archivo}`;
+  // Stagger 0..400ms para que las 2-4 reacciones simultáneas no salten
+  // alineadas y se oigan como una conversación natural.
+  const delay = Math.floor(Math.random() * 400);
+  setTimeout(() => {
+    if (muteado) return;
+    const h = cargarHowl(src);
+    h.play();
+  }, delay);
+}
+
+const REACCIONES = new Set<CategoriaCanto>([
+  "gane_mano",
+  "perdio_mano",
+  "gane_partida",
+  "perdio_partida"
+]);
+
+export function esReaccion(canto: CategoriaCanto): boolean {
+  return REACCIONES.has(canto);
 }
 
 /** Canta el "tanto" (puntaje del envido) con la voz del jugador. */

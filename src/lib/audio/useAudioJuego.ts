@@ -9,9 +9,11 @@ import type { EstadoJuego, MensajeChat } from "@/lib/truco/types";
 import { despertarAudio, sonidoCarta, sonidoMazo, sonidoPuntos } from "./sfx";
 import {
   cortarReproduccion,
+  esReaccion,
   identificarCanto,
   precargarVoces,
-  reproducirCanto
+  reproducirCanto,
+  reproducirReaccion
 } from "./sonidos";
 
 // Lista canónica de cartas para precargar (40 webp). La inferimos del mismo
@@ -106,7 +108,14 @@ function procesarMensaje(m: MensajeChat) {
       // el golpe sordo del SFX para reforzar el cierre.
       const id = identificarCanto(m.texto);
       if (id && m.jugadorId) {
-        reproducirCanto(id.canto, {
+        // Reacciones (gane_mano / perdio_mano / etc.) van por la vía
+        // paralela — bypassan la cola de cantos para que los 2-4
+        // jugadores reaccionen superpuestos como en una mesa real.
+        // Cantos del juego siguen serializados (un truco a la vez).
+        const reproductor = esReaccion(id.canto)
+          ? reproducirReaccion
+          : reproducirCanto;
+        reproductor(id.canto, {
           jugadorId: m.jugadorId,
           variante: id.variante > 0 ? id.variante : undefined
         });
