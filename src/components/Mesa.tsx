@@ -251,6 +251,7 @@ function PuestoJugador({
           posReparto={pos}
         />
       )}
+      <FlechaHaciaCentro pos={pos} />
     </div>
   );
 }
@@ -395,19 +396,64 @@ function repartoOffset(pos?: Posicion): { x: string; y: string } {
   }
 }
 
-/** Posición del puesto. Inset un poco mayor (8 = 2rem) para que los
- *  avatares estén un poco más cerca del centro y no tan pegados al borde. */
+/** Posición del puesto pegado a la esquina (inset 2 = 0.5rem). Antes
+ *  estaba a 2rem del borde y le robaba mucho espacio al tapete. */
 function clasePosicionPuesto(pos: Posicion): string {
   switch (pos) {
     case "abajo":
-      return "right-8 bottom-8"; // (no se usa: yo voy por MiAvatarBR)
+      return "right-2 bottom-2"; // (no se usa: yo voy por MiAvatarBR)
     case "arriba":
-      return "left-8 top-8"; // top-left
+      return "left-2 top-2"; // top-left
     case "izquierda":
-      return "left-8 bottom-8"; // bottom-left (rival 2v2)
+      return "left-2 bottom-2"; // bottom-left (rival 2v2)
     case "derecha":
-      return "right-8 top-8"; // top-right (rival 2v2)
+      return "right-2 top-2"; // top-right (rival 2v2)
   }
+}
+
+/** Flecha sutil que apunta desde el avatar hacia el centro de la mesa
+ *  (donde el jugador tira sus naipes). Se posiciona en la esquina
+ *  interior del puesto y rota según en qué corner esté el jugador. */
+function FlechaHaciaCentro({ pos }: { pos: Posicion }) {
+  // Posición dentro del wrapper (esquina opuesta a clasePosicionPuesto):
+  //  - puesto arriba (TL) → flecha en BR del wrapper.
+  //  - puesto izquierda (BL) → flecha en TR.
+  //  - puesto derecha (TR) → flecha en BL.
+  //  - puesto abajo (BR) → flecha en TL (no se usa, MiAvatarBR maneja).
+  // Rotación apunta al centro de la mesa: TL→135deg, TR→-135 (225),
+  // BL→45, BR→-45 (315).
+  const config: Record<
+    Posicion,
+    { className: string; rot: number }
+  > = {
+    arriba: { className: "absolute -bottom-1 -right-1", rot: 135 },
+    izquierda: { className: "absolute -top-1 -right-1", rot: 45 },
+    derecha: { className: "absolute -bottom-1 -left-1", rot: -135 },
+    abajo: { className: "absolute -top-1 -left-1", rot: -45 }
+  };
+  const c = config[pos];
+  return (
+    <div
+      aria-hidden
+      className={clsx("pointer-events-none opacity-40", c.className)}
+      style={{ transform: `rotate(${c.rot}deg)` }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width="14"
+        height="14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="text-dorado"
+      >
+        <path d="M5 12h14" />
+        <path d="M13 5l7 7-7 7" />
+      </svg>
+    </div>
+  );
 }
 
 /** Anchor del pile de cartas jugadas en cruz cardinal. Cada arm tiene un
