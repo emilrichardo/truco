@@ -7,7 +7,6 @@ import Link from "next/link";
 import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
-import { CartaEspanola } from "@/components/CartaEspanola";
 import { PrecargaCartas } from "@/components/PrecargaCartas";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
@@ -46,6 +45,9 @@ function PartidaSoloInterno() {
   const [chatAbierto, setChatAbierto] = useState(false);
   const [confirmSalir, setConfirmSalir] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  // Delay para que el modal de fin de partida no aparezca encima de las
+  // cartas que cerraron la última mano. Damos 2s para ver qué se jugó.
+  const [mostrarFinPartida, setMostrarFinPartida] = useState(false);
 
   const tamanio = (Number(params.get("tamanio")) === 4 ? 4 : 2) as 2 | 4;
   const puntos = (Number(params.get("puntos")) === 30 ? 30 : 15) as 15 | 30;
@@ -72,6 +74,20 @@ function PartidaSoloInterno() {
   }, [listoSlug, miSlug, tamanio, puntos, botsParam]);
 
   const { estado, miId, enviarAccion, enviarChat } = useSalaLocal(config);
+
+  // Cuando termina la partida, esperamos 2s antes de mostrar el modal
+  // de fin para que el jugador alcance a ver las cartas que cerraron
+  // la última mano. Si por algún motivo el ganador se "limpia" (revancha)
+  // reseteamos el flag.
+  const ganadorPartida = estado?.ganadorPartida ?? null;
+  useEffect(() => {
+    if (ganadorPartida === null) {
+      setMostrarFinPartida(false);
+      return;
+    }
+    const t = window.setTimeout(() => setMostrarFinPartida(true), 2000);
+    return () => clearTimeout(t);
+  }, [ganadorPartida]);
 
   // Audio del juego: cantos, cartas, reacciones.
   useAudioJuego(estado, miId);
@@ -241,30 +257,12 @@ function PartidaSoloInterno() {
           </div>
         )}
 
-        {estado.ganadorPartida !== null && (() => {
+        {estado.ganadorPartida !== null && mostrarFinPartida && (() => {
           const yoGane = miEquipoEs0 === (estado.ganadorPartida === 0);
           const miEquipoIdx = miEquipoEs0 ? 0 : 1;
           const rivalEquipoIdx = miEquipoEs0 ? 1 : 0;
           const miPuntaje = estado.puntos[miEquipoIdx];
           const rivalPuntaje = estado.puntos[rivalEquipoIdx];
-          // Última mano: la que cerró la partida. Si la partida cerró por
-          // envido sin cerrar la mano, manoActual sigue siendo la activa
-          // (con cartas todavía en hand). Si cerró por truco, está en
-          // historialManos. Tomamos la más reciente disponible.
-          const ultimaMano =
-            estado.historialManos[estado.historialManos.length - 1] ||
-            estado.manoActual;
-          const rival = estado.jugadores.find((j) => j.id !== miId);
-          const cartasRival = ultimaMano && rival
-            ? [
-                ...(ultimaMano.cartasPorJugador[rival.id] || []),
-                ...ultimaMano.bazas.flatMap((b) =>
-                  b.jugadas
-                    .filter((j) => j.jugadorId === rival.id)
-                    .map((j) => j.carta)
-                )
-              ]
-            : [];
           return (
             <div className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4 overflow-y-auto">
               <div className="papel p-5 text-center max-w-sm w-full my-4">
@@ -320,23 +318,6 @@ function PartidaSoloInterno() {
                     </div>
                   </div>
                 </div>
-
-                {/* Cartas del rival de la última mano */}
-                {cartasRival.length > 0 && rival && (
-                  <div className="mb-4">
-                    <div
-                      className="text-[10px] uppercase tracking-widest font-bold mb-2"
-                      style={{ color: "var(--madera-oscura)" }}
-                    >
-                      Cartas de {rival.nombre} en la última mano
-                    </div>
-                    <div className="flex justify-center gap-1">
-                      {cartasRival.slice(0, 3).map((c) => (
-                        <CartaEspanola key={c.id} carta={c} tamanio="sm" />
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div className="flex flex-col gap-2">
                   <button
