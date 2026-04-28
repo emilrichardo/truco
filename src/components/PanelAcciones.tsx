@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef, useState } from "react";
 import type { Accion, EstadoJuego } from "@/lib/truco/types";
 import { accionesLegales } from "@/lib/truco/motor";
 import { CartaEspanola } from "./CartaEspanola";
@@ -44,7 +45,111 @@ export function PanelAcciones({
     return legales.includes(t);
   };
 
-  const total = misCartas.length;
+  // Orden local de las cartas en mano — se puede reordenar arrastrando.
+  // Sincronizamos cuando el motor reparte una mano nueva (cambia el set
+  // de IDs); mientras tanto preservamos el orden que el usuario eligió.
+  const idsKey = misCartas
+    .map((c) => c.id)
+    .sort()
+    .join(",");
+  const [ordenLocal, setOrdenLocal] = useState<string[]>(() =>
+    misCartas.map((c) => c.id)
+  );
+  useEffect(() => {
+    setOrdenLocal(misCartas.map((c) => c.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsKey]);
+
+  // Estado de arrastre. Una sola carta a la vez, registrada por id.
+  const [arrastrandoId, setArrastrandoId] = useState<string | null>(null);
+  const [delta, setDelta] = useState({ x: 0, y: 0 });
+  const inicioPunteroRef = useRef<{ x: number; y: number } | null>(null);
+
+  function onPointerDown(e: React.PointerEvent, cartaId: string) {
+    if (!puedeJugarCarta) return;
+    inicioPunteroRef.current = { x: e.clientX, y: e.clientY };
+    setArrastrandoId(cartaId);
+    setDelta({ x: 0, y: 0 });
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    if (!arrastrandoId || !inicioPunteroRef.current) return;
+    setDelta({
+      x: e.clientX - inicioPunteroRef.current.x,
+      y: e.clientY - inicioPunteroRef.current.y
+    });
+  }
+
+  function onPointerUp(e: React.PointerEvent, cartaId: string) {
+    if (!arrastrandoId) return;
+    const movX = delta.x;
+    const movY = delta.y;
+    const distancia = Math.hypot(movX, movY);
+    setArrastrandoId(null);
+    setDelta({ x: 0, y: 0 });
+    inicioPunteroRef.current = null;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+
+    // Tap / clic suelto: jugar la carta directamente (compatibilidad).
+    if (distancia < 8) {
+      enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
+      return;
+    }
+    // Arrastre vertical hacia arriba con suficiente fuerza → tirar a la mesa.
+    if (movY < -80) {
+      enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
+      return;
+    }
+    // Arrastre horizontal con poco vertical → reordenar en la mano. Se
+    // calcula el desplazamiento entero por ancho de carta (~64px en
+    // móvil con el solapado del abanico).
+    if (Math.abs(movY) < 60 && Math.abs(movX) > 30) {
+      const anchoSlot = 64;
+      const idxActual = ordenLocal.indexOf(cartaId);
+      if (idxActual >= 0) {
+        const desplazamiento = Math.round(movX / anchoSlot);
+        const idxNuevo = Math.max(
+          0,
+          Math.min(ordenLocal.length - 1, idxActual + desplazamiento)
+        );
+        if (idxNuevo !== idxActual) {
+          const nuevoOrden = [...ordenLocal];
+          nuevoOrden.splice(idxActual, 1);
+          nuevoOrden.splice(idxNuevo, 0, cartaId);
+          setOrdenLocal(nuevoOrden);
+        }
+      }
+    }
+    // En cualquier otro caso, snap-back a la posición original (transición
+    // CSS hace el resto cuando seteamos delta a 0).
+  }
+
+  // Reordenamos las cartas según el orden local. Si el motor envía una
+  // carta que no está en ordenLocal todavía (caso borde), la dejamos al
+  // final.
+  const cartasOrdenadas = (() => {
+    const porId = new Map(misCartas.map((c) => [c.id, c]));
+    const visto = new Set<string>();
+    const out = [] as typeof misCartas;
+    for (const id of ordenLocal) {
+      const c = porId.get(id);
+      if (c) {
+        out.push(c);
+        visto.add(id);
+      }
+    }
+    for (const c of misCartas) {
+      if (!visto.has(c.id)) out.push(c);
+    }
+    return out;
+  })();
+
+  const total = cartasOrdenadas.length;
   const centro = (total - 1) / 2;
 
   return (
@@ -52,29 +157,47 @@ export function PanelAcciones({
       {/* Sutil borde dorado superior */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-dorado/40 to-transparent" />
 
-      {/* Mis cartas en abanico — tamaño "sm" para que ocupen menos pantalla */}
+      {/* Mis cartas en abanico — drag & drop: arrastrá hacia arriba para
+       *  tirar a la mesa, o de lado para reordenar la mano. Tap simple
+       *  sigue jugando la carta directo. */}
       <div className="flex justify-center items-end mb-2 min-h-[140px] sm:min-h-[170px]">
-        {misCartas.length === 0 ? (
+        {cartasOrdenadas.length === 0 ? (
           <span className="text-text-dim italic text-xs py-3 subtitulo-claim">
             {mano.fase === "terminada" ? "Repartiendo…" : "Sin cartas."}
           </span>
         ) : (
-          misCartas.map((c, i) => {
+          cartasOrdenadas.map((c, i) => {
             const offset = i - centro;
             const rot = offset * 9;
             const dy = Math.abs(offset) * 8;
+            const isDragging = arrastrandoId === c.id;
+            // Cuando arrastro: usamos transform inline con delta del
+            // puntero + un leve scale-up para que se sienta "agarrada".
+            // Sin transición durante el arrastre (sigue al dedo 1:1).
+            // Cuando suelto, transición de 200ms vuelve a la posición
+            // del abanico (snap-back) o al nuevo slot (reordenado).
+            const transform = isDragging
+              ? `translate(${delta.x}px, ${delta.y}px) scale(1.06)`
+              : `translateY(${dy}px) rotate(${rot}deg)`;
             return (
               <div
                 key={c.id}
                 className="fan-card"
                 style={
                   {
-                    "--r": `${rot}deg`,
-                    "--dy": `${dy}px`,
                     marginLeft: i === 0 ? 0 : "-1.25rem",
-                    zIndex: i + 1
+                    zIndex: isDragging ? 100 : i + 1,
+                    transform,
+                    transition: isDragging
+                      ? "none"
+                      : "transform 200ms ease",
+                    touchAction: "none"
                   } as React.CSSProperties
                 }
+                onPointerDown={(e) => onPointerDown(e, c.id)}
+                onPointerMove={onPointerMove}
+                onPointerUp={(e) => onPointerUp(e, c.id)}
+                onPointerCancel={(e) => onPointerUp(e, c.id)}
               >
                 <div
                   className="reparto-anim"
@@ -90,14 +213,6 @@ export function PanelAcciones({
                     carta={c}
                     jugable={puedeJugarCarta}
                     tamanio="sm"
-                    onClick={() =>
-                      puedeJugarCarta &&
-                      enviar({
-                        tipo: "jugar_carta",
-                        jugadorId: miId,
-                        cartaId: c.id
-                      })
-                    }
                   />
                 </div>
               </div>

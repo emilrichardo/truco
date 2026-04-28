@@ -41,17 +41,29 @@ export function CartaEspanola({
   // instantáneo apenas el browser termina el fetch de la webp, sin pasar
   // por /_next/image.
   const src = `/cartas/${carta.palo}/${carta.numero}.webp`;
+  // Renderizamos como <div> en vez de <button> para que el wrapper de
+  // arrastre del padre reciba sin estorbo todos los pointer events. El
+  // click directo está soportado vía onClick (cuando se pasa) — útil
+  // afuera del fan-card del jugador (cartas en mesa, etc.). Cuando el
+  // padre maneja el drag, no se pasa onClick.
   return (
-    <button
-      type="button"
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
       title={nombreCarta(carta)}
       onClick={onClick}
-      disabled={!onClick || !jugable}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       className={clsx(
         "es-card transition relative p-0",
         ancho,
         jugable && "active:scale-95 hover:-translate-y-1",
-        resaltada && "halo"
+        resaltada && "halo",
+        onClick && "cursor-pointer"
       )}
     >
       <img
@@ -60,8 +72,8 @@ export function CartaEspanola({
         draggable={false}
         decoding="async"
         loading="eager"
-        className="absolute inset-0 w-full h-full object-cover select-none"
+        className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
       />
-    </button>
+    </div>
   );
 }
