@@ -12,7 +12,7 @@ const ANCHOS: Record<Tamanio, string> = {
   // para que las cartas tiradas en la mesa no choquen con los
   // avatares de los jugadores. En desktop / sm+ queda igual.
   md: "w-[5.5rem] sm:w-36 md:w-40",
-  lg: "w-32 sm:w-44 md:w-52"
+  lg: "w-[7.2rem] sm:w-44 md:w-52"
 };
 
 export function CartaEspanola({

@@ -227,14 +227,11 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
     resolverBaza(estado, baza);
     if (mano.fase !== "terminada") {
       // Próxima baza o final de mano
-      const ganador = baza.ganadorEquipo;
       if (mano.bazas.length < 3 && !mano.ganadorMano) {
         mano.bazas.push({ jugadas: [], ganadorEquipo: null, pardada: false });
-        // Quien gana la baza arranca la siguiente. Si parda, arranca el mano.
-        const proximoId = !baza.pardada
-          ? primerJugadorDeEquipoEnBaza(estado, baza, ganador!)
-          : mano.manoJugadorId;
-        mano.turnoJugadorId = proximoId;
+        // La ronda no cambia de sentido entre bazas: sigue el asiento
+        // siguiente al último que jugó, siempre en orden anti-horario.
+        mano.turnoJugadorId = siguienteJugadorDespuesDeBaza(estado, baza);
       }
     }
   } else {
@@ -249,19 +246,10 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
   return { ok: true, estado };
 }
 
-function primerJugadorDeEquipoEnBaza(
-  estado: EstadoJuego,
-  baza: Baza,
-  equipo: Equipo
-): string {
-  // El primer jugador de ese equipo que tiró la carta más alta.
-  let mejor: { jugadorId: string; carta: Carta } | null = null;
-  for (const j of baza.jugadas) {
-    const jugador = jugadorPorId(estado, j.jugadorId)!;
-    if (jugador.equipo !== equipo) continue;
-    if (!mejor || comparar(j.carta, mejor.carta) > 0) mejor = j;
-  }
-  return mejor!.jugadorId;
+function siguienteJugadorDespuesDeBaza(estado: EstadoJuego, baza: Baza): string {
+  const ultima = baza.jugadas[baza.jugadas.length - 1];
+  const jugador = jugadorPorId(estado, ultima.jugadorId)!;
+  return jugadorPorAsiento(estado, siguienteAsiento(estado, jugador.asiento)).id;
 }
 
 function resolverBaza(estado: EstadoJuego, baza: Baza) {

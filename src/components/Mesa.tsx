@@ -106,21 +106,10 @@ export function Mesa({
   );
 
   return (
-    <div
-      className="relative w-full h-full"
-      style={{ perspective: "1400px", perspectiveOrigin: "center 70%" }}
-    >
-      {/* Plano 3D de la mesa: tapete + cartas tiradas viven acá adentro
-       *  y se inclinan en bloque (rotateX). Avatares y mini-manos quedan
-       *  AFUERA de este plano para que no se distorsionen. */}
-      <div
-        className="absolute inset-0"
-        style={{
-          transform: "rotateX(12deg)",
-          transformOrigin: "center 65%",
-          transformStyle: "preserve-3d"
-        }}
-      >
+    <div className="relative w-full h-full">
+      {/* Tapete + cartas tiradas en plano 2D. Avatares y mini-manos quedan
+       * afuera para conservar la UI sin deformaciones. */}
+      <div className="absolute inset-0">
         <div className="absolute inset-1 sm:inset-2 tapete" />
         {/* Cartas jugadas: cada jugador en su arm desde el centro */}
         {orden.map((j, idx) => {
@@ -457,10 +446,8 @@ function CartasJugadas({
   const rotBase = enLadoIzquierdo ? -12 : 12;
 
   return (
-    // Sin transform/perspective propios — viven dentro del plano 3D que
-    // envuelve todo el tapete (definido en el wrapper de <Mesa>). Así
-    // todas las pilas comparten una sola inclinación de mesa, en lugar
-    // de tener cada una su propia rotación independiente.
+    // Sin transformaciones de cámara propias: las pilas quedan en el mismo
+    // plano 2D del tapete, con rotación individual para dar naturalidad.
     <div className={clsx("absolute", clasePosicionArm(pos))}>
       {jugadas.map((j, i) => {
         // Cartas sucesivas se desplazan un poco hacia la esquina del jugador.
@@ -600,15 +587,15 @@ function clasePosicionPanelCompañero(pos: Posicion): string {
   }
 }
 
-/** Anchor de la pila de cartas tiradas: 4 cuadrantes pegados al centro
- *  de la mesa. Las cartas casi se tocan entre sí — antes estaban
- *  separadas en cada esquina y la mesa se veía vacía. */
+/** Anchor de la pila de cartas tiradas: 4 cuadrantes cerca del centro pero
+ *  con aire vertical. Arriba/abajo deben rozarse en las esquinas, no
+ *  montarse como una sola pila. */
 function clasePosicionArm(pos: Posicion): string {
   switch (pos) {
-    case "abajo-izquierda":  return "bottom-[36%] left-[36%]";
-    case "derecha-medio":    return "bottom-[36%] right-[36%]";
-    case "arriba-derecha":   return "top-[36%] right-[36%]";
-    case "arriba-izquierda": return "top-[36%] left-[36%]";
+    case "abajo-izquierda":  return "bottom-[31%] left-[35%]";
+    case "derecha-medio":    return "bottom-[31%] right-[35%]";
+    case "arriba-derecha":   return "top-[31%] right-[35%]";
+    case "arriba-izquierda": return "top-[31%] left-[35%]";
   }
 }
 
