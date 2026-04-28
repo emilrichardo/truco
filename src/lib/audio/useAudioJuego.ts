@@ -7,13 +7,14 @@
 import { useEffect, useRef } from "react";
 import type { EstadoJuego, MensajeChat } from "@/lib/truco/types";
 import { despertarAudio, sonidoCarta, sonidoMazo, sonidoPuntos } from "./sfx";
-import { identificarCanto, reproducirCanto } from "./sonidos";
+import { cortarReproduccion, identificarCanto, reproducirCanto } from "./sonidos";
 
 export function useAudioJuego(
   estado: EstadoJuego | null,
   _miId: string | null
 ) {
   const ultimoChatId = useRef<string | null>(null);
+  const ultimoManoNum = useRef<number>(0);
 
   // Desbloquear AudioContext en el primer click (browser autoplay policy).
   useEffect(() => {
@@ -29,6 +30,19 @@ export function useAudioJuego(
       window.removeEventListener("touchstart", desbloquear);
     };
   }, []);
+
+  // Cuando arranca una mano nueva (se reparten cartas), cortamos cualquier
+  // canto/reacción rezagado de la mano anterior. Las reacciones de
+  // gane_mano / perdio_mano son cortas y entran en el delay de 3.5s, pero
+  // si el clip es largo o quedó encolado detrás de otro, esto evita que
+  // se siga escuchando encima del nuevo reparto.
+  const manoNum = estado?.manoActual?.numero ?? 0;
+  useEffect(() => {
+    if (manoNum !== ultimoManoNum.current) {
+      ultimoManoNum.current = manoNum;
+      if (manoNum > 0) cortarReproduccion();
+    }
+  }, [manoNum]);
 
   // Procesar nuevos eventos del chat para SFX + voces.
   useEffect(() => {

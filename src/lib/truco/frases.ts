@@ -47,124 +47,122 @@ export type CategoriaFrase =
 //   - Máximo DOS repeticiones de vocal para sugerir cantito ("trucoo").
 //   - Apóstrofo en final de palabra para caída de "s" santiagueña.
 export const FRASES: Record<CategoriaFrase, string[]> = {
+  // Frases CORTAS y espontáneas. ElevenLabs con speed 1.18 las dice en
+  // <2.5 segundos cada una, así no se montan con la siguiente jugada.
   envido: [
-    "Envido, ckari, callandito nomás.",
-    "Envido pué, a ver qué tenés guardao.",
-    "¡Envido che, no te me achiqué'!",
-    "¡Envidoo, primito! Vení nomá'.",
-    "¡Envidoo, changoo! Achalay la mano que tengo, conchudo, vení a verla si te da el cuero."
+    "Envido.",
+    "Envido pué.",
+    "¡Envido, ckari!",
+    "¡Envidoo, primito!",
+    "¡Envidoo, conchudo!"
   ],
   envido_envido: [
-    "Envido envido, callandito...",
-    "Envido envido pué, no me asustá'.",
-    "¡Envido envido che, vamo' parejo, ckari!",
+    "Envido envido.",
+    "Envido envido pué.",
+    "¡Envido envido, ckari!",
     "¡Envido envidoo, primito!",
-    "¡Envido envidoo, hermanazo! A ver quién canta más fuerte, ura, acá no afloja nadie."
+    "¡Envido envidoo, ura!"
   ],
   real_envido: [
-    "Real envido, despacito che...",
-    "Real envido pué, ckari, vamo viendo.",
-    "¡Real envido che, salí de abajo'l árbol!",
-    "¡Real envidoo, primito! Tres puntito' pa' mi rancho.",
-    "¡Real envidoo, hermanazo! Achalay esta mano, ni rezándole a la Telesita me la ganás, culiao."
+    "Real envido.",
+    "Real envido pué.",
+    "¡Real envido, ckari!",
+    "¡Real envidoo, primito!",
+    "¡Real envidoo, culiao!"
   ],
   falta_envido: [
-    "Falta envido, despacito nomá'.",
-    "Falta envido pué, te la juego entera.",
-    "¡Falta envido che, ahora o nunca, ckari!",
-    "¡Falta envidoo, primito! La partida en una.",
-    "¡Falta envidoo, changoo! Si querés la partida, vení a buscarla, qué lo parió, no te quedés con las ganas."
+    "Falta envido.",
+    "Falta envido pué.",
+    "¡Falta envido, ckari!",
+    "¡Falta envidoo, primito!",
+    "¡Falta envidoo, qué lo parió!"
   ],
   truco: [
-    "Truco, callandito che...",
-    "Truco pué, vamo' viendo.",
-    "¡Truco che, no te durmá', ckari!",
-    "¡Trucoo, primito! A ver qué hacé'.",
-    "¡Trucoo, carajo! Achalay, hermanito, vení nomás a buscarla, ura, hasta el aca de mi mano."
+    "Truco.",
+    "Truco pué.",
+    "¡Truco, ckari!",
+    "¡Trucoo, primito!",
+    "¡Trucoo, ura!"
   ],
   retruco: [
-    "Quiero retruco, despacito che...",
-    "Retruco pué, no me asustá', ckari.",
-    "¡Quiero retruco che, salí de la cocina!",
-    "¡Retrucoo, primito! Subila si te da, vidita.",
-    "¡Quiero retrucoo, changoo! Atatay con vo', a ver si te aguantás ahora, conchudo."
+    "Quiero retruco.",
+    "Retruco pué.",
+    "¡Retruco, ckari!",
+    "¡Retrucoo, primito!",
+    "¡Quiero retrucoo, conchudo!"
   ],
   vale_cuatro: [
-    "Vale cuatro, callandito...",
-    "Vale cuatro pué, ahí va, ckari.",
-    "¡Vale cuatro che, todo o nada, primito!",
-    "¡Vale cuatroo, hermanito! A duelo nos vamo'.",
-    "¡Vale cuatroo, hermanazo! Esta es la última, qué lo parió, agarrate de la silla, culiao."
+    "Vale cuatro.",
+    "Vale cuatro pué.",
+    "¡Vale cuatro, ckari!",
+    "¡Vale cuatroo, primito!",
+    "¡Vale cuatroo, qué lo parió!"
   ],
 
   quiero: [
     "Quiero.",
     "Quiero, ckari.",
-    "¡Quieroo, primito! Vení nomá'.",
-    "¡Quieroo, hermanazo! Acá te espero, no afloje'.",
-    "¡Quieroo, changoo! Atatay con vo', vení a buscarme si te da la nafta, culiao."
+    "¡Quieroo, primito!",
+    "¡Quieroo, hermanazo!",
+    "¡Quieroo, culiao!"
   ],
   no_quiero: [
-    "No quiero...",
-    "No quiero, ckari. Otra vuelta será.",
-    "No quieroo, primito. Hoy no e' mi día, vidita.",
-    "¡No quiero, paisano! Me guardo pa' mejor mano.",
-    "¡No quiero nada, hermanazo! A la pucha, pero ojo que la próxima te como crudo, ura, te lo digo yo."
+    "No quiero.",
+    "No quiero, ckari.",
+    "No quieroo, primito.",
+    "¡No quiero, paisano!",
+    "¡No quiero, ura!"
   ],
   ir_al_mazo: [
-    "Me voy al mazo.",
-    "Al mazo nomá', ckari.",
-    "¡Me voy al mazo, primito! Esta' carta' son pa' jugar al solitario.",
-    "¡Al mazo, hermanazo! Atatay con el reparto que me tocó.",
-    "¡Me voy al mazo, paisano! No me dieron ni una sota, qué lo parió, esto es pa' agarrarse a las trompada' con el que mezcló."
+    "Al mazo.",
+    "Al mazo nomá'.",
+    "Me voy al mazo, ckari.",
+    "¡Al mazo, hermanazo!",
+    "¡Al mazo, qué lo parió!"
   ],
   son_buenas: [
     "Son buenas.",
-    "Son buenas, ckari. Bien jugao.",
-    "Son buenas, primito... esta vez.",
-    "Son buena' che, te la' llevá'.",
-    "¡Son buenaa', hermanazo, te la' llevá' vó' nomá', achalay esa mano!"
+    "Son buenas, ckari.",
+    "Son buenas, primito.",
+    "Son buena' che.",
+    "¡Son buenas, hermano!"
   ],
   son_mejores: [
     "Son mejores.",
     "Son mejores, ckari.",
     "¡Son mejores, primito!",
-    "¡Son mejores, hermanazo! Treinta y tre'.",
-    "¡Son mejore', changoo! Treinta y tre' con la del cuatro de espada, achalay la mano, culiao."
+    "¡Son mejores, hermanazo!",
+    "¡Son mejore', culiao!"
   ],
 
-  // Reacción cuando mi equipo ganó la mano (truco). De suave a chicaneo NOA.
+  // Reacciones — todas cortísimas, espontáneas, una respiración.
   gane_mano: [
-    "Esa.",
-    "Ahí está, ckari.",
-    "¡Tomá pa' vó, primito!",
-    "¡Ja, ja! La pucha digo, ahí están las mías.",
-    "¡Tomá pa' vó, conchudo! Ja, ja, te la metí doblada, hermanazo."
+    "¡Esa!",
+    "¡Ahí está, ckari!",
+    "¡Tomá pa' vó!",
+    "¡Ja, la pucha!",
+    "¡Tomá, conchudo!"
   ],
-  // Reacción cuando mi equipo perdió la mano. Lamento con malas palabras.
   perdio_mano: [
     "Uy.",
-    "Bueno, otra será.",
-    "Atatay, qué lo parió.",
-    "¡A la pucha, qué garrón, ura!",
-    "¡Mierda, culiao, te la dejé servida! Pero la próxima me la cobro."
+    "Atatay.",
+    "¡Qué lo parió!",
+    "¡A la pucha, ura!",
+    "¡Mierda, culiao!"
   ],
-
-  // Reacción cuando gané la PARTIDA entera. Triunfalismo y carcajada.
   gane_partida: [
     "¡Listo el pollo!",
-    "¡La mesa es mía, primitos!",
-    "¡A pagar el fernet, hermano!",
-    "¡Ja, ja! Ganamos, qué lo parió. Achalay esta partida.",
-    "¡A la pucha digo, ckari! Esto fue una masacre, conchudo, andá a llorar a la chacarera."
+    "¡La mesa es mía!",
+    "¡A pagar el fernet!",
+    "¡Ja, qué lo parió!",
+    "¡A la pucha, conchudo!"
   ],
-  // Reacción cuando perdí la PARTIDA entera. Aceptación con dignidad.
   perdio_partida: [
     "Bueno...",
-    "Tuviste suerte, hermano.",
-    "Ahora pagás vó' el fernet, ura.",
-    "¡Mierda, qué lo parió, casi te ganaba!",
-    "¡A la pucha digo, culiao! Pero la próxima me tomo revancha, ckari, te lo juro."
+    "Tuviste suerte.",
+    "Ahora pagás vó'.",
+    "¡Mierda, qué lo parió!",
+    "¡A la pucha, culiao!"
   ]
 };
 

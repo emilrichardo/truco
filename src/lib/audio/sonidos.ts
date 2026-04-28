@@ -205,6 +205,15 @@ export function activarSonido() {
   muteado = false;
 }
 
+/** Corta la reproducción actual y vacía la cola SIN mutear. Se usa cuando
+ *  arranca una mano nueva para que las reacciones / cantos rezagados de
+ *  la mano anterior no se monten con el nuevo reparto. */
+export function cortarReproduccion() {
+  cola.length = 0;
+  cacheHowl.forEach((h) => h.stop());
+  reproduciendo = false;
+}
+
 // Reacciones al cierre de mano / partida — sin clip propio por ahora.
 export function reaccionGanaMano(_jugadorId: string) { /* sin clip */ }
 export function reaccionPierdeMano(_jugadorId: string) { /* sin clip */ }
