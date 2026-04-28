@@ -28,8 +28,10 @@ export type CategoriaCanto =
   | "son_mejores";
 
 // Voces disponibles: argentinas (locale=es-AR) generadas via ElevenLabs.
-// Cada jugador recibe una voz estable por hash(jugadorId) — Lucas siempre
-// suena igual entre partidas, pero distinto a Richi.
+// La asignación es por ASIENTO en la mesa, no por hash del id — con
+// hash, en 1v1 había 25% de probabilidad que ambos jugadores cayeran
+// en la misma voz y "se cruzaban". Ahora cada asiento (0..3) toma una
+// voz distinta determinísticamente.
 const VOCES = ["lalo", "juan", "manuel", "agustin"] as const;
 type Voz = (typeof VOCES)[number];
 const VARIANTES_POR_CANTO = 5;
@@ -40,7 +42,22 @@ function hashStr(s: string): number {
   return Math.abs(h);
 }
 
+// Mapa jugadorId → asiento, mantenido al día por useAudioJuego cuando
+// cambia el estado. Permite asignar voces por asiento (sin colisiones).
+const asientoPorJugador = new Map<string, number>();
+
+export function setAsientosJugadores(
+  jugadores: { id: string; asiento: number }[]
+) {
+  asientoPorJugador.clear();
+  for (const j of jugadores) asientoPorJugador.set(j.id, j.asiento);
+}
+
 function vozDeJugador(jugadorId: string): Voz {
+  const asiento = asientoPorJugador.get(jugadorId);
+  if (asiento !== undefined) return VOCES[asiento % VOCES.length];
+  // Fallback al hash si todavía no se cargaron los asientos (no debería
+  // pasar en partida normal — useAudioJuego setea apenas hay jugadores).
   return VOCES[hashStr(jugadorId) % VOCES.length];
 }
 

@@ -15,7 +15,8 @@ import {
   precargarVoces,
   reproducirCanto,
   reproducirPuntosEnvido,
-  reproducirReaccion
+  reproducirReaccion,
+  setAsientosJugadores
 } from "./sonidos";
 
 // Lista canónica de cartas para precargar (40 webp). La inferimos del mismo
@@ -62,9 +63,14 @@ export function useAudioJuego(
   // jugadores. Cartas (40 webp) + voces de los jugadores en partida
   // (cantos más comunes). Usa fetch con cache:force-cache para no
   // bloquear el render — sólo calienta el cache HTTP del browser.
+  // También seteamos el mapa jugador→asiento para que vozDeJugador
+  // asigne sin colisiones.
   useEffect(() => {
-    if (precargado.current) return;
     if (!estado || estado.jugadores.length === 0) return;
+    setAsientosJugadores(
+      estado.jugadores.map((j) => ({ id: j.id, asiento: j.asiento }))
+    );
+    if (precargado.current) return;
     precargado.current = true;
     precargarCartas();
     precargarVoces(estado.jugadores.map((j) => j.id));

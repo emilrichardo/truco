@@ -524,21 +524,46 @@ function cantarTruco(
 
   const subir = tipo === "cantar_truco" ? "truco" : tipo === "cantar_retruco" ? "retruco" : "vale4";
 
-  // Validar progresión.
+  // Validar progresión. Hay dos contextos posibles para retruco / vale 4:
+  //   A) Sub-canto después de QUERER el nivel anterior — el equipo que
+  //      tiene "el quiero" sube. Aplica el chequeo clásico: trucoEstado y
+  //      equipoConTruco.
+  //   B) Respuesta a un canto pendiente — el rival cantó truco y vos
+  //      respondés con retruco (acepta + sube en una). En ese caso
+  //      trucoEstado todavía está "ninguno" y trucoCantoActivo apunta al
+  //      canto del rival; aceptamos implícitamente y subimos.
+  const cantoPendiente = mano.trucoCantoActivo;
+  const respondiendoAlRival =
+    !!cantoPendiente && cantoPendiente.equipoQueDebeResponder === jugador.equipo;
+
   if (subir === "truco" && mano.trucoEstado !== "ninguno") {
     return { ok: false, error: "Ya se cantó truco.", estado };
   }
+
   if (subir === "retruco") {
-    if (mano.trucoEstado !== "truco")
+    if (respondiendoAlRival && cantoPendiente!.nivel === "truco") {
+      // B: rival cantó truco, yo respondo con retruco. Acepto su truco
+      // (vale 2 ya bloqueado para mí si rechazan retruco) y subo.
+      mano.trucoEstado = "truco";
+      mano.valorMano = 2;
+      mano.equipoConTruco = jugador.equipo;
+    } else if (mano.trucoEstado !== "truco") {
       return { ok: false, error: "Solo se canta retruco después de truco.", estado };
-    if (mano.equipoConTruco !== jugador.equipo)
+    } else if (mano.equipoConTruco !== jugador.equipo) {
       return { ok: false, error: "No tenés el truco para subir.", estado };
+    }
   }
   if (subir === "vale4") {
-    if (mano.trucoEstado !== "retruco")
+    if (respondiendoAlRival && cantoPendiente!.nivel === "retruco") {
+      // B: rival cantó retruco, respondo con vale 4 (acepta + sube).
+      mano.trucoEstado = "retruco";
+      mano.valorMano = 3;
+      mano.equipoConTruco = jugador.equipo;
+    } else if (mano.trucoEstado !== "retruco") {
       return { ok: false, error: "Solo se canta vale 4 después de retruco.", estado };
-    if (mano.equipoConTruco !== jugador.equipo)
+    } else if (mano.equipoConTruco !== jugador.equipo) {
       return { ok: false, error: "No tenés el retruco para subir.", estado };
+    }
   }
 
   mano.trucoCantoActivo = {

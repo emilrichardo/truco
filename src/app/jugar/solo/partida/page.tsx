@@ -8,6 +8,7 @@ import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
 import { CartaEspanola } from "@/components/CartaEspanola";
+import { PrecargaCartas } from "@/components/PrecargaCartas";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
 import { Marcador } from "@/components/Marcador";
@@ -49,6 +50,9 @@ function PartidaSoloInterno() {
 
   const tamanio = (Number(params.get("tamanio")) === 4 ? 4 : 2) as 2 | 4;
   const puntos = (Number(params.get("puntos")) === 30 ? 30 : 15) as 15 | 30;
+  // Si la URL trae `?bot=<slug>`, fuerza al primer bot a ese personaje.
+  // Lo usa el botón "Revancha" para mantener al mismo oponente.
+  const botSlugParam = params.get("bot");
 
   // Si no hay primo guardado, mandar al inicio.
   useEffect(() => {
@@ -62,9 +66,10 @@ function PartidaSoloInterno() {
       miNombre: yo?.nombre || "Primo",
       miPersonaje: miSlug,
       tamanio,
-      puntosObjetivo: puntos
+      puntosObjetivo: puntos,
+      botPersonaje: botSlugParam || undefined
     };
-  }, [listoSlug, miSlug, tamanio, puntos]);
+  }, [listoSlug, miSlug, tamanio, puntos, botSlugParam]);
 
   const { estado, miId, enviarAccion, enviarChat } = useSalaLocal(config);
 
@@ -103,6 +108,7 @@ function PartidaSoloInterno() {
 
   return (
     <main className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-bg">
+      <PrecargaCartas />
       <header className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
         <button
           onClick={() => setConfirmSalir(true)}
@@ -333,9 +339,15 @@ function PartidaSoloInterno() {
                   <button
                     onClick={() => {
                       // Hard reload para garantizar que el motor empiece
-                      // de cero con un nuevo reparto contra el mismo oponente.
+                      // de cero. Pasamos `?bot=<slug>` para preservar al
+                      // mismo oponente — antes la revancha pickeaba un
+                      // personaje al azar, sentía cambio de rival.
+                      const botSlug = rival?.personaje || "";
+                      const url = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}${
+                        botSlug ? `&bot=${encodeURIComponent(botSlug)}` : ""
+                      }`;
                       borrarSnapshotLocal();
-                      window.location.href = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}`;
+                      window.location.href = url;
                     }}
                     className="btn btn-primary w-full"
                   >

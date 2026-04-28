@@ -2,8 +2,7 @@
 //
 // Decisiones:
 //  - Sin malas palabras ni modismos. Conversaciones cordiales y claras.
-//  - Cada categoría tiene 2-3 variantes para no sonar repetitivo,
-//    pero sin exagerar.
+//  - 4-5 variantes por categoría para variedad sin caer en slang.
 //  - SIN reacciones de fin de mano / fin de partida — eran ráfagas de
 //    voces simultáneas que ensuciaban la mesa. El banner ResultadoMano
 //    ya marca el cierre visualmente.
@@ -29,53 +28,75 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
   envido: [
     "Envido.",
     "Te canto envido.",
-    "Envido, amigo."
+    "Envido, amigo.",
+    "Te voy con envido.",
+    "Va envido."
   ],
   envido_envido: [
     "Envido envido.",
-    "Te canto envido envido."
+    "Te canto envido envido.",
+    "Envido envido, amigo.",
+    "Voy con envido envido."
   ],
   real_envido: [
     "Real envido.",
-    "Te canto real envido."
+    "Te canto real envido.",
+    "Real envido, amigo.",
+    "Voy con real envido."
   ],
   falta_envido: [
     "Falta envido.",
-    "Te canto falta envido."
+    "Te canto falta envido.",
+    "Falta envido, amigo.",
+    "Vamos con falta envido."
   ],
   truco: [
     "Truco.",
     "Te canto truco.",
-    "Truco, amigo."
+    "Truco, amigo.",
+    "Va truco.",
+    "Te voy con truco."
   ],
   retruco: [
     "Quiero retruco.",
     "Retruco.",
-    "Te retruco."
+    "Te retruco.",
+    "Va retruco."
   ],
   vale_cuatro: [
     "Vale cuatro.",
-    "Quiero vale cuatro."
+    "Quiero vale cuatro.",
+    "Va vale cuatro."
   ],
   quiero: [
     "Quiero.",
-    "Sí, quiero."
+    "Sí, quiero.",
+    "Quiero, amigo.",
+    "Dale, quiero."
   ],
   no_quiero: [
     "No quiero.",
-    "No, gracias."
+    "No, gracias.",
+    "No quiero, amigo.",
+    "Paso."
   ],
   ir_al_mazo: [
     "Me voy al mazo.",
-    "Al mazo."
+    "Al mazo.",
+    "Mazo.",
+    "Voy al mazo."
   ],
   son_buenas: [
     "Son buenas.",
-    "Son buenas, amigo."
+    "Son buenas, amigo.",
+    "Son buenas para vos.",
+    "Las tuyas son buenas."
   ],
   son_mejores: [
     "Son mejores.",
-    "Son mejores, amigo."
+    "Son mejores, amigo.",
+    "Acá son mejores.",
+    "Tengo mejores."
   ]
 };
 

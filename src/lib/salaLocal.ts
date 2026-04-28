@@ -41,6 +41,9 @@ export interface ConfigSalaLocal {
   miPersonaje: string;
   tamanio: 2 | 4;
   puntosObjetivo: 15 | 30;
+  /** Si está presente, fuerza que el primer bot use este personaje. Útil
+   *  para que la "revancha" mantenga el mismo oponente entre partidas. */
+  botPersonaje?: string;
 }
 
 interface State {
@@ -141,7 +144,12 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
       }
     ];
     for (let i = 1; i < config.tamanio; i++) {
-      const personaje = elegirPersonajeLibre(jugadores);
+      // Para el primer bot, si nos pasaron botPersonaje (revancha),
+      // forzamos ese personaje. Para el resto va al azar entre los libres.
+      const personaje =
+        i === 1 && config.botPersonaje
+          ? config.botPersonaje
+          : elegirPersonajeLibre(jugadores);
       const meta = PERSONAJES.find((p) => p.slug === personaje);
       jugadores.push({
         id: nuevoIdLocal(),
