@@ -277,21 +277,26 @@ function CartasJugadas({
   const rotBase = pos === "arriba" || pos === "izquierda" ? -12 : 12;
 
   return (
-    <div className={clsx("absolute z-15", clasePosicionArm(pos))}>
+    // Sin z-index en el wrapper — antes z-15 creaba un stacking context
+    // por jugador y los z-index internos no podían comparar entre cartas
+    // de distintos jugadores. Ahora los hijos comparten el stacking
+    // context del padre (Mesa) y la carta ganadora de la baza queda por
+    // encima de las cartas perdedoras de la MISMA baza, sin importar de
+    // qué jugador sean.
+    <div className={clsx("absolute", clasePosicionArm(pos))}>
       {jugadas.map((j, i) => {
         // Cartas sucesivas se desplazan un poco hacia la esquina del jugador.
         const dx = dirX * i * 12;
         const dy = dirY * i * 8;
         // Rotación base + variación leve por baza para que no queden idénticas.
         const rot = rotBase + (i - (jugadas.length - 1) / 2) * 4;
-        // La carta que GANÓ la baza queda por encima de las perdedoras
-        // dentro del pile (z-index alto). Las perdedoras quedan apiladas
-        // por orden de baza. La de la última baza activa va siempre
-        // arriba para que el jugador vea cuál acaba de tirar.
+        // z-index por capas:
+        //   - Cada baza tiene su propio rango (baza 0: 100s, 1: 200s, 2: 300s).
+        //   - La carta ganadora DENTRO de su baza suma +50 para quedar
+        //     por encima de las perdedoras de esa misma baza.
+        //   - La baza más nueva siempre queda arriba de las viejas.
+        const zIndex = (j.bazaIdx + 1) * 100 + (j.gano ? 50 : 0);
         const esUltimaBaza = j.bazaIdx === numeroDeBaza - 1;
-        let zIndex = i + 1;
-        if (j.gano) zIndex += 100;
-        if (esUltimaBaza) zIndex += 50;
         return (
           <div
             key={`${j.bazaIdx}-${j.jugIdx}-${j.carta.id}`}

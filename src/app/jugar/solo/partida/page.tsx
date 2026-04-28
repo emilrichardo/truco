@@ -274,7 +274,7 @@ function PartidaSoloInterno() {
           return (
             <div className="absolute inset-0 sheet-bg flex items-center justify-center z-40 p-4 overflow-y-auto">
               <div className="papel p-5 text-center max-w-sm w-full my-4">
-                <div className="text-5xl mb-1">{yoGane ? "🏆" : "🪦"}</div>
+                {yoGane && <div className="text-5xl mb-1">🏆</div>}
                 <div
                   className="titulo-marca text-2xl mb-1"
                   style={{
