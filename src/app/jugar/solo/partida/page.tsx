@@ -112,48 +112,46 @@ function PartidaSoloInterno() {
       <header className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
         <button
           onClick={() => setConfirmSalir(true)}
-          className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
+          className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs shrink-0"
           title="Salir de la partida"
         >
           ←
         </button>
-        <Link href="/" className="hidden sm:inline-block">
-          <img
-            src="/brand/logo.webp"
-            alt="Truco Entre Primos"
-            className="h-7 w-auto opacity-90 hover:opacity-100 transition"
-          />
-        </Link>
-        <div className="hidden sm:block flex-1 min-w-0 text-[11px] text-text-dim truncate subtitulo-claim">
-          🤖 vs máquina · {tamanio === 4 ? "2v2" : "1v1"} · a {puntos}
-        </div>
-        {/* Marcador compacto inline — visible en todas las pantallas, en
-         *  mobile reemplaza al título "vs máquina" para ahorrar lugar. */}
-        <div className="flex-1 sm:flex-none flex items-center justify-end gap-2 text-[11px] font-bold uppercase tracking-wider">
-          <div className="flex items-center gap-1.5">
-            <span className="text-dorado truncate max-w-[80px] sm:max-w-[120px]">
+
+        {/* Marcador prominente al centro del header. Reservamos un slot
+         *  vacío a la derecha (140px) para que los controles de música
+         *  flotantes (fixed top-right) no tapen el score. */}
+        <div className="flex-1 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="text-dorado truncate max-w-[90px]">
               {tituloNos}
             </span>
             <span
-              className="font-display text-base text-crema leading-none"
+              className="font-display text-lg text-crema leading-none"
               style={{ minWidth: "1.4em", textAlign: "right" }}
             >
               {miEquipoEs0 ? estado.puntos[0] : estado.puntos[1]}
             </span>
           </div>
-          <span className="text-text-dim/60">·</span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-crema truncate max-w-[80px] sm:max-w-[120px]">
-              {tituloEllos}
-            </span>
+          <span className="text-dorado/60 text-base">—</span>
+          <div className="flex items-center gap-1.5 min-w-0">
             <span
-              className="font-display text-base text-crema leading-none"
-              style={{ minWidth: "1.4em", textAlign: "right" }}
+              className="font-display text-lg text-crema leading-none"
+              style={{ minWidth: "1.4em", textAlign: "left" }}
             >
               {miEquipoEs0 ? estado.puntos[1] : estado.puntos[0]}
             </span>
+            <span className="text-crema truncate max-w-[90px]">
+              {tituloEllos}
+            </span>
           </div>
         </div>
+
+        {/* Reserva derecha para no chocar con MusicaAmbiental (fixed
+         *  top-1.5 right-2 z-50, ~140px de ancho con sus 2 botones +
+         *  slider). Dejamos el espacio vacío en el flex; los controles
+         *  flotan encima sin tapar el score. */}
+        <div className="w-[140px] shrink-0" aria-hidden />
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">

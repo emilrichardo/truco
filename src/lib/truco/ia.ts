@@ -310,6 +310,18 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   const mano = estado.manoActual!;
   if (!legales.includes("cantar_truco")) return null;
 
+  // Etiqueta trucera: en baza 1 con la ventana de envido todavía abierta
+  // (envido no resuelto y nadie tiró carta todavía o sólo algunos), el bot
+  // NO canta truco — el envido tiene que jugarse primero. Si la mano de
+  // envido del bot es floja se aguanta, juega carta y deja que el envido
+  // se cierre solo. Antes el bot cantaba truco prematuramente y le robaba
+  // al humano la chance de cantar envido con buenos puntos.
+  const ventanaEnvidoAbierta =
+    mano.bazas.length === 1 &&
+    !mano.envidoResuelto &&
+    mano.bazas[0].jugadas.length < estado.jugadores.length;
+  if (ventanaEnvidoAbierta) return null;
+
   const fuerza = fuerzaTruco(vista.enMano);
   const bazasGanadas = mano.bazas.filter(
     (b) => b.ganadorEquipo === yo.equipo
