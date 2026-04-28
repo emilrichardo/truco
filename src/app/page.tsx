@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { urlPersonaje, getPersonaje } from "@/data/jugadores";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
@@ -18,7 +18,7 @@ export default function HomePage() {
 
   return (
     <main className="min-h-[100dvh] px-4 py-6 max-w-2xl mx-auto">
-      <HeaderMarca variante="hero" conClaim href={null} />
+      <HeaderMarca variante="hero" href={null} />
 
       <DivisorCriollo className="my-6" />
 
@@ -57,7 +57,7 @@ export default function HomePage() {
       )}
 
       {/* Acciones principales: dos caminos lado a lado */}
-      <section className="grid grid-cols-2 gap-3 mb-6">
+      <section className="grid grid-cols-2 gap-3 mb-3">
         <OpcionMenu
           href="/jugar/crear"
           icono="/brand/iconos/online.webp"
@@ -73,6 +73,8 @@ export default function HomePage() {
           variante="secundario"
         />
       </section>
+
+      <BotonCompartirJuego />
 
       <footer className="text-center mt-8 space-y-2">
         <div className="flex items-center justify-center gap-4">
@@ -95,6 +97,57 @@ export default function HomePage() {
         </div>
       </footer>
     </main>
+  );
+}
+
+/** Botón de "Compartir el juego" para invitar primos al sitio (no a una
+ *  sala puntual). Usa la Web Share API en mobile y cae en copiar al
+ *  clipboard en desktop. Mensaje pensado para WhatsApp: emoji + claim
+ *  + URL para que el preview de OG complete con el logo. */
+function BotonCompartirJuego() {
+  const [tieneShare, setTieneShare] = useState(false);
+  const [copiado, setCopiado] = useState(false);
+
+  useEffect(() => {
+    setTieneShare(typeof navigator !== "undefined" && !!navigator.share);
+  }, []);
+
+  const compartir = async () => {
+    const url =
+      typeof window !== "undefined" ? window.location.origin : "";
+    const texto =
+      "🃏 Truco entre Primos — jugá truco argentino online, gratis, sin registro. Sumate:";
+    const datos = { title: "Truco Entre Primos", text: texto, url };
+
+    if (tieneShare) {
+      try {
+        await navigator.share(datos);
+        return;
+      } catch {
+        /* usuario canceló — no hacemos nada */
+        return;
+      }
+    }
+    // Fallback desktop: copiar al clipboard.
+    try {
+      await navigator.clipboard.writeText(`${texto} ${url}`);
+      setCopiado(true);
+      window.setTimeout(() => setCopiado(false), 1800);
+    } catch {
+      window.prompt("Copiá este enlace:", url);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={compartir}
+      className="btn w-full mb-6 justify-center gap-2 border-dorado/40 hover:border-dorado"
+      aria-label="Compartir el juego con amigos"
+    >
+      <span aria-hidden>{copiado ? "✓" : "📲"}</span>
+      <span>{copiado ? "Enlace copiado" : "Compartir con amigos"}</span>
+    </button>
   );
 }
 
@@ -149,7 +202,7 @@ function ElegirPrimero({ onElegir }: { onElegir: (slug: string) => void }) {
   const yo = seleccionado ? getPersonaje(seleccionado) : null;
   return (
     <main className="min-h-[100dvh] px-4 py-6 max-w-xl mx-auto">
-      <HeaderMarca variante="compacto" conClaim href={null} />
+      <HeaderMarca variante="compacto" href={null} />
       <p className="text-center text-text-dim text-sm mt-4 mb-5">
         Antes de jugar, elegí qué primo te representa.
       </p>
