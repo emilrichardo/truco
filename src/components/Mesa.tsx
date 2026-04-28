@@ -139,11 +139,20 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
         if (!pos) return null;
         const jugadas = jugadasPorJugador.get(j.id) || [];
         if (jugadas.length === 0) return null;
+        // Para cada jugada calculamos si la carta ganó la baza
+        // (ganadorEquipo === equipo del jugador). El render usa esto
+        // para subir el z-index — la carta ganadora queda por encima
+        // de las perdedoras dentro del pile del jugador.
+        const jugadasConGanador = jugadas.map((jg) => {
+          const baza = estado.manoActual?.bazas[jg.bazaIdx];
+          const gano = !!baza && baza.ganadorEquipo === j.equipo;
+          return { ...jg, gano };
+        });
         return (
           <CartasJugadas
             key={`cards-${j.id}`}
             pos={pos}
-            jugadas={jugadas}
+            jugadas={jugadasConGanador}
             numeroDeBaza={numeroDeBaza}
           />
         );
@@ -255,7 +264,7 @@ function CartasJugadas({
   numeroDeBaza
 }: {
   pos: Posicion;
-  jugadas: JugadaEnMesa[];
+  jugadas: (JugadaEnMesa & { gano: boolean })[];
   numeroDeBaza: number;
 }) {
   // Cada cuadrante apunta a la esquina del avatar correspondiente.
@@ -275,19 +284,27 @@ function CartasJugadas({
         const dy = dirY * i * 8;
         // Rotación base + variación leve por baza para que no queden idénticas.
         const rot = rotBase + (i - (jugadas.length - 1) / 2) * 4;
+        // La carta que GANÓ la baza queda por encima de las perdedoras
+        // dentro del pile (z-index alto). Las perdedoras quedan apiladas
+        // por orden de baza. La de la última baza activa va siempre
+        // arriba para que el jugador vea cuál acaba de tirar.
+        const esUltimaBaza = j.bazaIdx === numeroDeBaza - 1;
+        let zIndex = i + 1;
+        if (j.gano) zIndex += 100;
+        if (esUltimaBaza) zIndex += 50;
         return (
           <div
             key={`${j.bazaIdx}-${j.jugIdx}-${j.carta.id}`}
             className="absolute top-0 left-0 transition-transform"
             style={{
-              zIndex: i + 1,
+              zIndex,
               transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg)`
             }}
           >
             <CartaEspanola
               carta={j.carta}
               tamanio="md"
-              resaltada={j.bazaIdx === numeroDeBaza - 1}
+              resaltada={esUltimaBaza}
             />
           </div>
         );
