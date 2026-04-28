@@ -459,8 +459,14 @@ function cantarEnvido(
     equipoQueDebeResponder: equipoContrario(jugador.equipo)
   };
   mano.envidoEstado = nivelNuevo as any;
-  // Le pasamos el "turno de responder" a alguien del otro equipo.
-  mano.turnoJugadorId = primerJugadorDeEquipo(estado, equipoContrario(jugador.equipo));
+  // Le pasamos el "turno de responder" al rival más cercano en sentido
+  // anti-horario — así la ronda no se invierte cuando canta el segundo
+  // jugador de un equipo en 2v2.
+  mano.turnoJugadorId = siguienteJugadorDeEquipo(
+    estado,
+    jugador.asiento,
+    equipoContrario(jugador.equipo)
+  );
   anuncio(estado, jugador.id, fraseDeCanto(nivelNuevo, cadena), "canto");
   estado.version++;
   return { ok: true, estado };
@@ -498,6 +504,26 @@ function fraseDeCanto(
 function primerJugadorDeEquipo(estado: EstadoJuego, eq: Equipo): string {
   // Toma el primer jugador del equipo en orden de asiento.
   return jugadoresEnEquipo(estado, eq).sort((a, b) => a.asiento - b.asiento)[0].id;
+}
+
+/**
+ * Devuelve el siguiente jugador del equipo `eq` en orden anti-horario
+ * partiendo del asiento `desdeAsiento`. Usado al pasar el turno tras un
+ * canto: la ronda nunca debe retroceder, siempre avanza al rival más
+ * cercano en sentido anti-horario.
+ */
+function siguienteJugadorDeEquipo(
+  estado: EstadoJuego,
+  desdeAsiento: number,
+  eq: Equipo
+): string {
+  const n = estado.jugadores.length;
+  for (let i = 1; i <= n; i++) {
+    const a = (desdeAsiento + i) % n;
+    const j = jugadorPorAsiento(estado, a);
+    if (j.equipo === eq) return j.id;
+  }
+  return primerJugadorDeEquipo(estado, eq);
 }
 
 // ============== Truco ==============
@@ -559,8 +585,14 @@ function cantarTruco(
     equipoQueCanto: jugador.equipo,
     equipoQueDebeResponder: equipoContrario(jugador.equipo)
   };
-  // Le pasamos el turno de responder al otro equipo.
-  mano.turnoJugadorId = primerJugadorDeEquipo(estado, equipoContrario(jugador.equipo));
+  // Le pasamos el turno de responder al rival más cercano en sentido
+  // anti-horario, para no invertir la ronda en 2v2 cuando el canto sale
+  // del segundo jugador del equipo.
+  mano.turnoJugadorId = siguienteJugadorDeEquipo(
+    estado,
+    jugador.asiento,
+    equipoContrario(jugador.equipo)
+  );
   anuncio(estado, jugador.id, fraseDeCanto(subir), "canto");
   estado.version++;
   return { ok: true, estado };
