@@ -11,8 +11,10 @@ import {
   cortarReproduccion,
   esReaccion,
   identificarCanto,
+  identificarTanto,
   precargarVoces,
   reproducirCanto,
+  reproducirPuntosEnvido,
   reproducirReaccion
 } from "./sonidos";
 
@@ -102,16 +104,23 @@ function procesarMensaje(m: MensajeChat) {
     case "canto":
     case "respuesta":
     case "mano": {
-      // Voz: matcheamos el texto contra FRASES para reproducir EXACTAMENTE
-      // el variante que el motor pickeó (no uno random) — así el audio
-      // coincide con lo que aparece en el chat. Para "ir al mazo" sumamos
-      // el golpe sordo del SFX para reforzar el cierre.
+      // 1) Declaración de tanto del envido ("Tengo 33."): el motor emite
+      //    una de estas por equipo después del Quiero, en orden mano →
+      //    otro. La capa de audio reproduce el clip envido_puntos/<NN>.mp3
+      //    con la voz del jugador para que escuches qué tenía cada uno.
+      const tanto = identificarTanto(m.texto);
+      if (tanto !== null && m.jugadorId) {
+        reproducirPuntosEnvido(m.jugadorId, tanto);
+        break;
+      }
+      // 2) Canto / respuesta / reacción regular. Matcheamos el texto contra
+      //    FRASES para reproducir EXACTAMENTE el variante que el motor
+      //    pickeó. Reacciones (gane_mano / perdio_mano / etc.) van por
+      //    la vía paralela — bypassan la cola de cantos para que los 2-4
+      //    jugadores reaccionen superpuestos. Cantos del juego siguen
+      //    serializados.
       const id = identificarCanto(m.texto);
       if (id && m.jugadorId) {
-        // Reacciones (gane_mano / perdio_mano / etc.) van por la vía
-        // paralela — bypassan la cola de cantos para que los 2-4
-        // jugadores reaccionen superpuestos como en una mesa real.
-        // Cantos del juego siguen serializados (un truco a la vez).
         const reproductor = esReaccion(id.canto)
           ? reproducirReaccion
           : reproducirCanto;

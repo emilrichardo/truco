@@ -205,6 +205,17 @@ export function reproducirPuntosEnvido(jugadorId: string, puntos: number) {
   reproducirArchivo(`/audio/voces/${voz}/envido_puntos/${archivo}`);
 }
 
+/** Detecta una declaración de tanto en un texto del chat. El motor emite
+ *  "Tengo 33." cuando alguien declara su tanto del envido — esta función
+ *  parsea el número para mapearlo al clip envido_puntos/<NN>.mp3. */
+export function identificarTanto(texto: string): number | null {
+  const m = texto.match(/^\s*Tengo\s+(\d+)/i);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  if (n >= 0 && n <= 33) return n;
+  return null;
+}
+
 export interface CantoIdentificado {
   canto: CategoriaCanto;
   /** Índice 1..5 que matchea el archivo `0N.mp3` y la posición en

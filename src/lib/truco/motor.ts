@@ -703,6 +703,10 @@ function resolverEnvido(
     motivo: `Envido querido (+${puntosOtorgados})`
   });
   anuncio(estado, jugador.id, fraseAleatoria("quiero"), "respuesta");
+  // Cada equipo canta su tanto en orden: el "mano" primero, después el
+  // otro. La capa de audio detecta el número y reproduce el clip de
+  // envido_puntos correspondiente con la voz del jugador.
+  declararTantos(estado, eq0, eq1);
   anuncio(estado, "", detalle, "puntos");
   anuncio(
     estado,
@@ -719,6 +723,39 @@ function resolverEnvido(
   }
   estado.version++;
   return { ok: true, estado };
+}
+
+/** Anuncia el tanto de cada equipo en orden — el "mano" primero, después
+ *  el otro. Si el segundo tiene menos, dice "Son buenas". Si tiene más,
+ *  declara su número. La capa de audio detecta el "Tengo N." y reproduce
+ *  el clip de envido_puntos/<N>.mp3 con la voz del jugador. */
+function declararTantos(
+  estado: EstadoJuego,
+  eq0: { jugadorId: string; puntos: number },
+  eq1: { jugadorId: string; puntos: number }
+) {
+  const mano = estado.manoActual!;
+  const eqMano = mano.manoEquipo;
+  const declMano = eqMano === 0 ? eq0 : eq1;
+  const declOtro = eqMano === 0 ? eq1 : eq0;
+
+  anuncio(estado, declMano.jugadorId, `Tengo ${declMano.puntos}.`, "respuesta");
+
+  if (declOtro.puntos > declMano.puntos) {
+    anuncio(
+      estado,
+      declOtro.jugadorId,
+      `Tengo ${declOtro.puntos}.`,
+      "respuesta"
+    );
+  } else {
+    anuncio(
+      estado,
+      declOtro.jugadorId,
+      fraseAleatoria("son_buenas"),
+      "respuesta"
+    );
+  }
 }
 
 function mejorEnvidoPorEquipo(estado: EstadoJuego) {

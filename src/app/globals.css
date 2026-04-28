@@ -512,8 +512,11 @@ body {
  * Reverso (back) sí dibuja su propio fondo en azul criollo. */
 .es-card {
   @apply relative aspect-[2/3] rounded-lg overflow-hidden select-none;
-  background: transparent;
-  border: none;
+  /* Fondo crema como papel de naipe — tapa el "rectángulo transparente con
+   * sombra" mientras la <img> de la cara se descarga. Cuando la imagen
+   * carga, queda tapado completamente. */
+  background: var(--crema);
+  border: 1px solid rgba(30, 27, 24, 0.25);
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.35),
     0 4px 10px rgba(0, 0, 0, 0.4);

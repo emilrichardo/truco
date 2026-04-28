@@ -1,17 +1,16 @@
-// Frases para cantos y respuestas, en habla URBANA del norte argentino.
-// Cada categoría tiene 5 variantes (cantos) o 7-8 (reacciones), de menor
-// a mayor intensidad. El motor pica una al azar al emitir el evento.
+// Frases para cantos y respuestas en habla joven urbana argentina,
+// con un toque del norte (Salta / Tucumán / Santiago capital). Cada
+// categoría tiene 5 variantes (cantos) o 7-8 (reacciones), de menor a
+// mayor intensidad. El motor pica una al azar al emitir el evento.
 //
-// Estas mismas frases las consume scripts/generar-voces.ts para
-// sintetizar MP3 con ElevenLabs — audio y chat siempre en sync.
+// Las consume también scripts/generar-voces.ts para sintetizar MP3
+// con ElevenLabs — audio y chat siempre en sync.
 //
-// Estilo: norteño urbano (Salta / Tucumán / Santiago capital), no del
-// monte profundo. Sin quichuismos heavy ("ckari" fuera, "achalay" sólo
-// como interjección breve). Vocativos: loco, primito, hermano,
-// hermanazo, primo, paisano, che. Groserías argentinas con buen gusto:
-// ura (puta), conchudo, culiao, qué lo parió, a la pucha, mierda,
-// carajo. Apóstrofo para caída de "s" sólo en gritos. "Pué" y "nomá'"
-// como muletillas norteñas pero sin abusar.
+// Estilo: pibe de ciudad, sin quechua. Vocativos: loco, primo,
+// primito, hermano, hermanazo, paisano, che. Groserías argentinas con
+// buen gusto: ura (puta), conchudo, culiao, qué lo parió, a la pucha,
+// mierda, carajo, qué cagada, qué macana. Apóstrofo para caída de "s"
+// sólo en gritos. "Pué" y "nomá'" como muletillas norteñas, sin abusar.
 
 export type CategoriaFrase =
   | "envido"
@@ -142,13 +141,13 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
   ],
   perdio_mano: [
     "Uy.",
-    "Atatay.",
+    "Uff.",
     "Uhh.",
     "¡Qué lo parió!",
     "¡A la pucha, ura!",
     "¡Mierda, culiao!",
     "¡Pero la concha!",
-    "Atatay con esto."
+    "Qué cagada."
   ],
   gane_partida: [
     "¡Listo el pollo!",
@@ -166,7 +165,7 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "¡Mierda, qué lo parió!",
     "¡A la pucha, culiao!",
     "¡La concha del mazo!",
-    "Atatay, perdimos."
+    "Nos cagaron, qué macana."
   ]
 };
 
