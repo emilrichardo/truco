@@ -229,8 +229,9 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
       // Próxima baza o final de mano
       if (mano.bazas.length < 3 && !mano.ganadorMano) {
         mano.bazas.push({ jugadas: [], ganadorEquipo: null, pardada: false });
-        // La ronda no cambia de sentido entre bazas: sigue el asiento
-        // siguiente al último que jugó, siempre en orden anti-horario.
+        // Regla del truco: "el que mata es mano". Abre la próxima baza
+        // el jugador que ganó la anterior; si fue parda, abre el mismo
+        // que la abrió.
         mano.turnoJugadorId = siguienteJugadorDespuesDeBaza(estado, baza);
       }
     }
@@ -247,9 +248,22 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
 }
 
 function siguienteJugadorDespuesDeBaza(estado: EstadoJuego, baza: Baza): string {
-  const ultima = baza.jugadas[baza.jugadas.length - 1];
-  const jugador = jugadorPorId(estado, ultima.jugadorId)!;
-  return jugadorPorAsiento(estado, siguienteAsiento(estado, jugador.asiento)).id;
+  // "El que mata es mano": si la baza tuvo ganador, abre la próxima el
+  // jugador del equipo ganador que tiró la carta más alta. Si fue parda,
+  // abre el mismo que abrió esta baza (si la parda anterior también fue
+  // parda, esto se resuelve por recursión: el opener se mantiene).
+  if (baza.ganadorEquipo !== null && !baza.pardada) {
+    let mejor: { jugadorId: string; carta: Carta } | null = null;
+    for (const j of baza.jugadas) {
+      const jug = jugadorPorId(estado, j.jugadorId)!;
+      if (jug.equipo !== baza.ganadorEquipo) continue;
+      if (!mejor || comparar(j.carta, mejor.carta) > 0) {
+        mejor = { jugadorId: j.jugadorId, carta: j.carta };
+      }
+    }
+    if (mejor) return mejor.jugadorId;
+  }
+  return baza.jugadas[0].jugadorId;
 }
 
 function resolverBaza(estado: EstadoJuego, baza: Baza) {

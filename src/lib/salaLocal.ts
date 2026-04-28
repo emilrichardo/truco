@@ -16,7 +16,10 @@ import { decidirAccionBot } from "@/lib/truco/ia";
 import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { PERSONAJES } from "@/data/jugadores";
 
-const RETARDO_BOT_MS = 700;
+// Delay antes de que el bot juegue/responda. 700ms se sentía instantáneo
+// y no daba tiempo al humano a leer el último canto o pensar antes de
+// que el bot tirara la siguiente carta. 1500ms se siente más natural.
+const RETARDO_BOT_MS = 1500;
 // Pausa entre que se cierra una mano (banner de resumen + última burbuja) y
 // el reparto de la siguiente. Sin esto las cartas nuevas aparecen detrás del
 // banner y se pisan con la burbuja del último canto.
