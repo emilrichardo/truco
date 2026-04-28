@@ -365,8 +365,8 @@ function GrupoBotones({
   return (
     <div className="flex items-stretch gap-1.5">
       <div
-        className="shrink-0 flex items-center justify-end px-2 py-1.5 text-[9px] uppercase tracking-widest font-bold text-dorado/70 border-l-2 border-dorado/40 w-[68px] sm:w-[80px] text-right leading-tight"
-        style={{ textShadow: "0 1px 0 rgba(0,0,0,0.4)" }}
+        className="shrink-0 flex items-center justify-end px-2 py-1.5 text-[10px] uppercase tracking-widest font-bold text-dorado border-l-2 border-dorado/60 w-[68px] sm:w-[80px] text-right leading-tight"
+        style={{ textShadow: "0 1px 0 rgba(0,0,0,0.6)" }}
       >
         {titulo}
       </div>

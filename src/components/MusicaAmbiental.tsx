@@ -105,8 +105,11 @@ export function MusicaAmbiental() {
     };
   }, []);
 
-  // Crear Howl para la pista actual. autoplay=true delega en Howler la
-  // espera del primer gesto del usuario para destrabar.
+  // Crear Howl para la pista actual. NO usamos autoplay — iOS Safari y
+  // Chrome móvil bloquean cualquier audio con sonido hasta que haya un
+  // gesto del usuario. En su lugar, escuchamos el primer touch/click en
+  // toda la página y ahí mandamos h.play(). Una vez destrabado, el
+  // browser respeta los .play() siguientes.
   useEffect(() => {
     if (pistas.length === 0 || actualIdx < 0) return;
     const pista = pistas[actualIdx % pistas.length];
@@ -114,25 +117,44 @@ export function MusicaAmbiental() {
       src: [`/audio/musica/${encodeURIComponent(pista)}`],
       volume: estado.volumen,
       html5: true, // streamea archivos largos
-      autoplay: !estado.silenciado,
       onend: () => {
-        // Próxima pista al azar, distinta a la que acaba de sonar.
         setActualIdx((a) => indiceRandom(pistas.length, a));
       },
       onplayerror: () => {
-        // Browser bloqueó el play. Reintentar cuando Howler destrabe.
+        // Browser bloqueó el play (típico en iOS antes del primer gesto).
+        // Reintentamos en el próximo unlock event.
         h.once("unlock", () => {
           if (!estado.silenciado) h.play();
         });
       },
       onloaderror: () => {
-        // Si la pista no carga, saltamos a la siguiente automáticamente.
         setActualIdx((a) => indiceRandom(pistas.length, a));
       }
     });
     howlRef.current = h;
 
+    // Intento 1: tratar de arrancar de una (funciona en desktop sin
+    // restricciones).
+    if (!estado.silenciado) h.play();
+
+    // Intento 2: si el browser bloquea, esperamos al primer gesto del
+    // usuario (iOS / Chrome móvil) y disparamos play() ahí mismo. Tiene
+    // que ejecutarse SÍNCRONAMENTE dentro del handler para que cuente
+    // como "user gesture" en iOS.
+    const arrancarConGesto = () => {
+      if (estado.silenciado) return;
+      if (h.playing()) return;
+      h.play();
+    };
+    window.addEventListener("touchstart", arrancarConGesto, {
+      once: true,
+      passive: true
+    });
+    window.addEventListener("click", arrancarConGesto, { once: true });
+
     return () => {
+      window.removeEventListener("touchstart", arrancarConGesto);
+      window.removeEventListener("click", arrancarConGesto);
       h.stop();
       h.unload();
       if (howlRef.current === h) howlRef.current = null;

@@ -79,13 +79,8 @@ export function Mesa({ estado, miId }: { estado: EstadoJuego; miId: string }) {
     <div className="relative w-full h-full">
       <div className="absolute inset-1 sm:inset-2 tapete" />
 
-      {/* Centro: sólo el sol criollo, decorativo. La meta info (Mano · Baza
-       *  y Vale X) se renderea abajo para no pisar las cartas tiradas. */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
-        <div className="text-dorado/10 text-6xl leading-none select-none">
-          ☀
-        </div>
-      </div>
+      {/* La meta info (Mano · Baza y Vale X) se renderea abajo para no pisar
+       *  las cartas tiradas. */}
       <div className="absolute left-1/2 bottom-1 -translate-x-1/2 z-10 flex items-center gap-2 pointer-events-none">
         <div
           className="text-dorado/80 text-[10px] uppercase tracking-widest font-bold"
