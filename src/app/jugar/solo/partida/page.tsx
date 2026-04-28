@@ -148,10 +148,10 @@ function PartidaSoloInterno() {
         </div>
 
         {/* Reserva derecha para no chocar con MusicaAmbiental (fixed
-         *  top-1.5 right-2 z-50, ~140px de ancho con sus 2 botones +
-         *  slider). Dejamos el espacio vacío en el flex; los controles
-         *  flotan encima sin tapar el score. */}
-        <div className="w-[140px] shrink-0" aria-hidden />
+         *  top-1.5 right-2 z-50, ~170-180px reales con padding y safe-
+         *  area). Antes era 140px y la pill de música tapaba el score.
+         *  El widget flota fixed encima de este slot vacío. */}
+        <div className="w-[180px] shrink-0" aria-hidden />
       </header>
 
       <div className="flex-1 flex overflow-hidden relative">
