@@ -143,7 +143,9 @@ function BurbujaCanto({
     <div
       key={keyAnim}
       className={clsx(
-        "absolute z-40 pointer-events-none envido-pop",
+        // z-[400] para quedar por encima de las cartas tiradas en mesa
+        // (que llegan a z-index 350 con la lógica de bazas).
+        "absolute z-[400] pointer-events-none envido-pop",
         clasePosicion(lado)
       )}
     >
