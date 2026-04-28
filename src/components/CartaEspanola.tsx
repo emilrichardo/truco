@@ -8,7 +8,10 @@ type Tamanio = "xs" | "sm" | "md" | "lg";
 const ANCHOS: Record<Tamanio, string> = {
   xs: "w-9 sm:w-10",
   sm: "w-20 sm:w-24",
-  md: "w-28 sm:w-36 md:w-40",
+  // md: en mobile achicado ~20% (5.5rem = 88px vs antes 7rem/112px)
+  // para que las cartas tiradas en la mesa no choquen con los
+  // avatares de los jugadores. En desktop / sm+ queda igual.
+  md: "w-[5.5rem] sm:w-36 md:w-40",
   lg: "w-32 sm:w-44 md:w-52"
 };
 
