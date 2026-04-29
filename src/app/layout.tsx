@@ -151,7 +151,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: structuredDataJson }}
         />
       </head>
-      <body className="antialiased font-sans">
+      {/* suppressHydrationWarning evita el warning de React cuando una
+          extensión del navegador (Bitwarden, ColorZilla, Console Ninja,
+          Grammarly, etc.) inyecta atributos en el <body> antes de la
+          hidratación. No tapa errores de hidratación reales del código
+          de la app — sólo los del body de nivel root. */}
+      <body className="antialiased font-sans" suppressHydrationWarning>
         {children}
         <MusicaAmbiental />
       </body>
