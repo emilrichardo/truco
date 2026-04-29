@@ -13,7 +13,7 @@ import {
   iniciarPartida
 } from "@/lib/truco/motor";
 import { decidirAccionBot } from "@/lib/truco/ia";
-import { calcularEnvido } from "@/lib/truco/cartas";
+import { calcularEnvido, jerarquia } from "@/lib/truco/cartas";
 import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { PERSONAJES } from "@/data/jugadores";
 
@@ -314,18 +314,46 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   );
 
   // Resolver consulta: el humano decide qué hace su bot compañero.
-  //  - envido: "envido" / "real_envido" / "falta_envido" / "no"
-  //  - truco:  "truco" / "no"
-  // En "no" el bot juega su carta normalmente (decidirAccionBot decide
-  // qué carta es sensata para ese contexto).
+  //  - "envido" / "real_envido" / "falta_envido": el bot canta esa apuesta.
+  //  - "juga": el bot tira la carta más alta (matar). Pensado para
+  //    cuando el humano quiere asegurar la baza con la carta brava.
+  //  - "veni": el bot tira la carta más baja (venir con poco). Útil
+  //    para ahorrar cartas grandes para más adelante.
   const resolverConsulta = useCallback(
-    (decision: "envido" | "real_envido" | "falta_envido" | "no") => {
+    (
+      decision:
+        | "envido"
+        | "real_envido"
+        | "falta_envido"
+        | "juga"
+        | "veni"
+    ) => {
       if (!estado || !consulta) return;
       const botId = consulta.botJugadorId;
-      const accion: Accion =
-        decision === "no"
-          ? decidirAccionBot(estado, botId)
-          : { tipo: `cantar_${decision}` as Accion["tipo"], jugadorId: botId };
+      let accion: Accion;
+      if (decision === "juga" || decision === "veni") {
+        const cartas = estado.manoActual?.cartasPorJugador[botId] || [];
+        if (cartas.length === 0) {
+          // Caso raro: el bot ya jugó todas. Caemos al decisor de la IA.
+          accion = decidirAccionBot(estado, botId);
+        } else {
+          const ordenadas = [...cartas].sort(
+            (a, b) => jerarquia(a) - jerarquia(b)
+          );
+          const elegida =
+            decision === "juga" ? ordenadas[ordenadas.length - 1] : ordenadas[0];
+          accion = {
+            tipo: "jugar_carta",
+            jugadorId: botId,
+            cartaId: elegida.id
+          };
+        }
+      } else {
+        accion = {
+          tipo: `cantar_${decision}` as Accion["tipo"],
+          jugadorId: botId
+        };
+      }
       const r = aplicarAccion(estado, accion);
       setConsulta(null);
       if (r.ok) dispatch({ tipo: "set", estado: { ...estado } });
