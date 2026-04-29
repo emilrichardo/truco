@@ -29,6 +29,7 @@ import { MiAvatarBR } from "@/components/MiAvatarBR";
 import { setMusicaUIOculta } from "@/components/MusicaAmbiental";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 import { usePreloadCartas } from "@/lib/preload";
+import { decidirAccionBot } from "@/lib/truco/ia";
 
 export default function SalaPage() {
   // Preload de cartas al entrar a la sala — si el usuario abrió el link
@@ -53,6 +54,13 @@ export default function SalaPage() {
     { id: string; nombre: string; conectado: boolean }[]
   >([]);
   const avisoTimerRef = useRef<number | null>(null);
+  const botTimerRef = useRef<number | null>(null);
+  // Para evitar despachar dos veces la misma acción del bot cuando el
+  // estado se actualiza por realtime y el effect re-corre antes de que
+  // llegue el estado pos-acción.
+  const ultimaAccionBotRef = useRef<{ jugadorId: string; version: number } | null>(
+    null
+  );
 
   const { estado, salaMeta, error: errorSala } = useSalaOnline(salaId);
   const chatVisibleCount = useMemo(() => {
@@ -65,6 +73,96 @@ export default function SalaPage() {
 
   // Audio del juego: cantos, cartas, reacciones.
   useAudioJuego(estado, miId);
+
+  // Dispatcher de bots: el creador (asiento 0) corre la IA de los bots
+  // localmente y manda sus acciones al servidor vía sala-accion. Sin
+  // este effect los bots quedaban congelados aunque la partida hubiera
+  // arrancado. Misma idea que salaLocal pero pasando por la edge
+  // function en vez de aplicarAccion en memoria.
+  const RETARDO_BOT_MS = 1500;
+  const RETARDO_PROX_MANO_MS = 3500;
+  useEffect(() => {
+    if (!estado || !miId || !estado.iniciada) return;
+    if (estado.ganadorPartida !== null) return;
+    const yo = estado.jugadores.find((j) => j.id === miId);
+    if (!yo || yo.asiento !== 0) return; // sólo el creador despacha bots
+    const mano = estado.manoActual;
+    if (!mano) return;
+
+    if (botTimerRef.current) {
+      clearTimeout(botTimerRef.current);
+      botTimerRef.current = null;
+    }
+
+    // Mano cerrada — el creador dispara la próxima.
+    if (mano.fase === "terminada") {
+      botTimerRef.current = window.setTimeout(() => {
+        enviarAccionOnline(salaId, miId, {
+          tipo: "iniciar_prox_mano",
+          jugadorId: ""
+        });
+      }, RETARDO_PROX_MANO_MS);
+      return () => {
+        if (botTimerRef.current) {
+          clearTimeout(botTimerRef.current);
+          botTimerRef.current = null;
+        }
+      };
+    }
+
+    // ¿Quién actúa ahora si es bot? Mismo criterio que salaLocal.
+    let actor: typeof yo | undefined;
+    if (mano.envidoCantoActivo) {
+      const eq = mano.envidoCantoActivo.equipoQueDebeResponder;
+      const tieneHumano = estado.jugadores.some(
+        (j) => j.equipo === eq && !j.esBot
+      );
+      if (!tieneHumano) {
+        actor = estado.jugadores.find((j) => j.equipo === eq && j.esBot);
+      }
+    } else if (mano.trucoCantoActivo) {
+      const eq = mano.trucoCantoActivo.equipoQueDebeResponder;
+      const tieneHumano = estado.jugadores.some(
+        (j) => j.equipo === eq && !j.esBot
+      );
+      if (!tieneHumano) {
+        actor = estado.jugadores.find((j) => j.equipo === eq && j.esBot);
+      }
+    } else {
+      actor = estado.jugadores.find(
+        (j) => j.id === mano.turnoJugadorId && j.esBot
+      );
+    }
+    if (!actor) return;
+
+    // Anti-doble dispatch: si ya despachamos una acción para este bot
+    // a esta versión del estado, no la repetimos. Cuando el estado se
+    // actualice (post-acción), version subirá y volvemos a evaluar.
+    const ultimaAccion = ultimaAccionBotRef.current;
+    if (
+      ultimaAccion &&
+      ultimaAccion.jugadorId === actor.id &&
+      ultimaAccion.version === estado.version
+    ) {
+      return;
+    }
+
+    botTimerRef.current = window.setTimeout(() => {
+      const accion = decidirAccionBot(estado, actor!.id);
+      ultimaAccionBotRef.current = {
+        jugadorId: actor!.id,
+        version: estado.version
+      };
+      enviarAccionOnline(salaId, miId, accion);
+    }, RETARDO_BOT_MS);
+
+    return () => {
+      if (botTimerRef.current) {
+        clearTimeout(botTimerRef.current);
+        botTimerRef.current = null;
+      }
+    };
+  }, [estado, miId, salaId]);
 
   useEffect(() => {
     if (errorSala) setError(errorSala);

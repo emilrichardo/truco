@@ -19,8 +19,6 @@ Deno.serve(async (req) => {
   if (!body || !body.sala_id || !body.jugador_id || !body.accion) {
     return fail("missing_fields");
   }
-  // El cliente puede mandar accion sin jugadorId; lo forzamos al del payload.
-  body.accion.jugadorId = body.jugador_id;
 
   const sb = admin();
   const { data: sala, error: errSel } = await sb
@@ -32,9 +30,42 @@ Deno.serve(async (req) => {
   if (!sala.iniciada) return fail("no_iniciada", 409);
   if (sala.terminada) return fail("ya_terminada", 409);
 
-  const estadoActual = sala.estado as EstadoJuego;
+  // Resolución de quién actúa:
+  //  - Caso normal: la acción es del propio jugador. Forzamos
+  //    accion.jugadorId = body.jugador_id (default seguro).
+  //  - Caso bot: el creador (asiento 0) puede despachar acciones de
+  //    bots de la sala. En ese caso accion.jugadorId viene seteado al
+  //    bot y debe quedar así para que el motor lo procese.
+  //  - "iniciar_prox_mano" es un trigger sin jugadorId — sólo el
+  //    creador puede dispararla.
+  const estadoSala = sala.estado as EstadoJuego;
+  if (body.accion.tipo === "iniciar_prox_mano") {
+    const dispatcher = estadoSala.jugadores.find((j) => j.id === body.jugador_id);
+    if (!dispatcher || dispatcher.asiento !== 0) {
+      return fail("solo_creador", 403);
+    }
+    body.accion.jugadorId = "";
+  } else if (
+    body.accion.jugadorId &&
+    body.accion.jugadorId !== body.jugador_id
+  ) {
+    const dispatcher = estadoSala.jugadores.find((j) => j.id === body.jugador_id);
+    const target = estadoSala.jugadores.find(
+      (j) => j.id === body.accion.jugadorId
+    );
+    if (!dispatcher || dispatcher.asiento !== 0) {
+      return fail("solo_creador_despacha_bots", 403);
+    }
+    if (!target || !target.esBot) {
+      return fail("target_no_es_bot", 403);
+    }
+    // OK: dejamos accion.jugadorId apuntando al bot.
+  } else {
+    body.accion.jugadorId = body.jugador_id;
+  }
+
   const inicio = Date.now();
-  const r = aplicarAccion(estadoActual, body.accion);
+  const r = aplicarAccion(estadoSala, body.accion);
   if (!r.ok) return fail(r.error || "accion_invalida");
 
   const updates: Record<string, unknown> = { estado: r.estado };
