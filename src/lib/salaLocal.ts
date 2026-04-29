@@ -58,6 +58,8 @@ export interface ConfigSalaLocal {
   miPersonaje: string;
   tamanio: 2 | 4;
   puntosObjetivo: 18 | 30;
+  /** Si la partida se juega con flor (3 cartas mismo palo = +3 pts). */
+  conFlor: boolean;
   /** Si está presente, fuerza los personajes de los bots en orden de
    *  asiento (bot 1 = botPersonajes[0], bot 2 = botPersonajes[1], etc).
    *  Lo usa el botón "Revancha" para mantener a los mismos oponentes. */
@@ -117,6 +119,7 @@ function mismaConfig(a: ConfigSalaLocal, b: ConfigSalaLocal): boolean {
   return (
     a.tamanio === b.tamanio &&
     a.puntosObjetivo === b.puntosObjetivo &&
+    a.conFlor === b.conFlor &&
     a.miPersonaje === b.miPersonaje
   );
 }
@@ -182,7 +185,8 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
       salaId: `solo-${nuevoIdLocal().slice(6)}`,
       jugadores,
       modo: config.tamanio === 4 ? "2v2" : "1v1",
-      puntosObjetivo: config.puntosObjetivo
+      puntosObjetivo: config.puntosObjetivo,
+      conFlor: config.conFlor
     });
     iniciarPartida(inicial);
     guardarSnapshot({ estado: inicial, miId: yoId, config });
@@ -408,6 +412,18 @@ function deberiaConsultar(
     (c) => distanciaDeJuego(c.asiento) < miDist
   );
   if (!botEsPie) return null;
+
+  // Si hay flor pendiente sin resolver, el envido está bloqueado. No
+  // consultamos al humano por envido en esa ventana — primero se canta
+  // la flor (el botón de Flor le sale al jugador con flor en su panel).
+  if (estado.conFlor) {
+    if (mano.florResuelta) return null;
+    const alguienConFlor = estado.jugadores.some((j) => {
+      const enMano = mano.cartasPorJugador[j.id] || [];
+      return enMano.length === 3 && enMano.every((c) => c.palo === enMano[0].palo);
+    });
+    if (alguienConFlor) return null;
+  }
 
   // Sólo consultamos si la ventana de envido sigue abierta — sino ya no
   // hay nada que preguntar.

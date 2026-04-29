@@ -12,6 +12,7 @@ interface Payload {
   personaje: string;
   tamanio: 2 | 4;
   puntos_objetivo: 18 | 30;
+  con_flor?: boolean;
   device_id?: string;          // identificador estable del cliente
 }
 
@@ -76,7 +77,8 @@ Deno.serve(async (req) => {
     salaId,
     jugadores: [jugador],
     modo: body.tamanio === 4 ? "2v2" : "1v1",
-    puntosObjetivo: body.puntos_objetivo
+    puntosObjetivo: body.puntos_objetivo,
+    conFlor: !!body.con_flor
   });
 
   // 4) Persistir.

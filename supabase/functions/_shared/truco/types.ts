@@ -62,6 +62,14 @@ export interface ResolucionEnvido {
   detalle: string;
 }
 
+export interface ResolucionFlor {
+  ganadorEquipo: Equipo;
+  puntos: number;
+  detalle: string;
+  /** Quiénes cantaron flor en esta mano y con qué puntaje (20 + suma 2 cartas). */
+  cantos: { jugadorId: string; puntos: number }[];
+}
+
 export interface Mano {
   numero: number;
   manoEquipo: Equipo;
@@ -77,6 +85,12 @@ export interface Mano {
   trucoCantoActivo: CantoTrucoActivo | null;
   envidoResuelto: boolean;
   envidoResolucion: ResolucionEnvido | null;
+  /** Sólo si la partida se juega `conFlor`. Marca si ya se resolvió la
+   *  flor en esta mano. Una vez resuelta no se puede cantar envido. */
+  florResuelta: boolean;
+  florResolucion: ResolucionFlor | null;
+  /** Jugadores que cantaron flor en orden (para mostrar las frases en chat). */
+  florCantores: string[];
   /** Equipo que tiene "el truco" (puede subir el canto). null si nadie cantó truco aún. */
   equipoConTruco: Equipo | null;
   /** Puntos en juego por la mano (cuánto vale ganar). */
@@ -117,6 +131,7 @@ export type AccionTipo =
   | "cantar_envido"
   | "cantar_real_envido"
   | "cantar_falta_envido"
+  | "cantar_flor"
   | "responder_quiero"
   | "responder_no_quiero"
   | "cantar_truco"
@@ -139,6 +154,8 @@ export interface EstadoJuego {
   jugadores: Jugador[];
   /** 2v2 o 1v1: cantidad de equipos siempre 2. Tamaños 1, 2 o 4 jugadores. */
   modo: "1v1" | "2v2";
+  /** ¿Se juega con flor? (3 cartas mismo palo = +3 pts). Default: false. */
+  conFlor: boolean;
   puntosObjetivo: 18 | 30;
   puntos: [number, number];
   manoActual: Mano | null;

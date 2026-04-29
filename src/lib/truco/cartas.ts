@@ -117,6 +117,19 @@ export function valorEnvidoCarta(c: Carta): number {
   return c.numero;
 }
 
+/** ¿La mano tiene flor? Tres cartas del mismo palo. */
+export function tieneFlor(mano: Carta[]): boolean {
+  if (mano.length < 3) return false;
+  const palo = mano[0].palo;
+  return mano.every((c) => c.palo === palo);
+}
+
+/** Puntaje de la flor: 20 + suma de los valores de envido de las 3 cartas.
+ *  Asume que la mano efectivamente es flor (3 mismo palo). */
+export function valorFlor(mano: Carta[]): number {
+  return 20 + mano.reduce((s, c) => s + valorEnvidoCarta(c), 0);
+}
+
 /**
  * Calcula el envido de una mano de 3 cartas según las reglas argentinas:
  * - Si hay dos o más del mismo palo: 20 + suma de las dos más altas de ese palo.

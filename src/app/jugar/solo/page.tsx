@@ -15,6 +15,7 @@ export default function SoloPage() {
   const [cambiar, setCambiar] = useState(false);
   const [tamanio, setTamanio] = useState<2 | 4>(2);
   const [puntos, setPuntos] = useState<18 | 30>(18);
+  const [conFlor, setConFlor] = useState(false);
   const [creando, setCreando] = useState(false);
 
   // Mientras el usuario elige config, ya empezamos a bajar las cartas.
@@ -34,7 +35,9 @@ export default function SoloPage() {
     // Forzar partida nueva: limpiar snapshot anterior (chat, cartas, etc.)
     // así no arrastra estado de una partida previa.
     borrarSnapshotLocal();
-    router.push(`/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}`);
+    router.push(
+      `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}${conFlor ? "&flor=1" : ""}`
+    );
   };
 
   return (
@@ -105,6 +108,14 @@ export default function SoloPage() {
           </Choice>
           <Choice activo={puntos === 30} onClick={() => setPuntos(30)}>
             A 30 (15 + 15)
+          </Choice>
+        </Opcion>
+        <Opcion label="Flor">
+          <Choice activo={!conFlor} onClick={() => setConFlor(false)}>
+            Sin flor
+          </Choice>
+          <Choice activo={conFlor} onClick={() => setConFlor(true)}>
+            Con flor (+3 pts)
           </Choice>
         </Opcion>
 

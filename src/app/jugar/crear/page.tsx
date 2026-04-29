@@ -15,6 +15,7 @@ export default function CrearSalaPage() {
   const [cambiar, setCambiar] = useState(false);
   const [tamanio, setTamanio] = useState<2 | 4>(4);
   const [puntos, setPuntos] = useState<18 | 30>(30);
+  const [conFlor, setConFlor] = useState(false);
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +38,8 @@ export default function CrearSalaPage() {
       nombre: yo.nombre,
       personaje: miSlug,
       tamanio,
-      puntosObjetivo: puntos
+      puntosObjetivo: puntos,
+      conFlor
     });
     if (!r.ok || !r.sala_id || !r.jugador_id) {
       setError(r.error || "No se pudo crear la sala.");
@@ -121,6 +123,14 @@ export default function CrearSalaPage() {
           </Choice>
           <Choice activo={puntos === 30} onClick={() => setPuntos(30)}>
             A 30 (15 + 15)
+          </Choice>
+        </Opcion>
+        <Opcion label="Flor">
+          <Choice activo={!conFlor} onClick={() => setConFlor(false)}>
+            Sin flor
+          </Choice>
+          <Choice activo={conFlor} onClick={() => setConFlor(true)}>
+            Con flor (+3 pts)
           </Choice>
         </Opcion>
 

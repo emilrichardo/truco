@@ -91,13 +91,15 @@ export async function crearSalaOnline(payload: {
   personaje: string;
   tamanio: 2 | 4;
   puntosObjetivo: 18 | 30;
+  conFlor: boolean;
 }): Promise<SalaResp> {
   return invocar("sala-crear", {
     device_id: deviceId(),
     nombre: payload.nombre,
     personaje: payload.personaje,
     tamanio: payload.tamanio,
-    puntos_objetivo: payload.puntosObjetivo
+    puntos_objetivo: payload.puntosObjetivo,
+    con_flor: payload.conFlor
   });
 }
 

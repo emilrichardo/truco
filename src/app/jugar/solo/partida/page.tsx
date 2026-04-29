@@ -59,6 +59,7 @@ function PartidaSoloInterno() {
 
   const tamanio = (Number(params.get("tamanio")) === 4 ? 4 : 2) as 2 | 4;
   const puntos = (Number(params.get("puntos")) === 30 ? 30 : 18) as 18 | 30;
+  const conFlor = params.get("flor") === "1";
   // Si la URL trae `?bots=slug1,slug2,slug3` (orden por asiento), forzamos
   // a esos personajes. Lo usa el botón Revancha para mantener exactamente
   // los mismos oponentes entre partidas.
@@ -77,9 +78,10 @@ function PartidaSoloInterno() {
       miPersonaje: miSlug,
       tamanio,
       puntosObjetivo: puntos,
+      conFlor,
       botPersonajes: botsParam ? botsParam.split(",").filter(Boolean) : undefined
     };
-  }, [listoSlug, miSlug, tamanio, puntos, botsParam]);
+  }, [listoSlug, miSlug, tamanio, puntos, conFlor, botsParam]);
 
   const {
     estado,
@@ -344,6 +346,8 @@ function PartidaSoloInterno() {
                         .sort((a, b) => a.asiento - b.asiento)
                         .map((j) => j.personaje);
                       const url = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}${
+                        conFlor ? "&flor=1" : ""
+                      }${
                         slugsBots.length
                           ? `&bots=${encodeURIComponent(slugsBots.join(","))}`
                           : ""
