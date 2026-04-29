@@ -148,17 +148,26 @@ export default function SalaPage() {
     },
     [salaId, miId]
   );
-  const [agregandoBot, setAgregandoBot] = useState(false);
-  const sumarBot = useCallback(async () => {
-    if (agregandoBot) return; // evita doble click
-    setAgregandoBot(true);
-    try {
-      const r = await agregarBotOnline(salaId, miId ?? undefined);
-      if (!r.ok) setError(r.error || "No se pudo agregar bot.");
-    } finally {
-      setAgregandoBot(false);
-    }
-  }, [salaId, miId, agregandoBot]);
+  // Trackeamos en qué asiento está cargando el bot — así sólo ese slot
+  // muestra "Cargando bot…" en vez de pintar todos los slots vacíos a la
+  // vez. Si hay un asiento cargando, los otros botones se deshabilitan
+  // para evitar doble pedido a la edge function.
+  const [cargandoEnAsiento, setCargandoEnAsiento] = useState<number | null>(
+    null
+  );
+  const sumarBot = useCallback(
+    async (asiento: number) => {
+      if (cargandoEnAsiento !== null) return;
+      setCargandoEnAsiento(asiento);
+      try {
+        const r = await agregarBotOnline(salaId, miId ?? undefined);
+        if (!r.ok) setError(r.error || "No se pudo agregar bot.");
+      } finally {
+        setCargandoEnAsiento(null);
+      }
+    },
+    [salaId, miId, cargandoEnAsiento]
+  );
   const quitarBot = useCallback(
     async (botId: string) => {
       const r = await abandonarSalaOnline(salaId, botId);
@@ -323,11 +332,24 @@ export default function SalaPage() {
           </div>
           <button
             onClick={() => setMenuCompartir(true)}
-            className="btn btn-primary !px-2 !py-1 !min-h-0 text-[11px] flex items-center gap-1 shrink-0"
-            title="Compartir enlace"
+            className="btn btn-primary !px-3 !py-1.5 !min-h-0 text-xs flex items-center gap-1.5 shrink-0 font-bold"
+            title="Compartir enlace de la sala"
           >
-            <span aria-hidden>📤</span>
-            <span className="hidden sm:inline">Compartir</span>
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M10 13a5 5 0 0 0 7.07 0l3.54-3.54a5 5 0 0 0-7.07-7.07l-1.41 1.41" />
+              <path d="M14 11a5 5 0 0 0-7.07 0l-3.54 3.54a5 5 0 0 0 7.07 7.07l1.41-1.41" />
+            </svg>
+            <span>Compartir sala</span>
           </button>
         </header>
       ) : (
@@ -389,7 +411,7 @@ export default function SalaPage() {
           onIniciar={iniciar}
           onSumarBot={sumarBot}
           onQuitarBot={quitarBot}
-          agregandoBot={agregandoBot}
+          cargandoEnAsiento={cargandoEnAsiento}
           onCerrar={() => setConfirmSalir(true)}
           cerrando={cerrando}
         />
@@ -540,16 +562,16 @@ function SalaEspera({
   onCerrar,
   onSumarBot,
   onQuitarBot,
-  agregandoBot,
+  cargandoEnAsiento,
   cerrando
 }: {
   estado: EstadoJuego;
   miId: string | null;
   onIniciar: (mezclarEquipos: boolean) => void;
   onCerrar: () => void;
-  onSumarBot?: () => void;
+  onSumarBot?: (asiento: number) => void;
   onQuitarBot?: (botId: string) => void;
-  agregandoBot?: boolean;
+  cargandoEnAsiento?: number | null;
   cerrando: boolean;
 }) {
   const total = estado.modo === "2v2" ? 4 : 2;
@@ -568,19 +590,24 @@ function SalaEspera({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className={`flex-1 grid ${gridCls} gap-3 p-3 sm:p-4`}>
-        {slots.map(({ i, j }) => (
-          <SlotEspera
-            key={i}
-            asiento={i}
-            jugador={j}
-            esYo={j?.id === miId}
-            onSumarBot={!j && onSumarBot ? onSumarBot : undefined}
-            agregandoBot={agregandoBot}
-            onQuitarBot={
-              j?.esBot && onQuitarBot ? () => onQuitarBot(j.id) : undefined
-            }
-          />
-        ))}
+        {slots.map(({ i, j }) => {
+          const hayCargando = cargandoEnAsiento != null;
+          const esEstaSlotCargando = cargandoEnAsiento === i;
+          return (
+            <SlotEspera
+              key={i}
+              asiento={i}
+              jugador={j}
+              esYo={j?.id === miId}
+              onSumarBot={!j && onSumarBot ? () => onSumarBot(i) : undefined}
+              cargandoBot={esEstaSlotCargando}
+              deshabilitarBot={hayCargando && !esEstaSlotCargando}
+              onQuitarBot={
+                j?.esBot && onQuitarBot ? () => onQuitarBot(j.id) : undefined
+              }
+            />
+          );
+        })}
       </div>
       {/* Toggle: solo en 2v2, donde tiene sentido sortear compañeros */}
       {total === 4 && (
@@ -632,14 +659,16 @@ function SlotEspera({
   esYo,
   onSumarBot,
   onQuitarBot,
-  agregandoBot
+  cargandoBot,
+  deshabilitarBot
 }: {
   asiento: number;
   jugador?: Jugador;
   esYo: boolean;
   onSumarBot?: () => void;
   onQuitarBot?: () => void;
-  agregandoBot?: boolean;
+  cargandoBot?: boolean;
+  deshabilitarBot?: boolean;
 }) {
   const equipo = (asiento % 2) as 0 | 1;
   const colorEquipo = equipo === 0 ? "border-dorado" : "border-azul-criollo";
@@ -704,11 +733,18 @@ function SlotEspera({
             <button
               type="button"
               onClick={onSumarBot}
-              disabled={agregandoBot}
-              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-[10px] mt-1 disabled:opacity-60"
+              disabled={cargandoBot || deshabilitarBot}
+              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-[10px] mt-1 disabled:opacity-50"
               title="Llenar este lugar con un bot"
             >
-              {agregandoBot ? "Cargando bot…" : "+ Sumar bot"}
+              {cargandoBot ? (
+                <span className="flex items-center gap-1">
+                  <span className="parpadeo">⏳</span>
+                  <span>Cargando bot…</span>
+                </span>
+              ) : (
+                "+ Sumar bot"
+              )}
             </button>
           )}
         </>
