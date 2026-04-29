@@ -17,7 +17,8 @@ export const PERSONAJES: PersonajeMeta[] = [
   { slug: "richi", nombre: "Richi", numero: 10 },
   { slug: "jorge", nombre: "Jorge", numero: 10 },
   { slug: "rodrigo", nombre: "Rodrigo", numero: 11 },
-  { slug: "dani", nombre: "Dani", numero: 12 }
+  { slug: "dani", nombre: "Dani", numero: 12 },
+  { slug: "gonzalo", nombre: "Gonzalo", numero: 3 }
 ];
 
 export function getPersonaje(slug: string): PersonajeMeta | undefined {
