@@ -54,7 +54,7 @@ export function MenuCompartir({
 
   return (
     <div
-      className="fixed inset-0 sheet-bg z-50 flex items-end sm:items-center justify-center p-3"
+      className="fixed inset-0 sheet-bg z-50 flex items-center justify-center p-3"
       onClick={onCerrar}
     >
       <div
