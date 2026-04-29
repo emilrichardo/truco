@@ -6,15 +6,27 @@
 // si el usuario refresca la página la partida sigue donde estaba.
 // Las partidas vs máquina NUNCA se persisten en Supabase (no cuentan
 // para el ranking ni para el historial entre primos).
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import {
   aplicarAccion,
   crearEstadoInicial,
   iniciarPartida
 } from "@/lib/truco/motor";
 import { decidirAccionBot } from "@/lib/truco/ia";
+import { calcularEnvido } from "@/lib/truco/cartas";
 import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { PERSONAJES } from "@/data/jugadores";
+
+/** Consulta del bot compañero al humano antes de actuar en baza 1.
+ *  Cuando el bot tiene su turno y hay ventana de envido abierta, en vez
+ *  de tirar carta directamente le pregunta al humano si quiere cantar. */
+export interface ConsultaCompañero {
+  tipo: "envido";
+  /** ID del bot que está esperando la decisión. */
+  botJugadorId: string;
+  /** Cuántos puntos de envido tiene el bot — para que el humano decida. */
+  envidoBot: number;
+}
 
 // Delay antes de que el bot juegue/responda. 700ms se sentía instantáneo
 // y no daba tiempo al humano a leer el último canto o pensar antes de
@@ -113,6 +125,7 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     miId: null
   });
   const botTimerRef = useRef<number | null>(null);
+  const [consulta, setConsulta] = useState<ConsultaCompañero | null>(null);
 
   // Inicialización: si hay snapshot guardado con la misma config, lo
   // restauramos. Si no, armamos estado nuevo.
@@ -217,7 +230,28 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     }
 
     const actor = quienActuaSiBot(estado);
-    if (!actor) return;
+    if (!actor) {
+      setConsulta(null);
+      return;
+    }
+
+    // Antes de actuar: ¿el bot debería consultar al humano? Si la ventana
+    // de envido está abierta y el compañero es humano, pausamos y le
+    // pedimos al humano que decida en lugar de jugar carta a ciegas.
+    const c = deberiaConsultar(estado, actor);
+    if (c) {
+      setConsulta((prev) => {
+        if (
+          prev &&
+          prev.botJugadorId === c.botJugadorId &&
+          prev.tipo === c.tipo
+        )
+          return prev;
+        return c;
+      });
+      return;
+    }
+    setConsulta(null);
 
     botTimerRef.current = window.setTimeout(() => {
       // Mutamos una copia: aplicarAccion mutará in-place, así que reusamos
@@ -277,7 +311,68 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     [estado, miId]
   );
 
-  return { estado, miId, enviarAccion, enviarChat };
+  // Resolver consulta: el humano decide qué hace su bot compañero.
+  //  - "envido" / "real_envido" / "falta_envido": el bot canta esa apuesta.
+  //  - "no": el bot juega su carta normal (decidirAccionBot puede igual
+  //    cantar truco si tiene mano excepcional, eso ya es decisión propia
+  //    sobre el truco, no sobre el envido).
+  const resolverConsulta = useCallback(
+    (decision: "envido" | "real_envido" | "falta_envido" | "no") => {
+      if (!estado || !consulta) return;
+      const botId = consulta.botJugadorId;
+      const accion: Accion =
+        decision === "no"
+          ? decidirAccionBot(estado, botId)
+          : { tipo: `cantar_${decision}` as Accion["tipo"], jugadorId: botId };
+      const r = aplicarAccion(estado, accion);
+      setConsulta(null);
+      if (r.ok) dispatch({ tipo: "set", estado: { ...estado } });
+    },
+    [estado, consulta]
+  );
+
+  return {
+    estado,
+    miId,
+    enviarAccion,
+    enviarChat,
+    consulta,
+    resolverConsulta
+  };
+}
+
+/** Decide si el bot que está por actuar debe pedir input al humano antes
+ *  de tirar carta. Hoy aplica sólo a la ventana de envido en baza 1: si el
+ *  compañero del bot es humano y todavía no se cantó/resolvió envido,
+ *  paramos y mostramos opciones. Más adelante se puede extender al truco. */
+function deberiaConsultar(
+  estado: EstadoJuego,
+  bot: Jugador
+): ConsultaCompañero | null {
+  if (!bot.esBot) return null;
+  const compañeroHumano = estado.jugadores.some(
+    (j) => j.equipo === bot.equipo && j.id !== bot.id && !j.esBot
+  );
+  if (!compañeroHumano) return null;
+  const mano = estado.manoActual;
+  if (!mano) return null;
+  if (mano.turnoJugadorId !== bot.id) return null;
+  // Si hay un canto pendiente del rival, el flujo de respuesta ya delega
+  // al humano vía quienActuaSiBot — no necesitamos consultar acá.
+  if (mano.envidoCantoActivo || mano.trucoCantoActivo) return null;
+  // Sólo consultamos si la ventana de envido sigue abierta — sino ya no
+  // hay nada que preguntar.
+  const envidoCantable =
+    mano.bazas.length === 1 &&
+    !mano.envidoResuelto &&
+    mano.bazas[0].jugadas.length < estado.jugadores.length;
+  if (!envidoCantable) return null;
+  // En baza 1 antes de jugar, las cartas en mano del bot son sus 3
+  // originales. Calculamos el envido que tiene para que el humano decida
+  // con info concreta.
+  const cartas = mano.cartasPorJugador[bot.id] || [];
+  const envidoBot = calcularEnvido(cartas);
+  return { tipo: "envido", botJugadorId: bot.id, envidoBot };
 }
 
 function quienActuaSiBot(estado: EstadoJuego): Jugador | undefined {

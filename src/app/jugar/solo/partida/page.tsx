@@ -11,6 +11,7 @@ import { PrecargaCartas } from "@/components/PrecargaCartas";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
 import { ChatFlotante } from "@/components/ChatFlotante";
+import { ConsultaCompañero } from "@/components/ConsultaCompañero";
 import { MiAvatarBR } from "@/components/MiAvatarBR";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 import {
@@ -73,7 +74,14 @@ function PartidaSoloInterno() {
     };
   }, [listoSlug, miSlug, tamanio, puntos, botsParam]);
 
-  const { estado, miId, enviarAccion, enviarChat } = useSalaLocal(config);
+  const {
+    estado,
+    miId,
+    enviarAccion,
+    enviarChat,
+    consulta,
+    resolverConsulta
+  } = useSalaLocal(config);
 
   // Cuando termina la partida, esperamos 2s antes de mostrar el modal
   // de fin para que el jugador alcance a ver las cartas que cerraron
@@ -170,6 +178,13 @@ function PartidaSoloInterno() {
               <Mesa estado={estado} miId={miId} enviarChat={enviarChat} />
             <ResultadoEnvido estado={estado} miId={miId} />
             <ResultadoMano estado={estado} miId={miId} />
+            {consulta && (
+              <ConsultaCompañero
+                consulta={consulta}
+                estado={estado}
+                onResolver={resolverConsulta}
+              />
+            )}
             <MiAvatarBR estado={estado} miId={miId} />
             <ChatFlotante
               estado={estado}
