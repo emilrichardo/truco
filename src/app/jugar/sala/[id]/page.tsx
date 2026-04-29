@@ -20,7 +20,7 @@ import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { Mesa } from "@/components/Mesa";
 import { PanelAcciones } from "@/components/PanelAcciones";
 import { Chat } from "@/components/Chat";
-import { Marcador } from "@/components/Marcador";
+import { ContadorPuntos } from "@/components/ContadorPuntos";
 import { ChatFlotante } from "@/components/ChatFlotante";
 import { MenuCompartir } from "@/components/MenuCompartir";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
@@ -148,10 +148,24 @@ export default function SalaPage() {
     },
     [salaId, miId]
   );
+  const [agregandoBot, setAgregandoBot] = useState(false);
   const sumarBot = useCallback(async () => {
-    const r = await agregarBotOnline(salaId, miId ?? undefined);
-    if (!r.ok) setError(r.error || "No se pudo agregar bot.");
-  }, [salaId, miId]);
+    if (agregandoBot) return; // evita doble click
+    setAgregandoBot(true);
+    try {
+      const r = await agregarBotOnline(salaId, miId ?? undefined);
+      if (!r.ok) setError(r.error || "No se pudo agregar bot.");
+    } finally {
+      setAgregandoBot(false);
+    }
+  }, [salaId, miId, agregandoBot]);
+  const quitarBot = useCallback(
+    async (botId: string) => {
+      const r = await abandonarSalaOnline(salaId, botId);
+      if (!r.ok) setError(r.error || "No se pudo quitar el bot.");
+    },
+    [salaId]
+  );
   const cerrarSala = useCallback(async () => {
     if (cerrando) return;
     setCerrando(true);
@@ -268,27 +282,45 @@ export default function SalaPage() {
   const meEnCurso = estado.iniciada && yaSoyJugador;
   const miEquipoEs0 =
     estado.jugadores.find((j) => j.id === miId)?.equipo === 0;
+  // Para el marcador inline en el header (igual al modo Solo). En 1v1
+  // mostramos los nombres reales; en 2v2 los rótulos genéricos.
+  const yo = estado.jugadores.find((j) => j.id === miId);
+  const es1v1 = estado.modo === "1v1";
+  const rivalParaTitulo = es1v1
+    ? estado.jugadores.find((j) => j.id !== miId)
+    : undefined;
+  const tituloNos = es1v1 && yo ? yo.nombre : "Nos";
+  const tituloEllos = es1v1 && rivalParaTitulo ? rivalParaTitulo.nombre : "Ellos";
 
   return (
     <main className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-bg">
-      {/* Header compacto con mini logo */}
-      <header className="flex items-center gap-2 px-3 py-2 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
-        <Link href="/" className="hidden sm:inline-block">
-          <img
-            src="/brand/logo.webp"
-            alt="Truco Entre Primos"
-            className="h-7 w-auto opacity-90 hover:opacity-100 transition"
-          />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] text-text-dim subtitulo-claim leading-none">
-            Sala
+      {/* Header: en lobby muestra el alias de la sala + compartir; en
+       *  partida usa el mismo layout que el modo Solo (back arrow + score
+       *  inline centrado). El chat y la música son botones flotantes. */}
+      {!estado.iniciada ? (
+        <header className="flex items-center gap-2 px-3 py-2 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
+          <button
+            onClick={() => setConfirmSalir(true)}
+            className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs shrink-0"
+            title="Salir de la sala"
+          >
+            ←
+          </button>
+          <Link href="/" className="hidden sm:inline-block">
+            <img
+              src="/brand/logo.webp"
+              alt="Truco Entre Primos"
+              className="h-7 w-auto opacity-90 hover:opacity-100 transition"
+            />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <div className="text-[10px] text-text-dim subtitulo-claim leading-none">
+              Sala
+            </div>
+            <div className="font-display text-base sm:text-lg text-dorado leading-tight truncate">
+              {salaId}
+            </div>
           </div>
-          <div className="font-display text-base sm:text-lg text-dorado leading-tight truncate">
-            {salaId}
-          </div>
-        </div>
-        {!estado.iniciada && (
           <button
             onClick={() => setMenuCompartir(true)}
             className="btn btn-primary !px-2 !py-1 !min-h-0 text-[11px] flex items-center gap-1 shrink-0"
@@ -297,38 +329,39 @@ export default function SalaPage() {
             <span aria-hidden>📤</span>
             <span className="hidden sm:inline">Compartir</span>
           </button>
-        )}
-        {estado.iniciada && (
-          <>
-            <button
-              onClick={abrirChat}
-              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs relative md:hidden"
-              title="Chat de la mesa"
-            >
-              💬
-              {chatNoVisto > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red text-text text-[9px] rounded-full w-4 h-4 flex items-center justify-center">
-                  {chatNoVisto > 9 ? "9+" : chatNoVisto}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setMenuCompartir(true)}
-              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
-              title="Compartir"
-            >
-              📤
-            </button>
-            <button
-              onClick={() => setConfirmSalir(true)}
-              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
-              title="Salir"
-            >
-              ✕
-            </button>
-          </>
-        )}
-      </header>
+        </header>
+      ) : (
+        <header className="relative flex items-center px-2 py-1.5 border-b border-border z-30 bg-surface/40 backdrop-blur-sm">
+          <button
+            onClick={() => setConfirmSalir(true)}
+            className="btn btn-ghost !px-2 !py-1 !min-h-0 text-xs shrink-0"
+            title="Salir de la partida"
+          >
+            ←
+          </button>
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider pointer-events-none">
+            <div className="flex items-center gap-1.5">
+              <span className="text-dorado truncate max-w-[90px]">
+                {tituloNos}
+              </span>
+              <ContadorPuntos
+                valor={miEquipoEs0 ? estado.puntos[0] : estado.puntos[1]}
+                esMio
+              />
+            </div>
+            <span className="text-dorado/60 text-base">—</span>
+            <div className="flex items-center gap-1.5">
+              <ContadorPuntos
+                valor={miEquipoEs0 ? estado.puntos[1] : estado.puntos[0]}
+                esMio={false}
+              />
+              <span className="text-crema truncate max-w-[90px]">
+                {tituloEllos}
+              </span>
+            </div>
+          </div>
+        </header>
+      )}
 
       {error && (
         <div className="bg-red/30 border-b border-red text-text py-1 px-2 text-xs text-center">
@@ -355,6 +388,8 @@ export default function SalaPage() {
           miId={miId}
           onIniciar={iniciar}
           onSumarBot={sumarBot}
+          onQuitarBot={quitarBot}
+          agregandoBot={agregandoBot}
           onCerrar={() => setConfirmSalir(true)}
           cerrando={cerrando}
         />
@@ -370,22 +405,6 @@ export default function SalaPage() {
               {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
                * para que quede arriba de mi mano de cartas. */}
               <MiAvatarBR estado={estado} miId={miId!} />
-              {/* Marcador flotante: palitos compactos. En 2v2 va debajo del
-               * avatar TR (que sí existe); en 1v1 va arriba del todo. */}
-              <div
-                className={
-                  estado.modo === "2v2"
-                    ? "absolute top-48 right-2 z-20 sm:top-52"
-                    : "absolute top-3 right-2 z-20"
-                }
-              >
-                <Marcador
-                  puntosNos={estado.puntos[0]}
-                  puntosEllos={estado.puntos[1]}
-                  objetivo={estado.puntosObjetivo}
-                  miEquipoEs0={miEquipoEs0}
-                />
-              </div>
               {/* Burbuja con últimos 3 mensajes humanos */}
               <ChatFlotante
                 estado={estado}
@@ -520,6 +539,8 @@ function SalaEspera({
   onIniciar,
   onCerrar,
   onSumarBot,
+  onQuitarBot,
+  agregandoBot,
   cerrando
 }: {
   estado: EstadoJuego;
@@ -527,6 +548,8 @@ function SalaEspera({
   onIniciar: (mezclarEquipos: boolean) => void;
   onCerrar: () => void;
   onSumarBot?: () => void;
+  onQuitarBot?: (botId: string) => void;
+  agregandoBot?: boolean;
   cerrando: boolean;
 }) {
   const total = estado.modo === "2v2" ? 4 : 2;
@@ -552,6 +575,10 @@ function SalaEspera({
             jugador={j}
             esYo={j?.id === miId}
             onSumarBot={!j && onSumarBot ? onSumarBot : undefined}
+            agregandoBot={agregandoBot}
+            onQuitarBot={
+              j?.esBot && onQuitarBot ? () => onQuitarBot(j.id) : undefined
+            }
           />
         ))}
       </div>
@@ -603,12 +630,16 @@ function SlotEspera({
   asiento,
   jugador,
   esYo,
-  onSumarBot
+  onSumarBot,
+  onQuitarBot,
+  agregandoBot
 }: {
   asiento: number;
   jugador?: Jugador;
   esYo: boolean;
   onSumarBot?: () => void;
+  onQuitarBot?: () => void;
+  agregandoBot?: boolean;
 }) {
   const equipo = (asiento % 2) as 0 | 1;
   const colorEquipo = equipo === 0 ? "border-dorado" : "border-azul-criollo";
@@ -643,6 +674,17 @@ function SlotEspera({
                 bot
               </span>
             )}
+            {jugador.esBot && onQuitarBot && (
+              <button
+                type="button"
+                onClick={onQuitarBot}
+                className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rojo-fernet/90 hover:bg-rojo-fernet text-crema text-[10px] font-bold flex items-center justify-center shadow-md border border-carbon"
+                title={`Quitar a ${jugador.nombre}`}
+                aria-label={`Quitar a ${jugador.nombre}`}
+              >
+                ✕
+              </button>
+            )}
           </div>
           <div className="text-center">
             <div className="font-display text-base sm:text-lg leading-tight truncate max-w-[140px]">
@@ -662,10 +704,11 @@ function SlotEspera({
             <button
               type="button"
               onClick={onSumarBot}
-              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-[10px] mt-1"
+              disabled={agregandoBot}
+              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-[10px] mt-1 disabled:opacity-60"
               title="Llenar este lugar con un bot"
             >
-              + Sumar bot
+              {agregandoBot ? "Cargando bot…" : "+ Sumar bot"}
             </button>
           )}
         </>
