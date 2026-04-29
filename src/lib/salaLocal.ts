@@ -335,10 +335,12 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
 
   // Resolver consulta: el humano decide qué hace su bot compañero.
   //  - "envido" / "real_envido" / "falta_envido": el bot canta esa apuesta.
-  //  - "juga": el bot tira la carta más alta (matar). Pensado para
-  //    cuando el humano quiere asegurar la baza con la carta brava.
-  //  - "veni": el bot tira la carta más baja (venir con poco). Útil
-  //    para ahorrar cartas grandes para más adelante.
+  //  - "juga": el bot tira la carta más alta (matar la baza).
+  //  - "veni": el bot tira la carta más baja (venir con poco, ahorrar).
+  //  - "pasar": no canta, deja que la IA del bot decida la carta.
+  //    Útil cuando el humano no quiere meter mano en la jugada concreta
+  //    (ej. su compañero pie tiene mucho mejor info y pretiere dejarlo
+  //    decidir solo).
   const resolverConsulta = useCallback(
     (
       decision:
@@ -347,14 +349,16 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
         | "falta_envido"
         | "juga"
         | "veni"
+        | "pasar"
     ) => {
       if (!estado || !consulta) return;
       const botId = consulta.botJugadorId;
       let accion: Accion;
-      if (decision === "juga" || decision === "veni") {
+      if (decision === "pasar") {
+        accion = decidirAccionBot(estado, botId);
+      } else if (decision === "juga" || decision === "veni") {
         const cartas = estado.manoActual?.cartasPorJugador[botId] || [];
         if (cartas.length === 0) {
-          // Caso raro: el bot ya jugó todas. Caemos al decisor de la IA.
           accion = decidirAccionBot(estado, botId);
         } else {
           const ordenadas = [...cartas].sort(
@@ -430,22 +434,11 @@ function deberiaConsultar(
   if (!botEsPie) return null;
 
   // Caso A: consulta de envido en baza 1 (bot es pie y ventana abierta).
-  //          Si hay flor pendiente la salteamos — la flor manda.
-  //          Si el truco ya fue aceptado (trucoEstado != "ninguno") el
-  //          envido ya no se puede cantar — saltamos también.
+  //          Si ya hubo flor cantada o el truco ya fue aceptado, el
+  //          envido queda anulado — no consultamos.
   const enBaza1 = mano.bazas.length === 1;
   if (enBaza1) {
-    let alguienConFlor = false;
-    if (estado.conFlor) {
-      if (mano.florResuelta || mano.florCantores.length > 0) return null;
-      alguienConFlor = estado.jugadores.some((j) => {
-        const enMano = mano.cartasPorJugador[j.id] || [];
-        return (
-          enMano.length === 3 && enMano.every((c) => c.palo === enMano[0].palo)
-        );
-      });
-    }
-    if (alguienConFlor) return null;
+    if (estado.conFlor && mano.florCantores.length > 0) return null;
     const envidoCantable =
       !mano.envidoResuelto &&
       mano.trucoEstado === "ninguno" &&
@@ -455,9 +448,6 @@ function deberiaConsultar(
       const envidoBot = calcularEnvido(cartas);
       return { tipo: "envido", botJugadorId: bot.id, envidoBot };
     }
-    // Si no hay envido cantable pero la baza sigue (alguien todavía no
-    // tiró), caemos a la consulta de "jugar" más abajo si el bot abre
-    // la próxima jugada.
   }
 
   // Caso B: consulta de jugá/vení en baza 2 o 3 cuando el bot ABRE la

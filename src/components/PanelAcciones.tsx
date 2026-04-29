@@ -365,10 +365,6 @@ function BotoneraMenu({
       {puedo("cantar_flor") && (
         <button
           className="btn btn-primary"
-          style={{
-            background: "linear-gradient(135deg, var(--rojo-fernet), var(--dorado))",
-            borderColor: "var(--dorado)"
-          }}
           onClick={() => disparar("cantar_flor")}
           title="Tenés 3 cartas del mismo palo — flor"
         >

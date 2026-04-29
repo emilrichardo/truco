@@ -274,65 +274,38 @@ function PartidaSoloInterno() {
 
         {estado.ganadorPartida !== null && mostrarFinPartida && (() => {
           const yoGane = miEquipoEs0 === (estado.ganadorPartida === 0);
-          const miEquipoIdx = miEquipoEs0 ? 0 : 1;
-          const rivalEquipoIdx = miEquipoEs0 ? 1 : 0;
-          const miPuntaje = estado.puntos[miEquipoIdx];
-          const rivalPuntaje = estado.puntos[rivalEquipoIdx];
+          const equipoGanador = estado.ganadorPartida ?? 0;
+          // En 2v2 listamos los nombres del equipo ganador. En 1v1 alcanza
+          // con un solo nombre.
+          const ganadores = estado.jugadores
+            .filter((j) => j.equipo === equipoGanador)
+            .map((j) => j.nombre);
+          const titulo = es1v1
+            ? yoGane ? "¡Ganaste!" : "Perdiste"
+            : yoGane ? "¡Ganamos!" : "Perdieron";
+          const subtitulo =
+            ganadores.length > 1
+              ? `Ganaron ${ganadores.slice(0, -1).join(", ")} y ${ganadores[ganadores.length - 1]}`
+              : `Ganó ${ganadores[0]}`;
           return (
             <div className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4 overflow-y-auto">
               <div className="papel p-5 text-center max-w-sm w-full my-4">
-                {yoGane && <div className="text-5xl mb-1">🏆</div>}
+                {yoGane && <div className="text-5xl mb-2">🏆</div>}
                 <div
-                  className="titulo-marca text-2xl mb-1"
+                  className="titulo-marca text-2xl mb-2"
                   style={{
                     color: "var(--carbon)",
                     textShadow: "1px 1px 0 rgba(217,164,65,0.5)"
                   }}
                 >
-                  {yoGane ? "¡Ganaste!" : "Perdiste"}
+                  {titulo}
                 </div>
                 <p
-                  className="text-[10px] mb-4 subtitulo-claim"
+                  className="text-sm mb-4 subtitulo-claim"
                   style={{ color: "var(--madera-oscura)" }}
                 >
-                  Equipo {(estado.ganadorPartida ?? 0) + 1} se llevó la
-                  partida
+                  {subtitulo}
                 </p>
-
-                {/* Marcador final */}
-                <div
-                  className="grid grid-cols-2 gap-2 mb-4 px-2 py-3 rounded border-2"
-                  style={{ borderColor: "var(--dorado-oscuro)" }}
-                >
-                  <div className="text-center">
-                    <div
-                      className="text-[10px] uppercase tracking-widest font-bold mb-0.5 truncate"
-                      style={{ color: "var(--azul-criollo)" }}
-                    >
-                      {es1v1 && yo ? yo.nombre : "Nosotros"}
-                    </div>
-                    <div
-                      className="text-3xl font-display"
-                      style={{ color: "var(--carbon)" }}
-                    >
-                      {miPuntaje}
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div
-                      className="text-[10px] uppercase tracking-widest font-bold mb-0.5 truncate"
-                      style={{ color: "var(--rojo-fernet)" }}
-                    >
-                      {es1v1 && rival ? rival.nombre : "Ellos"}
-                    </div>
-                    <div
-                      className="text-3xl font-display"
-                      style={{ color: "var(--carbon)" }}
-                    >
-                      {rivalPuntaje}
-                    </div>
-                  </div>
-                </div>
 
                 <div className="flex flex-col gap-2">
                   <button

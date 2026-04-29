@@ -17,7 +17,13 @@ export function ConsultaCompañero({
   consulta: ConsultaT;
   estado: EstadoJuego;
   onResolver: (
-    decision: "envido" | "real_envido" | "falta_envido" | "juga" | "veni"
+    decision:
+      | "envido"
+      | "real_envido"
+      | "falta_envido"
+      | "juga"
+      | "veni"
+      | "pasar"
   ) => void;
 }) {
   const bot = estado.jugadores.find((j) => j.id === consulta.botJugadorId);
@@ -82,12 +88,14 @@ export function ConsultaCompañero({
           </div>
         )}
 
-        {/* Jugá / Vení: tirá la más alta (matar) o la más baja (ahorrar). */}
-        <div className="grid grid-cols-2 gap-1.5">
+        {/* Jugá / Vení: tirá la más alta (matar) o la más baja (ahorrar).
+         *  Pasar: dejá que el bot decida solo (útil si no querés meter
+         *  mano en la jugada concreta). */}
+        <div className="grid grid-cols-3 gap-1.5">
           <button
             type="button"
             onClick={() => onResolver("juga")}
-            className="btn btn-primary text-xs"
+            className="btn btn-primary text-xs !px-1.5"
             title="Tirá la carta más alta — matar la baza"
           >
             💪 Jugá
@@ -95,10 +103,18 @@ export function ConsultaCompañero({
           <button
             type="button"
             onClick={() => onResolver("veni")}
-            className="btn text-xs"
+            className="btn text-xs !px-1.5"
             title="Tirá la carta más baja — venir con poco"
           >
             🤏 Vení
+          </button>
+          <button
+            type="button"
+            onClick={() => onResolver("pasar")}
+            className="btn btn-ghost text-xs !px-1.5"
+            title="Dejá que el bot decida solo"
+          >
+            ⏭ Pasar
           </button>
         </div>
       </div>
