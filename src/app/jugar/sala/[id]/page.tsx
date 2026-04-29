@@ -11,6 +11,7 @@ import {
   guardarSesion,
   iniciarPartidaOnline,
   leerSesion,
+  revanchaOnline,
   unirseSalaOnline,
   useSalaOnline
 } from "@/lib/salaOnline";
@@ -340,6 +341,23 @@ export default function SalaPage() {
     },
     [salaId]
   );
+  const [revanchaPedida, setRevanchaPedida] = useState(false);
+  // Cuando el server resetea la sala (ganadorPartida vuelve a null), limpiamos
+  // el flag para que el botón pueda ser usado en futuras partidas.
+  useEffect(() => {
+    if (estado?.ganadorPartida === null) setRevanchaPedida(false);
+  }, [estado?.ganadorPartida]);
+  const pedirRevancha = useCallback(async () => {
+    if (!miId || revanchaPedida) return;
+    setRevanchaPedida(true);
+    const r = await revanchaOnline(salaId, miId);
+    if (!r.ok) {
+      setError(r.error || "No se pudo iniciar la revancha.");
+      setRevanchaPedida(false);
+    }
+    // Si ok, el realtime trae el nuevo estado y el modal desaparece solo
+    // (ganadorPartida vuelve a null).
+  }, [salaId, miId, revanchaPedida]);
   const cerrarSala = useCallback(async () => {
     if (cerrando) return;
     setCerrando(true);
@@ -658,23 +676,67 @@ export default function SalaPage() {
           )}
 
 
-          {/* Modal ganador */}
-          {estado.ganadorPartida !== null && (
-            <div className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4">
-              <div className="papel p-6 text-center max-w-sm">
-                <div className="text-5xl mb-2">🏆</div>
-                <div className="titulo-marca text-2xl mb-1" style={{ color: "var(--carbon)", textShadow: "1px 1px 0 rgba(217,164,65,0.5)" }}>
-                  Equipo <span className="acento" style={{ color: "var(--azul-criollo)" }}>{estado.ganadorPartida + 1}</span>
+          {/* Modal ganador con nombres y botón Revancha (sólo creador). */}
+          {estado.ganadorPartida !== null && (() => {
+            const equipoGanador = estado.ganadorPartida ?? 0;
+            const yoGane = miEquipoEs0 === (equipoGanador === 0);
+            const ganadores = estado.jugadores
+              .filter((j) => j.equipo === equipoGanador)
+              .map((j) => j.nombre);
+            const titulo = es1v1
+              ? yoGane
+                ? "¡Ganaste!"
+                : "Perdiste"
+              : yoGane
+                ? "¡Ganamos!"
+                : "Perdieron";
+            const subtitulo =
+              ganadores.length > 1
+                ? `Ganaron ${ganadores.slice(0, -1).join(", ")} y ${ganadores[ganadores.length - 1]}`
+                : `Ganó ${ganadores[0]}`;
+            return (
+              <div className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4">
+                <div className="papel p-5 text-center max-w-sm w-full">
+                  {yoGane && <div className="text-5xl mb-2">🏆</div>}
+                  <div
+                    className="titulo-marca text-2xl mb-2"
+                    style={{
+                      color: "var(--carbon)",
+                      textShadow: "1px 1px 0 rgba(217,164,65,0.5)"
+                    }}
+                  >
+                    {titulo}
+                  </div>
+                  <p
+                    className="text-sm mb-4 subtitulo-claim"
+                    style={{ color: "var(--madera-oscura)" }}
+                  >
+                    {subtitulo}
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {soyCreador && (
+                      <button
+                        type="button"
+                        onClick={pedirRevancha}
+                        disabled={revanchaPedida}
+                        className="btn btn-primary disabled:opacity-60"
+                      >
+                        {revanchaPedida ? "Repartiendo…" : "Revancha"}
+                      </button>
+                    )}
+                    {!soyCreador && (
+                      <p className="text-xs text-text-dim italic">
+                        Esperando que el creador inicie revancha…
+                      </p>
+                    )}
+                    <Link href="/" className="btn btn-ghost text-xs">
+                      Volver al inicio
+                    </Link>
+                  </div>
                 </div>
-                <p className="text-sm mb-4 subtitulo-claim text-[10px]" style={{ color: "var(--madera-oscura)" }}>
-                  Se llevó la partida
-                </p>
-                <Link href="/" className="btn btn-primary">
-                  Volver al inicio
-                </Link>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

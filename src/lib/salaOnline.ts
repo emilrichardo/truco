@@ -171,6 +171,16 @@ export async function enviarAccionOnline(
   });
 }
 
+export async function revanchaOnline(
+  salaId: string,
+  jugadorId: string
+): Promise<SalaResp> {
+  return invocar("sala-revancha", {
+    sala_id: salaId,
+    jugador_id: jugadorId
+  });
+}
+
 export async function enviarChatOnline(
   salaId: string,
   jugadorId: string,
