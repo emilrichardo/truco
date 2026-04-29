@@ -24,7 +24,6 @@ export function ChatFlotante({
    *  mostrando el botón — se renderiza encima del input de enviar. */
   oculto?: boolean;
 }) {
-  if (oculto) return null;
   // Mensajes humanos (no eventos del juego).
   const humanos = useMemo(
     () =>
@@ -81,6 +80,11 @@ export function ChatFlotante({
     ? estado.jugadores.find((j) => j.id === ultimo.jugadorId)?.nombre
     : null;
   const esYoUltimo = ultimo?.jugadorId === miId;
+
+  // Early return DESPUÉS de los hooks — antes era arriba del componente
+  // y violaba las rules of hooks (cuando `oculto` cambiaba, React veía
+  // distinta cantidad de hooks renderizados y tiraba error).
+  if (oculto) return null;
 
   return (
     <div

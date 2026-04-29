@@ -174,7 +174,12 @@ function PartidaSoloInterno() {
             <ChatFlotante
               estado={estado}
               miId={miId}
-              onAbrir={() => setChatAbierto(true)}
+              onAbrir={() => {
+                // En mobile abre el sheet, en desktop trae el sidebar.
+                // Ambos son no-ops cuando el otro flow no aplica.
+                setChatAbierto(true);
+                setSidebarVisible(true);
+              }}
             />
           </div>
           <PanelAcciones estado={estado} miId={miId} enviar={enviarAccion} />
@@ -192,16 +197,6 @@ function PartidaSoloInterno() {
             <Chat estado={estado} miId={miId} enviar={enviarChat} />
           </aside>
         )}
-        {!sidebarVisible && (
-          <button
-            onClick={() => setSidebarVisible(true)}
-            className="hidden md:flex absolute top-2 right-2 z-30 btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
-            title="Mostrar chat"
-          >
-            💬
-          </button>
-        )}
-
         {chatAbierto && (
           <div
             className="fixed inset-0 sheet-bg z-[600] md:hidden flex items-end"

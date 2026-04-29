@@ -161,7 +161,9 @@ export default function SalaPage() {
     router.replace("/");
   }, [salaId, miId, cerrando, router]);
   const abrirChat = useCallback(() => {
+    // En mobile abre el sheet, en desktop muestra el sidebar.
     setChatAbierto(true);
+    setSidebarVisible(true);
     setChatNoVisto(0);
   }, []);
 
@@ -410,16 +412,6 @@ export default function SalaPage() {
               <Chat estado={estado} miId={miId!} enviar={enviarChat} />
             </aside>
           )}
-          {!sidebarVisible && (
-            <button
-              onClick={() => setSidebarVisible(true)}
-              className="hidden md:flex absolute top-2 right-2 z-30 btn btn-ghost !px-2 !py-1 !min-h-0 text-xs"
-              title="Mostrar chat"
-            >
-              💬
-            </button>
-          )}
-
           {/* Chat: drawer en mobile */}
           {chatAbierto && (
             <div
