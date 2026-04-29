@@ -82,18 +82,20 @@ export default function SalaPage() {
   // Audio del juego: cantos, cartas, reacciones.
   useAudioJuego(estado, miId);
 
-  // Dispatcher de bots: el creador (asiento 0) corre la IA de los bots
-  // localmente y manda sus acciones al servidor vía sala-accion. Sin
-  // este effect los bots quedaban congelados aunque la partida hubiera
-  // arrancado. Misma idea que salaLocal pero pasando por la edge
-  // function en vez de aplicarAccion en memoria.
+  // Dispatcher de bots: cualquier humano conectado en la sala puede
+  // despachar las acciones de los bots. El primero gana — el server
+  // rechaza dispatches duplicados via el turn check del motor (una vez
+  // que el bot actúa, el turno se mueve y los siguientes dispatches
+  // del mismo bot fallan silenciosamente). Antes lo limitamos al
+  // asiento 0 (creador) pero si el creador cerraba la pestaña los
+  // bots se quedaban quietos.
   const RETARDO_BOT_MS = 1500;
   const RETARDO_PROX_MANO_MS = 3500;
   useEffect(() => {
     if (!estado || !miId || !estado.iniciada) return;
     if (estado.ganadorPartida !== null) return;
     const yo = estado.jugadores.find((j) => j.id === miId);
-    if (!yo || yo.asiento !== 0) return; // sólo el creador despacha bots
+    if (!yo || yo.esBot) return; // sólo humanos despachan
     const mano = estado.manoActual;
     if (!mano) return;
 
@@ -102,13 +104,20 @@ export default function SalaPage() {
       botTimerRef.current = null;
     }
 
-    // Mano cerrada — el creador dispara la próxima.
+    // Mano cerrada — el humano de menor asiento dispara la próxima
+    // (jitter mínimo entre clientes para que no manden los dos al
+    // mismo tiempo y uno coma el ya_terminada).
     if (mano.fase === "terminada") {
+      const humanos = estado.jugadores
+        .filter((j) => !j.esBot)
+        .sort((a, b) => a.asiento - b.asiento);
+      const soyElPrimero = humanos[0]?.id === miId;
+      if (!soyElPrimero) return;
       botTimerRef.current = window.setTimeout(() => {
         enviarAccionOnline(salaId, miId, {
           tipo: "iniciar_prox_mano",
           jugadorId: ""
-        });
+        }).catch((e) => console.warn("[bot-dispatch] iniciar_prox_mano", e));
       }, RETARDO_PROX_MANO_MS);
       return () => {
         if (botTimerRef.current) {
@@ -185,14 +194,25 @@ export default function SalaPage() {
       return;
     }
 
+    // Para evitar que dos clientes dispatchen al mismo bot, el humano
+    // de menor asiento es el "primario". Los demás esperan un poco más
+    // (fallback) por si el primario está offline.
+    const humanos = estado.jugadores
+      .filter((j) => !j.esBot)
+      .sort((a, b) => a.asiento - b.asiento);
+    const idxYo = humanos.findIndex((j) => j.id === miId);
+    const retraso = RETARDO_BOT_MS + idxYo * 800;
+
     botTimerRef.current = window.setTimeout(() => {
       const accion = decidirAccionBot(estado, actor!.id);
       ultimaAccionBotRef.current = {
         jugadorId: actor!.id,
         version: estado.version
       };
-      enviarAccionOnline(salaId, miId, accion);
-    }, RETARDO_BOT_MS);
+      enviarAccionOnline(salaId, miId, accion).catch((e) =>
+        console.warn("[bot-dispatch]", actor!.id, e)
+      );
+    }, retraso);
 
     return () => {
       if (botTimerRef.current) {
