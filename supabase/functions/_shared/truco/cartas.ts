@@ -1,5 +1,5 @@
 // Mazo de truco (40 cartas), jerarquía y cálculos de envido.
-import type { Carta, Numero, Palo } from "./types";
+import type { Carta, Numero, Palo } from "./types.ts";
 
 export const PALOS: Palo[] = ["espada", "basto", "oro", "copa"];
 export const NUMEROS: Numero[] = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12];

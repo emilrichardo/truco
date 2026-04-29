@@ -1,5 +1,6 @@
 // Motor del juego: aplica acciones, calcula bazas, resuelve envido y truco.
-import { nanoid } from "nanoid";
+// Versión Deno-friendly: imports con sufijo .ts y nanoid via npm:.
+import { nanoid } from "npm:nanoid@5";
 import {
   calcularEnvido,
   comparar,
@@ -9,7 +10,7 @@ import {
   nombreCarta,
   tieneFlor,
   valorFlor
-} from "./cartas";
+} from "./cartas.ts";
 import type {
   Accion,
   Baza,
@@ -21,9 +22,9 @@ import type {
   Jugador,
   Mano,
   ResolucionEnvido
-} from "./types";
-import { fraseAleatoria, fraseCanonica } from "./frases";
-import type { CategoriaFrase } from "./frases";
+} from "./types.ts";
+import { fraseAleatoria, fraseCanonica } from "./frases.ts";
+import type { CategoriaFrase } from "./frases.ts";
 
 const ENVIDO_VALORES = {
   envido: { quiero: 2, no_quiero: 1 },
@@ -75,7 +76,7 @@ function anuncio(
   estado: EstadoJuego,
   jugadorId: string,
   texto: string,
-  evento: import("./types").CategoriaEvento = "sistema"
+  evento: import("./types.ts").CategoriaEvento = "sistema"
 ) {
   const ts = Date.now();
   estado.anuncios.push({ id: nanoid(6), jugadorId, texto, ts });
