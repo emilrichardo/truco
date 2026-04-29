@@ -2,6 +2,7 @@
 // Marcador minimalista: sólo palitos formando un cuadrado con una diagonal
 // para representar cada grupo de 5 puntos. Dos columnas (Nos / Ellos)
 // apiladas verticalmente, compacto para vivir arriba a la derecha de la mesa.
+import { usePuntoAnimado } from "@/lib/usePuntoAnimado";
 
 const TAM = 18; // px de cada cuadradito
 
@@ -23,11 +24,15 @@ export function Marcador({
 }) {
   const nos = miEquipoEs0 ? puntosNos : puntosEllos;
   const ellos = miEquipoEs0 ? puntosEllos : puntosNos;
+  // Animamos los dos contadores con tick — los palitos van apareciendo
+  // de a uno con su sonidito y se siente que la mano sumó.
+  const nosAnim = usePuntoAnimado(nos, true);
+  const ellosAnim = usePuntoAnimado(ellos, false);
   return (
     <div className="placa-madera p-1.5 flex gap-2 items-start">
-      <Columna puntos={nos} color="var(--dorado)" titulo={tituloNos} />
+      <Columna puntos={nosAnim} color="var(--dorado)" titulo={tituloNos} />
       <div className="w-px self-stretch bg-crema/15" />
-      <Columna puntos={ellos} color="var(--crema)" titulo={tituloEllos} />
+      <Columna puntos={ellosAnim} color="var(--crema)" titulo={tituloEllos} />
     </div>
   );
 }

@@ -28,8 +28,12 @@ import { HeaderMarca } from "@/components/HeaderMarca";
 import { MiAvatarBR } from "@/components/MiAvatarBR";
 import { setMusicaUIOculta } from "@/components/MusicaAmbiental";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
+import { usePreloadCartas } from "@/lib/preload";
 
 export default function SalaPage() {
+  // Preload de cartas al entrar a la sala — si el usuario abrió el link
+  // directo o refrescó, no pasó por el lobby y nadie precargó. Idempotente.
+  usePreloadCartas();
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const salaId = params.id;

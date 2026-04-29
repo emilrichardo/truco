@@ -8,24 +8,35 @@ const NUMEROS = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12] as const;
 
 let cartasYaPrecargadas = false;
 
-/** Pre-cachea las 40 cartas españolas. Idempotente: solo corre la primera vez. */
+/** Pre-cachea las 40 cartas españolas. Idempotente: solo corre la primera vez.
+ *  Antes espaciábamos los fetches a 30ms (= ~1.2s para empezar el último);
+ *  con HTTP/2 multiplex el browser maneja bien fetches paralelos así que
+ *  ahora disparamos todo de una y priorizamos las "bravas" (las que más
+ *  se ven en baza 1). Cuando arranca la mano, las cartas ya están en
+ *  cache HTTP. */
 export function precargarCartas() {
   if (typeof window === "undefined") return;
   if (cartasYaPrecargadas) return;
   cartasYaPrecargadas = true;
-  // Disparamos en orden lo más pequeño primero (cabezas / figuras)
-  // para que las que más se ven (los 1, 7, etc.) lleguen rápido.
-  const orden: { palo: string; numero: number }[] = [];
+  const PRIORIDAD: { palo: string; numero: number }[] = [
+    { palo: "espada", numero: 1 },
+    { palo: "basto", numero: 1 },
+    { palo: "espada", numero: 7 },
+    { palo: "oro", numero: 7 }
+  ];
+  const RESTO: { palo: string; numero: number }[] = [];
   for (const n of NUMEROS) {
-    for (const p of PALOS) orden.push({ palo: p, numero: n });
+    for (const p of PALOS) {
+      if (!PRIORIDAD.some((c) => c.palo === p && c.numero === n)) {
+        RESTO.push({ palo: p, numero: n });
+      }
+    }
   }
-  // Espaciamos un poco para no saturar la red ni bloquear navegación.
-  orden.forEach(({ palo, numero }, i) => {
-    setTimeout(() => {
-      const img = new Image();
-      img.src = `/cartas/${palo}/${numero}.webp`;
-    }, i * 30);
-  });
+  for (const { palo, numero } of [...PRIORIDAD, ...RESTO]) {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = `/cartas/${palo}/${numero}.webp`;
+  }
 }
 
 /** Pre-cachea avatares de los jugadores presentes. */

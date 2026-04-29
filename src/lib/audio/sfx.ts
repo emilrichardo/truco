@@ -93,6 +93,31 @@ export function sonidoPuntos() {
   });
 }
 
+/** Tick corto y agudo para cada paso del contador del marcador. Más
+ *  liviano que sonidoPuntos (que es campanazo doble) — pensado para
+ *  encadenar 5 ó 6 ticks a 90ms de diferencia sin saturar. */
+export function sonidoTickPunto(esMio: boolean) {
+  const c = ctx();
+  if (!c) return;
+  if (c.state === "suspended") c.resume().catch(() => {});
+  const t0 = c.currentTime;
+  // Notas distintas según equipo: agudo brillante para "yo", más grave
+  // para "ellos". Así se distingue auditivamente quién está sumando.
+  const freq = esMio ? 1480 : 540;
+  const osc = c.createOscillator();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(freq, t0);
+  // Caída leve de pitch para sentirlo "puntilla" en vez de pitido plano.
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.85, t0 + 0.08);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(0.14, t0 + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.11);
+  osc.connect(g).connect(c.destination);
+  osc.start(t0);
+  osc.stop(t0 + 0.12);
+}
+
 /** Sonido grave / sordo cuando el rival se va al mazo. */
 export function sonidoMazo() {
   const c = ctx();

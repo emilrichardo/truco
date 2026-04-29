@@ -12,7 +12,9 @@ import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
 import { ChatFlotante } from "@/components/ChatFlotante";
 import { ConsultaCompañero } from "@/components/ConsultaCompañero";
+import { ContadorPuntos } from "@/components/ContadorPuntos";
 import { MiAvatarBR } from "@/components/MiAvatarBR";
+import { usePreloadCartas } from "@/lib/preload";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 import {
   useSalaLocal,
@@ -40,6 +42,11 @@ export default function PartidaSoloPage() {
 }
 
 function PartidaSoloInterno() {
+  // Preload de las 40 cartas apenas entramos a la pantalla de partida —
+  // si el usuario llegó desde refresh (revancha) o por URL directa sin
+  // pasar por el lobby, el lobby no corrió y nadie disparó el preload.
+  // Idempotente, así que no duplica trabajo si ya corrió antes.
+  usePreloadCartas();
   const router = useRouter();
   const params = useSearchParams();
   const [miSlug, , listoSlug] = usePersonajeLocal();
@@ -150,21 +157,17 @@ function PartidaSoloInterno() {
             <span className="text-dorado truncate max-w-[90px]">
               {tituloNos}
             </span>
-            <span
-              className="font-display text-lg text-crema leading-none"
-              style={{ minWidth: "1.4em", textAlign: "right" }}
-            >
-              {miEquipoEs0 ? estado.puntos[0] : estado.puntos[1]}
-            </span>
+            <ContadorPuntos
+              valor={miEquipoEs0 ? estado.puntos[0] : estado.puntos[1]}
+              esMio
+            />
           </div>
           <span className="text-dorado/60 text-base">—</span>
           <div className="flex items-center gap-1.5">
-            <span
-              className="font-display text-lg text-crema leading-none"
-              style={{ minWidth: "1.4em", textAlign: "left" }}
-            >
-              {miEquipoEs0 ? estado.puntos[1] : estado.puntos[0]}
-            </span>
+            <ContadorPuntos
+              valor={miEquipoEs0 ? estado.puntos[1] : estado.puntos[0]}
+              esMio={false}
+            />
             <span className="text-crema truncate max-w-[90px]">
               {tituloEllos}
             </span>
