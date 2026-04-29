@@ -436,6 +436,10 @@ export default function SalaPage() {
   const meEnCurso = estado.iniciada && yaSoyJugador;
   const miEquipoEs0 =
     estado.jugadores.find((j) => j.id === miId)?.equipo === 0;
+  // Soy el creador si soy el jugador en asiento 0 — sólo el creador
+  // puede agregar/quitar bots y disparar el inicio de la partida.
+  const soyCreador =
+    !!miId && estado.jugadores.find((j) => j.id === miId)?.asiento === 0;
   // Para el marcador inline en el header (igual al modo Solo). En 1v1
   // mostramos los nombres reales; en 2v2 los rótulos genéricos.
   const yo = estado.jugadores.find((j) => j.id === miId);
@@ -531,9 +535,7 @@ export default function SalaPage() {
       )}
 
       {error && (
-        <div className="bg-red/30 border-b border-red text-text py-1 px-2 text-xs text-center">
-          {error}
-        </div>
+        <ErrorModal mensaje={error} onCerrar={() => setError(null)} />
       )}
 
       {!estado.iniciada && !yaSoyJugador && (
@@ -554,8 +556,8 @@ export default function SalaPage() {
           estado={estado}
           miId={miId}
           onIniciar={iniciar}
-          onSumarBot={sumarBot}
-          onQuitarBot={quitarBot}
+          onSumarBot={soyCreador ? sumarBot : undefined}
+          onQuitarBot={soyCreador ? quitarBot : undefined}
           cargandoEnAsiento={cargandoEnAsiento}
           onCerrar={() => setConfirmSalir(true)}
           cerrando={cerrando}
@@ -944,5 +946,63 @@ function ElegirPrimoEnSala({
         </button>
       </div>
     </main>
+  );
+}
+
+/** Mapa de códigos crudos del backend → mensaje legible para el usuario.
+ *  Incluye los del CLI/edge function y algunos errores comunes del motor.
+ *  Si no hay match, devolvemos el mensaje original. */
+function legibilizarError(crudo: string): string {
+  // Los errores vienen como "fn-name: codigo". Sacamos el codigo solo.
+  const m = crudo.match(/(?:^|: )([a-z_][a-z0-9_]*)\s*$/i);
+  const code = m ? m[1] : crudo;
+  const map: Record<string, string> = {
+    solo_el_creador: "Sólo el creador de la sala puede hacer eso.",
+    solo_creador: "Sólo el creador puede hacer eso.",
+    solo_creador_despacha_bots: "Sólo el creador despacha a los bots.",
+    sala_no_encontrada: "La sala ya no existe.",
+    sala_llena: "La sala ya está completa.",
+    target_no_es_bot: "Sólo se puede quitar a los bots.",
+    no_iniciada: "La partida todavía no empezó.",
+    ya_terminada: "La partida ya terminó.",
+    creador_no_puede_abandonar:
+      "El creador no puede abandonar — usá Cerrar sala.",
+    ya_empezo: "La partida ya empezó.",
+    "No es tu turno.": "No es tu turno.",
+    "Acción rechazada.": "Acción rechazada."
+  };
+  return map[code] || crudo;
+}
+
+/** Modal de error: aparece centrado, se cierra al click o solo a los 4s. */
+function ErrorModal({
+  mensaje,
+  onCerrar
+}: {
+  mensaje: string;
+  onCerrar: () => void;
+}) {
+  useEffect(() => {
+    const t = window.setTimeout(onCerrar, 4000);
+    return () => clearTimeout(t);
+  }, [mensaje, onCerrar]);
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sheet-bg"
+      onClick={onCerrar}
+    >
+      <div
+        className="card p-4 max-w-sm w-full text-center border-l-4 border-l-red shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-3xl mb-2">⚠️</div>
+        <div className="text-sm text-crema mb-3">
+          {legibilizarError(mensaje)}
+        </div>
+        <button onClick={onCerrar} className="btn btn-ghost text-xs w-full">
+          Cerrar
+        </button>
+      </div>
+    </div>
   );
 }
