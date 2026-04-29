@@ -26,5 +26,8 @@ export function getPersonaje(slug: string): PersonajeMeta | undefined {
 }
 
 export function urlPersonaje(slug: string): string {
-  return `/jugadores/${slug}.png`;
+  // Servimos webp por default — pesa ~150KB vs ~1.7MB del PNG original.
+  // Los .png siguen en disco como fallback / para edición; si querés
+  // forzarlos pasá la url con .png a mano.
+  return `/jugadores/${slug}.webp`;
 }

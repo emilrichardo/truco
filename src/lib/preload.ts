@@ -39,12 +39,13 @@ export function precargarCartas() {
   }
 }
 
-/** Pre-cachea avatares de los jugadores presentes. */
+/** Pre-cachea avatares de los jugadores presentes. Apunta al webp para
+ *  matchear lo que sirve urlPersonaje (mucho más liviano que el PNG). */
 export function precargarAvatares(slugs: string[]) {
   if (typeof window === "undefined") return;
   for (const s of slugs) {
     const img = new Image();
-    img.src = `/jugadores/${s}.png`;
+    img.src = `/jugadores/${s}.webp`;
   }
 }
 
