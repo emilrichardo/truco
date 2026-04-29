@@ -1112,12 +1112,16 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
   // siempre que la baza no haya terminado y nadie haya cantado todavía.
   // Esta es la regla de truco argentino — el pie puede cortar la mano
   // antes de que el contrario juegue, sin esperar su turno. Si está activa
-  // la flor sin cantar, el envido se bloquea (la flor va primero).
+  // la flor sin cantar, el envido se bloquea (la flor va primero). Y si
+  // el truco ya fue aceptado (trucoEstado != "ninguno") el envido también
+  // se bloquea — la única excepción es "envido está primero", que se
+  // maneja en el bloque de respuesta a un canto pendiente, no acá.
   const envidoCantableEnBaza1 =
     !mano.envidoResuelto &&
     !mano.envidoCantoActivo &&
     !mano.florResuelta &&
     !alguienConFlor &&
+    mano.trucoEstado === "ninguno" &&
     mano.bazas.length === 1 &&
     mano.bazas[0].jugadas.length < estado.jugadores.length;
   if (envidoCantableEnBaza1) {

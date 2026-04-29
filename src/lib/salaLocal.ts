@@ -431,6 +431,8 @@ function deberiaConsultar(
 
   // Caso A: consulta de envido en baza 1 (bot es pie y ventana abierta).
   //          Si hay flor pendiente la salteamos — la flor manda.
+  //          Si el truco ya fue aceptado (trucoEstado != "ninguno") el
+  //          envido ya no se puede cantar — saltamos también.
   const enBaza1 = mano.bazas.length === 1;
   if (enBaza1) {
     let alguienConFlor = false;
@@ -446,13 +448,16 @@ function deberiaConsultar(
     if (alguienConFlor) return null;
     const envidoCantable =
       !mano.envidoResuelto &&
+      mano.trucoEstado === "ninguno" &&
       mano.bazas[0].jugadas.length < estado.jugadores.length;
     if (envidoCantable) {
       const cartas = mano.cartasPorJugador[bot.id] || [];
       const envidoBot = calcularEnvido(cartas);
       return { tipo: "envido", botJugadorId: bot.id, envidoBot };
     }
-    return null;
+    // Si no hay envido cantable pero la baza sigue (alguien todavía no
+    // tiró), caemos a la consulta de "jugar" más abajo si el bot abre
+    // la próxima jugada.
   }
 
   // Caso B: consulta de jugá/vení en baza 2 o 3 cuando el bot ABRE la
