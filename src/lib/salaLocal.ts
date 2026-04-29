@@ -13,26 +13,15 @@ import {
   iniciarPartida
 } from "@/lib/truco/motor";
 import { decidirAccionBot } from "@/lib/truco/ia";
-import { calcularEnvido, jerarquia } from "@/lib/truco/cartas";
 import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { PERSONAJES } from "@/data/jugadores";
+import {
+  deberiaConsultar,
+  accionDesdeConsulta,
+  type ConsultaCompañero
+} from "@/lib/consultaCompañero";
 
-/** Consulta del bot compañero al humano antes de tirar carta.
- *  - tipo "envido": baza 1 con envido cantable. El bot revela su envido
- *    y deja que el humano decida si cantar o no.
- *  - tipo "jugar": baza 2 o 3 cuando el bot abre la baza. No se canta
- *    nada — el humano elige si tira la carta más alta (jugá) o la más
- *    baja (vení). Útil para coordinar estrategia con el compañero. */
-export type ConsultaCompañero =
-  | {
-      tipo: "envido";
-      botJugadorId: string;
-      envidoBot: number;
-    }
-  | {
-      tipo: "jugar";
-      botJugadorId: string;
-    };
+export type { ConsultaCompañero };
 
 // Delay antes de que el bot juegue/responda. 700ms se sentía instantáneo
 // y no daba tiempo al humano a leer el último canto o pensar antes de
@@ -334,50 +323,12 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   );
 
   // Resolver consulta: el humano decide qué hace su bot compañero.
-  //  - "envido" / "real_envido" / "falta_envido": el bot canta esa apuesta.
-  //  - "juga": el bot tira la carta más alta (matar la baza).
-  //  - "veni": el bot tira la carta más baja (venir con poco, ahorrar).
-  //  - "pasar": no canta, deja que la IA del bot decida la carta.
-  //    Útil cuando el humano no quiere meter mano en la jugada concreta
-  //    (ej. su compañero pie tiene mucho mejor info y pretiere dejarlo
-  //    decidir solo).
+  // La lógica de qué Accion construir vive en accionDesdeConsulta
+  // (módulo compartido con la sala online).
   const resolverConsulta = useCallback(
-    (
-      decision:
-        | "envido"
-        | "real_envido"
-        | "falta_envido"
-        | "juga"
-        | "veni"
-        | "pasar"
-    ) => {
+    (decision: import("@/lib/consultaCompañero").DecisionConsulta) => {
       if (!estado || !consulta) return;
-      const botId = consulta.botJugadorId;
-      let accion: Accion;
-      if (decision === "pasar") {
-        accion = decidirAccionBot(estado, botId);
-      } else if (decision === "juga" || decision === "veni") {
-        const cartas = estado.manoActual?.cartasPorJugador[botId] || [];
-        if (cartas.length === 0) {
-          accion = decidirAccionBot(estado, botId);
-        } else {
-          const ordenadas = [...cartas].sort(
-            (a, b) => jerarquia(a) - jerarquia(b)
-          );
-          const elegida =
-            decision === "juga" ? ordenadas[ordenadas.length - 1] : ordenadas[0];
-          accion = {
-            tipo: "jugar_carta",
-            jugadorId: botId,
-            cartaId: elegida.id
-          };
-        }
-      } else {
-        accion = {
-          tipo: `cantar_${decision}` as Accion["tipo"],
-          jugadorId: botId
-        };
-      }
+      const accion = accionDesdeConsulta(estado, consulta.botJugadorId, decision);
       const r = aplicarAccion(estado, accion);
       setConsulta(null);
       if (r.ok) dispatch({ tipo: "set", estado: { ...estado } });
@@ -393,73 +344,6 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     consulta,
     resolverConsulta
   };
-}
-
-/** Decide si el bot que está por actuar debe pedir input al humano antes
- *  de tirar carta. Aplica sólo cuando el bot es PIE de su equipo (último
- *  en jugar en orden de juego) y su compañero es humano. La regla
- *  trucera: el pie es el que mira lo que jugaron todos antes y decide
- *  con más info. Si el humano es pie no hace falta consultar — ya tiene
- *  el control en su panel. */
-function deberiaConsultar(
-  estado: EstadoJuego,
-  bot: Jugador
-): ConsultaCompañero | null {
-  if (!bot.esBot) return null;
-  const compañeros = estado.jugadores.filter(
-    (j) => j.equipo === bot.equipo && j.id !== bot.id
-  );
-  const compañeroHumano = compañeros.some((j) => !j.esBot);
-  if (!compañeroHumano) return null;
-  const mano = estado.manoActual;
-  if (!mano) return null;
-  if (mano.turnoJugadorId !== bot.id) return null;
-  if (mano.envidoCantoActivo || mano.trucoCantoActivo) return null;
-
-  // El bot tiene que ser PIE del equipo: en orden de juego (distancia
-  // anti-horaria desde el mano de la mano) está más lejos que sus
-  // compañeros. Si el bot no es pie, dejamos que juegue normalmente —
-  // la canilla la tiene el humano que sí es pie.
-  const manoAsiento = estado.jugadores.find(
-    (j) => j.id === mano.manoJugadorId
-  )?.asiento;
-  if (manoAsiento === undefined) return null;
-  const n = estado.jugadores.length;
-  const distanciaDeJuego = (asiento: number) =>
-    (asiento - manoAsiento + n) % n;
-  const miDist = distanciaDeJuego(bot.asiento);
-  const botEsPie = compañeros.every(
-    (c) => distanciaDeJuego(c.asiento) < miDist
-  );
-  if (!botEsPie) return null;
-
-  // Caso A: consulta de envido en baza 1 (bot es pie y ventana abierta).
-  //          Si ya hubo flor cantada o el truco ya fue aceptado, el
-  //          envido queda anulado — no consultamos.
-  const enBaza1 = mano.bazas.length === 1;
-  if (enBaza1) {
-    if (estado.conFlor && mano.florCantores.length > 0) return null;
-    const envidoCantable =
-      !mano.envidoResuelto &&
-      mano.trucoEstado === "ninguno" &&
-      mano.bazas[0].jugadas.length < estado.jugadores.length;
-    if (envidoCantable) {
-      const cartas = mano.cartasPorJugador[bot.id] || [];
-      const envidoBot = calcularEnvido(cartas);
-      return { tipo: "envido", botJugadorId: bot.id, envidoBot };
-    }
-  }
-
-  // Caso B: consulta de jugá/vení en baza 2 o 3 cuando el bot ABRE la
-  // baza (todavía no tiró nadie). Acá la decisión "matar con la brava o
-  // venir con poco" se la pasamos al humano para que coordine. Si la
-  // baza ya tiene jugadas, no consultamos — el bot ya tiene info y
-  // elige por su cuenta.
-  const baza = mano.bazas[mano.bazas.length - 1];
-  if (baza.jugadas.length === 0) {
-    return { tipo: "jugar", botJugadorId: bot.id };
-  }
-  return null;
 }
 
 function quienActuaSiBot(estado: EstadoJuego): Jugador | undefined {

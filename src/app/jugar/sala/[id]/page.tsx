@@ -30,6 +30,13 @@ import { setMusicaUIOculta } from "@/components/MusicaAmbiental";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 import { usePreloadCartas } from "@/lib/preload";
 import { decidirAccionBot } from "@/lib/truco/ia";
+import {
+  deberiaConsultar,
+  accionDesdeConsulta,
+  type ConsultaCompañero as ConsultaT,
+  type DecisionConsulta
+} from "@/lib/consultaCompañero";
+import { ConsultaCompañero } from "@/components/ConsultaCompañero";
 
 export default function SalaPage() {
   // Preload de cartas al entrar a la sala — si el usuario abrió el link
@@ -55,6 +62,7 @@ export default function SalaPage() {
   >([]);
   const avisoTimerRef = useRef<number | null>(null);
   const botTimerRef = useRef<number | null>(null);
+  const [consulta, setConsulta] = useState<ConsultaT | null>(null);
   // Para evitar despachar dos veces la misma acción del bot cuando el
   // estado se actualiza por realtime y el effect re-corre antes de que
   // llegue el estado pos-acción.
@@ -133,7 +141,37 @@ export default function SalaPage() {
         (j) => j.id === mano.turnoJugadorId && j.esBot
       );
     }
-    if (!actor) return;
+    if (!actor) {
+      setConsulta(null);
+      return;
+    }
+
+    // ¿Debería consultarle al humano antes de actuar?
+    //   - Envido (baza 1, ventana abierta, bot es pie): consulta envido.
+    //   - Jugar (baza 2/3 cuando el bot abre la baza): consulta jugá/vení.
+    // Para "jugar" precomputamos la acción — si la IA decidió cantar
+    // truco (mano fuerte / macho), lo dejamos hacer sin consultar.
+    const c = deberiaConsultar(estado, actor);
+    if (c) {
+      let consultaFinal: ConsultaT | null = c;
+      if (c.tipo === "jugar") {
+        const accionPreview = decidirAccionBot(estado, actor.id);
+        if (accionPreview.tipo !== "jugar_carta") consultaFinal = null;
+      }
+      if (consultaFinal) {
+        setConsulta((prev) => {
+          if (
+            prev &&
+            prev.botJugadorId === consultaFinal!.botJugadorId &&
+            prev.tipo === consultaFinal!.tipo
+          )
+            return prev;
+          return consultaFinal;
+        });
+        return;
+      }
+    }
+    setConsulta(null);
 
     // Anti-doble dispatch: si ya despachamos una acción para este bot
     // a esta versión del estado, no la repetimos. Cuando el estado se
@@ -222,6 +260,15 @@ export default function SalaPage() {
       if (!r.ok) setError(r.error || "Acción rechazada.");
     },
     [salaId, miId]
+  );
+  const resolverConsulta = useCallback(
+    (decision: DecisionConsulta) => {
+      if (!estado || !consulta || !miId) return;
+      const accion = accionDesdeConsulta(estado, consulta.botJugadorId, decision);
+      setConsulta(null);
+      enviarAccionOnline(salaId, miId, accion);
+    },
+    [estado, consulta, salaId, miId]
   );
   const enviarChat = useCallback(
     async (m: {
@@ -525,6 +572,13 @@ export default function SalaPage() {
               {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
                * para que quede arriba de mi mano de cartas. */}
               <MiAvatarBR estado={estado} miId={miId!} />
+              {consulta && (
+                <ConsultaCompañero
+                  consulta={consulta}
+                  estado={estado}
+                  onResolver={resolverConsulta}
+                />
+              )}
               {/* Burbuja con últimos 3 mensajes humanos */}
               <ChatFlotante
                 estado={estado}

@@ -106,7 +106,8 @@
       "Bash(awk '{print $1}')",
       "Bash(npx tsx *)",
       "Read(//private/tmp/**)",
-      "Bash(pkill -f \"generar-voces\")"
+      "Bash(pkill -f \"generar-voces\")",
+      "Bash(grep -n \"Revancha\\\\|tamanio=\\\\${tamanio}\" src/app/jugar/solo/partida/page.tsx)"
     ],
     "additionalDirectories": [
       "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"
