@@ -11,6 +11,10 @@ import type { EstadoJuego, Jugador } from "../_shared/truco/types.ts";
 interface Payload {
   sala_id: string;
   jugador_id?: string;
+  /** Asiento específico donde poner el bot. Si está libre, se usa; sino
+   *  cae al primer asiento libre. Sin esto la function siempre llenaba
+   *  el de menor número aunque el usuario hubiese clickeado en otro. */
+  asiento?: number;
 }
 
 // Mismo catálogo que /src/data/jugadores.ts. Lo duplicamos acá para que la
@@ -53,11 +57,23 @@ Deno.serve(async (req) => {
 
   const total = sala.modo === "2v2" ? 4 : 2;
   const ocupados = new Set(estado.jugadores.map((j) => j.asiento));
+  // Si el cliente pidió un asiento puntual y está libre, lo respetamos
+  // (así clickear el slot de abajo a la derecha llena ese y no el primero
+  // libre). Sino cae al primer asiento disponible.
   let asiento = -1;
-  for (let i = 0; i < total; i++) {
-    if (!ocupados.has(i)) {
-      asiento = i;
-      break;
+  if (
+    typeof body.asiento === "number" &&
+    body.asiento >= 0 &&
+    body.asiento < total &&
+    !ocupados.has(body.asiento)
+  ) {
+    asiento = body.asiento;
+  } else {
+    for (let i = 0; i < total; i++) {
+      if (!ocupados.has(i)) {
+        asiento = i;
+        break;
+      }
     }
   }
   if (asiento < 0) return fail("sala_llena", 409);

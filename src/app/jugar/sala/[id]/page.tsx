@@ -160,7 +160,7 @@ export default function SalaPage() {
       if (cargandoEnAsiento !== null) return;
       setCargandoEnAsiento(asiento);
       try {
-        const r = await agregarBotOnline(salaId, miId ?? undefined);
+        const r = await agregarBotOnline(salaId, miId ?? undefined, asiento);
         if (!r.ok) setError(r.error || "No se pudo agregar bot.");
       } finally {
         setCargandoEnAsiento(null);

@@ -132,11 +132,13 @@ export async function iniciarPartidaOnline(
 
 export async function agregarBotOnline(
   salaId: string,
-  jugadorId?: string
+  jugadorId?: string,
+  asiento?: number
 ): Promise<SalaResp> {
   return invocar("sala-agregar-bot", {
     sala_id: salaId,
-    jugador_id: jugadorId
+    jugador_id: jugadorId,
+    asiento
   });
 }
 
