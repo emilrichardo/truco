@@ -31,6 +31,7 @@ export function ResultadoEnvido({
 
   const res = estado.manoActual?.envidoResolucion ?? null;
   const manoNum = estado.manoActual?.numero ?? 0;
+  const fase = estado.manoActual?.fase;
   const key = res ? `${manoNum}:${res.ganadorEquipo}:${res.puntos}` : null;
 
   useEffect(() => {
@@ -45,6 +46,13 @@ export function ResultadoEnvido({
     // "Son buenas") y recién después aparece el +N pts. Así no se pisa
     // visualmente con la voz que está cantando.
     showRef.current = window.setTimeout(() => {
+      // Si para cuando se cumple el delay la mano ya cerró, no mostramos
+      // el toast del envido — el banner grande de fin de mano va a ocupar
+      // el centro y no queremos los dos overlapping.
+      if (estado.manoActual?.fase === "terminada") {
+        showRef.current = null;
+        return;
+      }
       setData({ res, yoGane, key });
       showRef.current = null;
       hideRef.current = window.setTimeout(() => {
@@ -52,7 +60,20 @@ export function ResultadoEnvido({
         hideRef.current = null;
       }, DURACION_MS);
     }, RETARDO_TOAST_MS);
-  }, [res, key, estado.jugadores, miId]);
+  }, [res, key, estado.jugadores, miId, estado.manoActual]);
+
+  // Si la mano se cierra mientras el toast está visible, lo escondemos
+  // para dejarle el centro al ResultadoMano (banner grande). Antes los
+  // dos quedaban superpuestos por unos segundos.
+  useEffect(() => {
+    if (fase === "terminada" && data) {
+      if (hideRef.current) clearTimeout(hideRef.current);
+      if (showRef.current) clearTimeout(showRef.current);
+      hideRef.current = null;
+      showRef.current = null;
+      setData(null);
+    }
+  }, [fase, data]);
 
   // Si cambia la mano, reseteamos para que la próxima resolución pueda volver a mostrar.
   useEffect(() => {
