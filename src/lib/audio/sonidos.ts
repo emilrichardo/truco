@@ -109,6 +109,12 @@ function encolar(t: Tarea) {
 }
 
 function reproducirArchivo(src: string) {
+  // Precargamos el clip apenas se encola — así para cuando le toque el
+  // turno en la cola FIFO, el <audio> ya está cargado y arranca instantáneo.
+  // Antes el primer play de cada clip tenía latencia de red+decode y se
+  // notaba especialmente en la cadena Quiero → Tengo X → Tengo Y del envido.
+  const precarga = cargarHowl(src);
+  if (precarga.state() === "unloaded") precarga.load();
   encolar(() => {
     if (muteado) {
       avanzar();

@@ -1,11 +1,17 @@
 "use client";
 // Banner grande que aparece cuando se resuelve un envido (querido o no
-// querido). Muestra qué equipo ganó y cuántos puntos. Auto-oculta a los
-// ~3.5s. Vive en la Mesa para que se centre sobre la mesa.
+// querido). Muestra qué equipo ganó y cuántos puntos. Vive en la Mesa
+// para que se centre sobre la mesa.
+//
+// Timing: se demora ~2.5s después de que el motor resuelve el envido,
+// así primero se escuchan las voces ("Quiero", "Tengo 28.", "Son buenas")
+// y recién después aparece el +N pts. Antes el toast salía instantáneo
+// y se solapaba con las voces.
 import { useEffect, useRef, useState } from "react";
 import type { EstadoJuego, ResolucionEnvido } from "@/lib/truco/types";
 
-const DURACION_MS = 3500;
+const RETARDO_TOAST_MS = 2500;
+const DURACION_MS = 2800;
 
 export function ResultadoEnvido({
   estado,
@@ -20,7 +26,8 @@ export function ResultadoEnvido({
     key: string;
   } | null>(null);
   const ultimaKey = useRef<string | null>(null);
-  const tRef = useRef<number | null>(null);
+  const showRef = useRef<number | null>(null);
+  const hideRef = useRef<number | null>(null);
 
   const res = estado.manoActual?.envidoResolucion ?? null;
   const manoNum = estado.manoActual?.numero ?? 0;
@@ -32,12 +39,19 @@ export function ResultadoEnvido({
     ultimaKey.current = key;
     const me = estado.jugadores.find((j) => j.id === miId);
     const yoGane = me ? me.equipo === res.ganadorEquipo : false;
-    setData({ res, yoGane, key });
-    if (tRef.current) clearTimeout(tRef.current);
-    tRef.current = window.setTimeout(() => {
-      setData(null);
-      tRef.current = null;
-    }, DURACION_MS);
+    if (showRef.current) clearTimeout(showRef.current);
+    if (hideRef.current) clearTimeout(hideRef.current);
+    // Demoramos el toast: primero suenan "Quiero" + tantos ("Tengo 28.",
+    // "Son buenas") y recién después aparece el +N pts. Así no se pisa
+    // visualmente con la voz que está cantando.
+    showRef.current = window.setTimeout(() => {
+      setData({ res, yoGane, key });
+      showRef.current = null;
+      hideRef.current = window.setTimeout(() => {
+        setData(null);
+        hideRef.current = null;
+      }, DURACION_MS);
+    }, RETARDO_TOAST_MS);
   }, [res, key, estado.jugadores, miId]);
 
   // Si cambia la mano, reseteamos para que la próxima resolución pueda volver a mostrar.
@@ -47,7 +61,8 @@ export function ResultadoEnvido({
 
   useEffect(() => {
     return () => {
-      if (tRef.current) clearTimeout(tRef.current);
+      if (showRef.current) clearTimeout(showRef.current);
+      if (hideRef.current) clearTimeout(hideRef.current);
     };
   }, []);
 
