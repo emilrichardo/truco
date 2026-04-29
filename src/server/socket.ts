@@ -73,7 +73,7 @@ export function registerSocket(io: any) {
           personaje: string;
           modo: "solo" | "online";
           tamanio: 1 | 2 | 4;
-          puntosObjetivo: 15 | 30;
+          puntosObjetivo: 18 | 30;
         },
         cb: (data: { salaId: string; jugadorId: string }) => void
       ) => {

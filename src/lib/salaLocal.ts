@@ -57,7 +57,7 @@ export interface ConfigSalaLocal {
   miNombre: string;
   miPersonaje: string;
   tamanio: 2 | 4;
-  puntosObjetivo: 15 | 30;
+  puntosObjetivo: 18 | 30;
   /** Si está presente, fuerza los personajes de los bots en orden de
    *  asiento (bot 1 = botPersonajes[0], bot 2 = botPersonajes[1], etc).
    *  Lo usa el botón "Revancha" para mantener a los mismos oponentes. */

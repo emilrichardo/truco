@@ -11,7 +11,7 @@ interface Payload {
   nombre: string;
   personaje: string;
   tamanio: 2 | 4;
-  puntos_objetivo: 15 | 30;
+  puntos_objetivo: 18 | 30;
   device_id?: string;          // identificador estable del cliente
 }
 

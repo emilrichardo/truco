@@ -14,7 +14,7 @@ export default function SoloPage() {
   const [miSlug, setMiSlug, listo] = usePersonajeLocal();
   const [cambiar, setCambiar] = useState(false);
   const [tamanio, setTamanio] = useState<2 | 4>(2);
-  const [puntos, setPuntos] = useState<15 | 30>(15);
+  const [puntos, setPuntos] = useState<18 | 30>(18);
   const [creando, setCreando] = useState(false);
 
   // Mientras el usuario elige config, ya empezamos a bajar las cartas.
@@ -100,11 +100,11 @@ export default function SoloPage() {
           />
         </Opcion>
         <Opcion label="A cuántos">
-          <Choice activo={puntos === 15} onClick={() => setPuntos(15)}>
-            15 corto
+          <Choice activo={puntos === 18} onClick={() => setPuntos(18)}>
+            A 18 (9 + 9)
           </Choice>
           <Choice activo={puntos === 30} onClick={() => setPuntos(30)}>
-            30 largo
+            A 30 (15 + 15)
           </Choice>
         </Opcion>
 

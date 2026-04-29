@@ -139,7 +139,7 @@ export interface EstadoJuego {
   jugadores: Jugador[];
   /** 2v2 o 1v1: cantidad de equipos siempre 2. Tamaños 1, 2 o 4 jugadores. */
   modo: "1v1" | "2v2";
-  puntosObjetivo: 15 | 30;
+  puntosObjetivo: 18 | 30;
   puntos: [number, number];
   manoActual: Mano | null;
   historialManos: Mano[];

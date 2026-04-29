@@ -58,7 +58,7 @@ function PartidaSoloInterno() {
   const [mostrarFinPartida, setMostrarFinPartida] = useState(false);
 
   const tamanio = (Number(params.get("tamanio")) === 4 ? 4 : 2) as 2 | 4;
-  const puntos = (Number(params.get("puntos")) === 30 ? 30 : 15) as 15 | 30;
+  const puntos = (Number(params.get("puntos")) === 30 ? 30 : 18) as 18 | 30;
   // Si la URL trae `?bots=slug1,slug2,slug3` (orden por asiento), forzamos
   // a esos personajes. Lo usa el botón Revancha para mantener exactamente
   // los mismos oponentes entre partidas.

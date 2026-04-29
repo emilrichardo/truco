@@ -16,7 +16,7 @@ export function Marcador({
   puntosNos: number;
   puntosEllos: number;
   /** Mantenido por compatibilidad — ya no se muestra header. */
-  objetivo?: 15 | 30;
+  objetivo?: 18 | 30;
   miEquipoEs0: boolean;
   /** En 1v1 se pasan los nombres reales (yo / rival) en vez de "Nos / Ellos". */
   tituloNos?: string;

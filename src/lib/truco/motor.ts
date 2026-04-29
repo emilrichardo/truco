@@ -77,7 +77,7 @@ export function crearEstadoInicial(opts: {
   salaId: string;
   jugadores: Jugador[];
   modo: "1v1" | "2v2";
-  puntosObjetivo?: 15 | 30;
+  puntosObjetivo?: 18 | 30;
 }): EstadoJuego {
   return {
     salaId: opts.salaId,
