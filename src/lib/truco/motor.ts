@@ -4,7 +4,7 @@ import {
   calcularEnvido,
   comparar,
   crearMazo,
-  jerarquia,
+  esMachoEfectivo,
   mezclar,
   nombreCarta
 } from "./cartas";
@@ -223,14 +223,17 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
   baza.jugadas.push({ jugadorId: jugador.id, carta });
   anuncio(estado, jugador.id, `Tira ${nombreCarta(carta)}`, "carta");
 
-  // Atajo: si tira el ancho de espada (jerarquía 14, imbatible) y su
-  // equipo ya ganó una baza anterior, esta baza ya está definida — no
-  // tiene sentido seguir tirando cartas. Cerramos la mano de una.
-  // (Sólo aplica desde la baza 2 en adelante; en la 1ra el ancho gana
-  // la baza pero la mano sigue.)
+  // Atajo: si la carta tirada es "macho efectivo" — no queda en juego
+  // ninguna carta más alta — y su equipo ya ganó una baza anterior,
+  // esta baza está definida. Cerramos la mano de una en vez de seguir
+  // pidiendo cartas a los demás. Aplica al ancho de espada siempre, al
+  // ancho de basto si ya cayó el de espada, al 7 de espada si cayeron
+  // los anchos, etc.
   const bazaIdx = mano.bazas.length - 1;
-  const esAncho = jerarquia(carta) === 14;
-  if (esAncho && bazaIdx >= 1) {
+  const cartasYaJugadas = mano.bazas.flatMap((b) =>
+    b.jugadas.map((j) => j.carta)
+  );
+  if (bazaIdx >= 1 && esMachoEfectivo(carta, cartasYaJugadas)) {
     const bazasGanadasAntes = mano.bazas
       .slice(0, bazaIdx)
       .filter((b) => b.ganadorEquipo === jugador.equipo).length;
@@ -866,11 +869,21 @@ function cartasOriginalesDeMano(estado: EstadoJuego, jugadorId: string): Carta[]
 
 function devolverTurnoAJugar(estado: EstadoJuego) {
   const mano = estado.manoActual!;
-  const baza = mano.bazas[mano.bazas.length - 1];
+  const idx = mano.bazas.length - 1;
+  const baza = mano.bazas[idx];
   // El turno vuelve al jugador que correspondía antes del canto:
-  // el siguiente al último que tiró carta en la baza (o el mano si nadie tiró).
+  //  - Si nadie tiró todavía en la baza, vuelve al APERTURADOR de esta
+  //    baza (mano de la mano si es la 1ra; el ganador de la baza
+  //    anterior si es la 2da o 3ra). Antes apuntaba siempre al mano de
+  //    la mano, lo que dejaba al juego trabado cuando un bot cantaba al
+  //    abrir baza 2 y luego el rival decía quiero — el turno volvía al
+  //    mano de la mano original en vez de al bot que abría.
+  //  - Si ya hay cartas, vuelve al siguiente al último que tiró.
   if (baza.jugadas.length === 0) {
-    mano.turnoJugadorId = mano.manoJugadorId;
+    mano.turnoJugadorId =
+      idx === 0
+        ? mano.manoJugadorId
+        : siguienteJugadorDespuesDeBaza(estado, mano.bazas[idx - 1]);
   } else {
     const ultimo = baza.jugadas[baza.jugadas.length - 1];
     const jUlt = jugadorPorId(estado, ultimo.jugadorId)!;

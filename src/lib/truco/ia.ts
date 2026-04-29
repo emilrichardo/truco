@@ -10,7 +10,12 @@
 // Todo determinístico salvo donde explícitamente usamos aleatoriedad
 // (con probabilidad ponderada por personalidad).
 
-import { jerarquia, calcularEnvido, crearMazo } from "./cartas";
+import {
+  jerarquia,
+  calcularEnvido,
+  crearMazo,
+  esMachoEfectivo
+} from "./cartas";
 import type { Accion, Carta, EstadoJuego, Jugador } from "./types";
 import { accionesLegales } from "./motor";
 
@@ -320,21 +325,25 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   if (!legales.includes("cantar_truco")) return null;
 
   // Con compañero humano, en general NO canto truco — la decisión es del
-  // humano. PERO si tengo una mano excepcional (fuerza ≥ 80, tipo ancho
-  // de espada + ancho de basto, o el bot vio un 1 espada en su mano),
-  // canto igual: sería un desperdicio quedarse callado con cartas que
-  // ganan seguro. El humano siempre puede subir o ir al mazo después.
+  // humano. PERO si tengo una mano excepcional (fuerza ≥ 80, o tengo un
+  // "macho efectivo": una carta que dado lo ya jugado nadie puede matar,
+  // tipo el 1 de basto cuando ya cayó el 1 de espada), canto igual.
+  // Sería un desperdicio quedarse callado con cartas que ganan seguro.
   const tengoCompañeroHumano = estado.jugadores.some(
     (j) => j.equipo === yo.equipo && j.id !== jugadorId && !j.esBot
   );
   if (tengoCompañeroHumano) {
     const fuerzaActual = fuerzaTruco(vista.enMano);
-    const tieneAncho = vista.enMano.some((c) => jerarquia(c) === 14);
-    const manoExcepcional = fuerzaActual >= 80 || tieneAncho;
+    const cartasYaJugadas = mano.bazas.flatMap((b) =>
+      b.jugadas.map((j) => j.carta)
+    );
+    const tieneMacho = vista.enMano.some((c) =>
+      // La carta sería macho si se jugara ahora — chequeamos contra el
+      // historial actual de jugadas, sin contarla como ya tirada.
+      esMachoEfectivo(c, cartasYaJugadas)
+    );
+    const manoExcepcional = fuerzaActual >= 80 || tieneMacho;
     if (!manoExcepcional) return null;
-    // Caemos a la lógica normal — sigue evaluando los thresholds, así
-    // un ancho solo no obliga a cantar si el resto de la mano es basura
-    // y el bot prefiere jugar carta primero.
   }
 
   // Etiqueta trucera: en baza 1 con la ventana de envido todavía abierta

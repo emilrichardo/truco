@@ -66,6 +66,51 @@ export function comparar(a: Carta, b: Carta): number {
   return jerarquia(a) - jerarquia(b);
 }
 
+/** Devuelve `true` si `carta` es "macho efectivo" en este momento de la
+ *  mano: ya cayeron en mesa todas las cartas con jerarquía estrictamente
+ *  mayor, así que no queda en juego nada que la pueda matar. El 1 de
+ *  espada es macho desde el arranque; el 1 de basto pasa a serlo cuando
+ *  cae el de espada; el 7 de espada cuando caen los dos anchos; etc.
+ *  `cartasJugadas` debe incluir TODAS las cartas que ya se tiraron en
+ *  cualquier baza de la mano actual (incluyendo `carta`). */
+export function esMachoEfectivo(carta: Carta, cartasJugadas: Carta[]): boolean {
+  const j = jerarquia(carta);
+  if (j === 14) return true; // 1 espada — siempre macho.
+  for (let nivel = 14; nivel > j; nivel--) {
+    const totalEnMazo = totalCartasPorJerarquia(nivel);
+    const tirados = cartasJugadas.filter((c) => jerarquia(c) === nivel).length;
+    if (tirados < totalEnMazo) return false;
+  }
+  return true;
+}
+
+/** Cuántas cartas existen en el mazo de truco con esta jerarquía.
+ *  Usado para detectar "machos efectivos": si todas las cartas de
+ *  jerarquía > X ya se jugaron, la carta de jerarquía X es imbatible. */
+export function totalCartasPorJerarquia(j: number): number {
+  switch (j) {
+    case 14: // 1 espada
+    case 13: // 1 basto
+    case 12: // 7 espada
+    case 11: // 7 oro
+      return 1;
+    case 10: // los 3s
+    case 9: // los 2s
+    case 7: // los 12 (rey)
+    case 6: // los 11 (caballo)
+    case 5: // los 10 (sota)
+    case 3: // los 6
+    case 2: // los 5
+    case 1: // los 4
+      return 4;
+    case 8: // 1 copa, 1 oro
+    case 4: // 7 copa, 7 basto
+      return 2;
+    default:
+      return 0;
+  }
+}
+
 /** Valor de una carta para envido: figuras (10,11,12) valen 0; resto su número. */
 export function valorEnvidoCarta(c: Carta): number {
   if (c.numero >= 10) return 0;

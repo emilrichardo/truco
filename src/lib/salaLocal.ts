@@ -17,9 +17,11 @@ import { calcularEnvido } from "@/lib/truco/cartas";
 import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { PERSONAJES } from "@/data/jugadores";
 
-/** Consulta del bot compañero al humano antes de actuar en baza 1.
- *  Cuando el bot tiene su turno y hay ventana de envido abierta, en vez
- *  de tirar carta directamente le pregunta al humano si quiere cantar. */
+/** Consulta del bot compañero al humano antes de tirar carta. Aplica
+ *  cuando el bot es pie del equipo y la ventana de envido está abierta:
+ *  en vez de jugar a ciegas, le pasa info al humano que es mano del
+ *  equipo y le pide que decida. Para el truco, el bot decide solo si
+ *  tiene macho efectivo (ver intentarCantarTruco en ia.ts). */
 export interface ConsultaCompañero {
   tipo: "envido";
   /** ID del bot que está esperando la decisión. */
@@ -312,10 +314,10 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   );
 
   // Resolver consulta: el humano decide qué hace su bot compañero.
-  //  - "envido" / "real_envido" / "falta_envido": el bot canta esa apuesta.
-  //  - "no": el bot juega su carta normal (decidirAccionBot puede igual
-  //    cantar truco si tiene mano excepcional, eso ya es decisión propia
-  //    sobre el truco, no sobre el envido).
+  //  - envido: "envido" / "real_envido" / "falta_envido" / "no"
+  //  - truco:  "truco" / "no"
+  // En "no" el bot juega su carta normalmente (decidirAccionBot decide
+  // qué carta es sensata para ese contexto).
   const resolverConsulta = useCallback(
     (decision: "envido" | "real_envido" | "falta_envido" | "no") => {
       if (!estado || !consulta) return;
@@ -342,24 +344,43 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
 }
 
 /** Decide si el bot que está por actuar debe pedir input al humano antes
- *  de tirar carta. Hoy aplica sólo a la ventana de envido en baza 1: si el
- *  compañero del bot es humano y todavía no se cantó/resolvió envido,
- *  paramos y mostramos opciones. Más adelante se puede extender al truco. */
+ *  de tirar carta. Aplica sólo cuando el bot es PIE de su equipo (último
+ *  en jugar en orden de juego) y su compañero es humano. La regla
+ *  trucera: el pie es el que mira lo que jugaron todos antes y decide
+ *  con más info. Si el humano es pie no hace falta consultar — ya tiene
+ *  el control en su panel. */
 function deberiaConsultar(
   estado: EstadoJuego,
   bot: Jugador
 ): ConsultaCompañero | null {
   if (!bot.esBot) return null;
-  const compañeroHumano = estado.jugadores.some(
-    (j) => j.equipo === bot.equipo && j.id !== bot.id && !j.esBot
+  const compañeros = estado.jugadores.filter(
+    (j) => j.equipo === bot.equipo && j.id !== bot.id
   );
+  const compañeroHumano = compañeros.some((j) => !j.esBot);
   if (!compañeroHumano) return null;
   const mano = estado.manoActual;
   if (!mano) return null;
   if (mano.turnoJugadorId !== bot.id) return null;
-  // Si hay un canto pendiente del rival, el flujo de respuesta ya delega
-  // al humano vía quienActuaSiBot — no necesitamos consultar acá.
   if (mano.envidoCantoActivo || mano.trucoCantoActivo) return null;
+
+  // El bot tiene que ser PIE del equipo: en orden de juego (distancia
+  // anti-horaria desde el mano de la mano) está más lejos que sus
+  // compañeros. Si el bot no es pie, dejamos que juegue normalmente —
+  // la canilla la tiene el humano que sí es pie.
+  const manoAsiento = estado.jugadores.find(
+    (j) => j.id === mano.manoJugadorId
+  )?.asiento;
+  if (manoAsiento === undefined) return null;
+  const n = estado.jugadores.length;
+  const distanciaDeJuego = (asiento: number) =>
+    (asiento - manoAsiento + n) % n;
+  const miDist = distanciaDeJuego(bot.asiento);
+  const botEsPie = compañeros.every(
+    (c) => distanciaDeJuego(c.asiento) < miDist
+  );
+  if (!botEsPie) return null;
+
   // Sólo consultamos si la ventana de envido sigue abierta — sino ya no
   // hay nada que preguntar.
   const envidoCantable =
@@ -367,9 +388,6 @@ function deberiaConsultar(
     !mano.envidoResuelto &&
     mano.bazas[0].jugadas.length < estado.jugadores.length;
   if (!envidoCantable) return null;
-  // En baza 1 antes de jugar, las cartas en mano del bot son sus 3
-  // originales. Calculamos el envido que tiene para que el humano decida
-  // con info concreta.
   const cartas = mano.cartasPorJugador[bot.id] || [];
   const envidoBot = calcularEnvido(cartas);
   return { tipo: "envido", botJugadorId: bot.id, envidoBot };

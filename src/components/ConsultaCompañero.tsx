@@ -20,8 +20,8 @@ export function ConsultaCompañero({
   const bot = estado.jugadores.find((j) => j.id === consulta.botJugadorId);
   if (!bot) return null;
   return (
-    <div className="absolute inset-x-0 bottom-0 z-[800] p-3 pointer-events-none">
-      <div className="card pointer-events-auto p-3 max-w-md mx-auto border-2 border-dorado/60 shadow-2xl bg-carbon/95 backdrop-blur-sm">
+    <div className="absolute inset-0 z-[800] flex items-center justify-center p-3 pointer-events-none">
+      <div className="card pointer-events-auto p-3 w-full max-w-md border-2 border-dorado/60 shadow-2xl bg-carbon/95 backdrop-blur-sm">
         <div className="text-center mb-2">
           <div className="label-slim acento-azul">
             {bot.nombre} te pregunta
