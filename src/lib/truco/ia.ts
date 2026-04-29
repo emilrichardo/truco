@@ -322,7 +322,18 @@ function intentarCantarEnvido(ctx: ContextoCanto): Accion | null {
 function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   const { jugadorId, legales, vista, personalidad: p, yo, estado } = ctx;
   const mano = estado.manoActual!;
-  if (!legales.includes("cantar_truco")) return null;
+  // Detectamos cuál de los 3 niveles está disponible. Antes sólo
+  // chequeábamos cantar_truco — y entonces si el rival ya había cantado
+  // truco y vos como equipo aceptaste, la IA nunca subía a retruco
+  // aunque tuviera el 1 de basto en mano. Ahora cubrimos los 3 niveles.
+  const cantoLegal: Accion["tipo"] | null = legales.includes("cantar_truco")
+    ? "cantar_truco"
+    : legales.includes("cantar_retruco")
+      ? "cantar_retruco"
+      : legales.includes("cantar_vale4")
+        ? "cantar_vale4"
+        : null;
+  if (!cantoLegal) return null;
 
   // Con compañero humano, en general NO canto truco — la decisión es del
   // humano. PERO si tengo una mano excepcional (fuerza ≥ 80, o tengo un
@@ -350,8 +361,7 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   // (envido no resuelto y nadie tiró carta todavía o sólo algunos), el bot
   // NO canta truco — el envido tiene que jugarse primero. Si la mano de
   // envido del bot es floja se aguanta, juega carta y deja que el envido
-  // se cierre solo. Antes el bot cantaba truco prematuramente y le robaba
-  // al humano la chance de cantar envido con buenos puntos.
+  // se cierre solo.
   const ventanaEnvidoAbierta =
     mano.bazas.length === 1 &&
     !mano.envidoResuelto &&
@@ -367,20 +377,36 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   ).length;
   const distancia = estado.puntos[yo.equipo] - estado.puntos[1 - yo.equipo];
 
-  // Threshold base bajado a 50 (era 60). El bot canta truco más seguido.
+  // Threshold base. Al subir a retruco / vale 4 estamos arriesgando más
+  // puntos así que somos más exigentes con la fuerza requerida.
   let umbral = 50 - p.agresion * 14 - bazasGanadas * 12;
+  if (cantoLegal === "cantar_retruco") umbral += 10;
+  if (cantoLegal === "cantar_vale4") umbral += 16;
   if (distancia < -7) umbral -= 8; // vengo perdiendo, juego más fuerte
   if (distancia > 10) umbral += 4; // gano cómodo, ahorro
   if (bazasPerdidas >= 1 && bazasGanadas === 0) umbral += 6; // perdí 1ra, cuidado
 
-  if (fuerza >= umbral) return { tipo: "cantar_truco", jugadorId };
+  // Si tengo macho efectivo en mano, bajamos mucho el umbral — la baza
+  // está prácticamente asegurada y subir es lo correcto. Esto cubre el
+  // caso del 1 de basto cuando ya cayó el 1 de espada (y similares).
+  const cartasYaJugadas = mano.bazas.flatMap((b) =>
+    b.jugadas.map((j) => j.carta)
+  );
+  const tieneMachoActual = vista.enMano.some((c) =>
+    esMachoEfectivo(c, cartasYaJugadas)
+  );
+  if (tieneMachoActual) umbral -= 20;
 
-  // Bluff: cantar truco con mano floja para asustar. Más permisivo.
+  if (fuerza >= umbral) return { tipo: cantoLegal, jugadorId };
+
+  // Bluff: cantar para asustar. Sólo en truco inicial (no en retruco /
+  // vale 4 — ahí los puntos en juego ya son altos y bluff es muy caro).
   const puedoBluff =
-    bazasGanadas >= 1 || mano.bazas[0].jugadas.length === 0;
+    cantoLegal === "cantar_truco" &&
+    (bazasGanadas >= 1 || mano.bazas[0].jugadas.length === 0);
   if (puedoBluff && fuerza < 50) {
     if (Math.random() < p.bluff * 0.22) {
-      return { tipo: "cantar_truco", jugadorId };
+      return { tipo: cantoLegal, jugadorId };
     }
   }
   return null;
