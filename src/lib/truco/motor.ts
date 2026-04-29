@@ -502,65 +502,47 @@ function cantarFlor(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
     return { ok: false, error: "Ya tiraste carta — flor extemporánea.", estado };
   }
 
-  // Resolución única: todos los jugadores con flor revelan; gana el
-  // de mayor puntaje. Empate gana el equipo "mano".
+  // Sin contraflor: cada jugador con flor canta y suma +3 a su equipo
+  // de manera independiente. NO comparamos tantos — eso sólo aplica con
+  // contraflor (no implementado todavía). Si tu compañero también tiene
+  // flor, la canta cuando le toque y suma otros +3.
   mano.florCantores.push(jugador.id);
   anuncio(estado, jugador.id, fraseAleatoria("flor"), "canto");
-
-  const cantos: { jugadorId: string; puntos: number; equipo: Equipo }[] = [];
-  for (const j of estado.jugadores) {
-    const c = cartasOriginalesDe(estado, j.id);
-    if (tieneFlor(c)) {
-      cantos.push({ jugadorId: j.id, puntos: valorFlor(c), equipo: j.equipo });
-    }
-  }
-  // Buscar mejor por equipo
-  const mejorPorEquipo = new Map<Equipo, { jugadorId: string; puntos: number }>();
-  for (const c of cantos) {
-    const actual = mejorPorEquipo.get(c.equipo);
-    if (!actual || c.puntos > actual.puntos) {
-      mejorPorEquipo.set(c.equipo, { jugadorId: c.jugadorId, puntos: c.puntos });
-    }
-  }
-  const m0 = mejorPorEquipo.get(0);
-  const m1 = mejorPorEquipo.get(1);
-  let eqGanador: Equipo;
-  if (m0 && m1) {
-    if (m0.puntos > m1.puntos) eqGanador = 0;
-    else if (m1.puntos > m0.puntos) eqGanador = 1;
-    else eqGanador = mano.manoEquipo;
-  } else if (m0) {
-    eqGanador = 0;
-  } else if (m1) {
-    eqGanador = 1;
-  } else {
-    // Imposible (al menos el cantor tiene flor) pero por las dudas:
-    eqGanador = jugador.equipo;
-  }
   const puntos = 3;
-  estado.puntos[eqGanador] += puntos;
-  mano.florResuelta = true;
-  mano.florResolucion = {
-    ganadorEquipo: eqGanador,
-    puntos,
-    detalle: `Flor — equipo ${eqGanador + 1} +${puntos}.`,
-    cantos: cantos.map((c) => ({ jugadorId: c.jugadorId, puntos: c.puntos }))
-  };
+  estado.puntos[jugador.equipo] += puntos;
   mano.puntosOtorgados.push({
-    equipo: eqGanador,
+    equipo: jugador.equipo,
     puntos,
     motivo: `Flor (+${puntos})`
   });
-  // Anunciamos los tantos en orden mano-primero, igual que el envido.
-  const eqMano = mano.manoEquipo;
-  const orden = cantos.slice().sort((a, b) =>
-    a.equipo === eqMano && b.equipo !== eqMano ? -1 :
-    a.equipo !== eqMano && b.equipo === eqMano ? 1 : 0
+  anuncio(
+    estado,
+    "",
+    `Equipo ${jugador.equipo + 1} +${puntos} pts (flor)`,
+    "puntos"
   );
-  for (const c of orden) {
-    anuncio(estado, c.jugadorId, `Tengo ${c.puntos}.`, "respuesta");
+
+  // ¿Quedan más jugadores con flor sin cantar todavía? Si sí, dejamos
+  // la flor abierta para que canten cuando les toque su turno. Si no,
+  // marcamos resuelta — el envido queda anulado para esta mano.
+  const otrosConFlorPendientes = estado.jugadores.some(
+    (j) =>
+      j.id !== jugador.id &&
+      !mano.florCantores.includes(j.id) &&
+      tieneFlor(cartasOriginalesDe(estado, j.id))
+  );
+  if (!otrosConFlorPendientes) {
+    mano.florResuelta = true;
+    mano.florResolucion = {
+      ganadorEquipo: jugador.equipo,
+      puntos,
+      detalle: `Flor cantada por ${mano.florCantores.length} jugador(es).`,
+      cantos: mano.florCantores.map((id) => ({
+        jugadorId: id,
+        puntos: valorFlor(cartasOriginalesDe(estado, id))
+      }))
+    };
   }
-  anuncio(estado, "", `Equipo ${eqGanador + 1} +${puntos} pts (flor)`, "puntos");
   if (chequearFinPartida(estado)) {
     return { ok: true, estado };
   }
@@ -576,19 +558,22 @@ function cantarEnvido(
   tipo: "cantar_envido" | "cantar_real_envido" | "cantar_falta_envido"
 ): ResultadoAccion {
   const mano = estado.manoActual!;
-  // La flor manda sobre el envido: si en esta partida se juega con flor
-  // y alguien tiene flor pero todavía no se cantó, el envido se bloquea
-  // hasta que la flor se resuelva (o el jugador con flor decida no
-  // cantarla y se cierre la ventana).
+  // La flor manda sobre el envido. Mientras alguien con flor todavía no
+  // la haya cantado (y siga con cartas para hacerlo) el envido queda
+  // bloqueado. Una vez que TODOS los que tenían flor ya cantaron (o
+  // perdieron la chance jugando carta), el envido se anula para esta
+  // mano si alguien cantó flor — la flor toma precedencia.
   if (estado.conFlor) {
-    if (mano.florResuelta) {
-      // Pos-flor: el envido siempre queda anulado en esta mano.
+    if (mano.florCantores.length > 0) {
       return { ok: false, error: "Hubo flor — no se canta envido.", estado };
     }
-    const alguienConFlor = estado.jugadores.some((j) =>
-      tieneFlor(cartasOriginalesDe(estado, j.id))
-    );
-    if (alguienConFlor && mano.florCantores.length === 0) {
+    const alguienConFlorYTurno = estado.jugadores.some((j) => {
+      const cartasOrig = cartasOriginalesDe(estado, j.id);
+      if (!tieneFlor(cartasOrig)) return false;
+      const yaJugo = mano.bazas[0].jugadas.some((x) => x.jugadorId === j.id);
+      return !yaJugo;
+    });
+    if (alguienConFlorYTurno) {
       return { ok: false, error: "Hay flor pendiente — esa va primero.", estado };
     }
   }
@@ -1104,19 +1089,24 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
   }
 
   // Flor: si la partida es con flor y el jugador tiene 3 cartas del mismo
-  // palo, puede cantarla en baza 1 antes de tirar carta. Bloquea el
-  // envido (la flor manda).
-  let alguienConFlor = false;
-  if (estado.conFlor && !mano.florResuelta && mano.bazas.length === 1) {
+  // palo, puede cantarla en baza 1 antes de tirar carta y antes de
+  // haberla ya cantado. Cada flor cantada suma +3 al equipo de quien
+  // canta — múltiples jugadores con flor pueden cantar.
+  let alguienConFlorPendiente = false;
+  if (estado.conFlor && mano.bazas.length === 1) {
     const cartasOrig = cartasOriginalesDe(estado, j.id);
     const yaJugo = mano.bazas[0].jugadas.some((x) => x.jugadorId === j.id);
-    if (tieneFlor(cartasOrig) && !yaJugo) {
+    const yaCantoFlor = mano.florCantores.includes(j.id);
+    if (tieneFlor(cartasOrig) && !yaJugo && !yaCantoFlor) {
       out.push("cantar_flor");
     }
-    alguienConFlor = estado.jugadores.some((jx) =>
-      tieneFlor(cartasOriginalesDe(estado, jx.id))
+    alguienConFlorPendiente = estado.jugadores.some(
+      (jx) =>
+        !mano.florCantores.includes(jx.id) &&
+        tieneFlor(cartasOriginalesDe(estado, jx.id))
     );
   }
+  const alguienConFlor = alguienConFlorPendiente;
 
   // Envido cantable en baza 1 por CUALQUIER jugador (esté en turno o no),
   // siempre que la baza no haya terminado y nadie haya cantado todavía.

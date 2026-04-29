@@ -17,18 +17,22 @@ import { calcularEnvido, jerarquia } from "@/lib/truco/cartas";
 import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { PERSONAJES } from "@/data/jugadores";
 
-/** Consulta del bot compañero al humano antes de tirar carta. Aplica
- *  cuando el bot es pie del equipo y la ventana de envido está abierta:
- *  en vez de jugar a ciegas, le pasa info al humano que es mano del
- *  equipo y le pide que decida. Para el truco, el bot decide solo si
- *  tiene macho efectivo (ver intentarCantarTruco en ia.ts). */
-export interface ConsultaCompañero {
-  tipo: "envido";
-  /** ID del bot que está esperando la decisión. */
-  botJugadorId: string;
-  /** Cuántos puntos de envido tiene el bot — para que el humano decida. */
-  envidoBot: number;
-}
+/** Consulta del bot compañero al humano antes de tirar carta.
+ *  - tipo "envido": baza 1 con envido cantable. El bot revela su envido
+ *    y deja que el humano decida si cantar o no.
+ *  - tipo "jugar": baza 2 o 3 cuando el bot abre la baza. No se canta
+ *    nada — el humano elige si tira la carta más alta (jugá) o la más
+ *    baja (vení). Útil para coordinar estrategia con el compañero. */
+export type ConsultaCompañero =
+  | {
+      tipo: "envido";
+      botJugadorId: string;
+      envidoBot: number;
+    }
+  | {
+      tipo: "jugar";
+      botJugadorId: string;
+    };
 
 // Delay antes de que el bot juegue/responda. 700ms se sentía instantáneo
 // y no daba tiempo al humano a leer el último canto o pensar antes de
@@ -241,21 +245,33 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
       return;
     }
 
-    // Antes de actuar: ¿el bot debería consultar al humano? Si la ventana
-    // de envido está abierta y el compañero es humano, pausamos y le
-    // pedimos al humano que decida en lugar de jugar carta a ciegas.
+    // Antes de actuar: ¿el bot debería consultar al humano?
+    //   - Envido (baza 1, ventana abierta, bot es pie): consulta envido.
+    //   - Jugar (baza 2/3 cuando el bot abre la baza): consulta jugá/vení.
+    // Para la consulta de "jugar" calculamos la acción que el bot
+    // tomaría — si decide cantar truco / retruco, lo dejamos hacer
+    // y no consultamos sobre la carta.
     const c = deberiaConsultar(estado, actor);
     if (c) {
-      setConsulta((prev) => {
-        if (
-          prev &&
-          prev.botJugadorId === c.botJugadorId &&
-          prev.tipo === c.tipo
-        )
-          return prev;
-        return c;
-      });
-      return;
+      let consultaFinal: ConsultaCompañero | null = c;
+      if (c.tipo === "jugar") {
+        const accionPreview = decidirAccionBot(estado, actor.id);
+        if (accionPreview.tipo !== "jugar_carta") {
+          consultaFinal = null;
+        }
+      }
+      if (consultaFinal) {
+        setConsulta((prev) => {
+          if (
+            prev &&
+            prev.botJugadorId === consultaFinal!.botJugadorId &&
+            prev.tipo === consultaFinal!.tipo
+          )
+            return prev;
+          return consultaFinal;
+        });
+        return;
+      }
     }
     setConsulta(null);
 
@@ -413,28 +429,42 @@ function deberiaConsultar(
   );
   if (!botEsPie) return null;
 
-  // Si hay flor pendiente sin resolver, el envido está bloqueado. No
-  // consultamos al humano por envido en esa ventana — primero se canta
-  // la flor (el botón de Flor le sale al jugador con flor en su panel).
-  if (estado.conFlor) {
-    if (mano.florResuelta) return null;
-    const alguienConFlor = estado.jugadores.some((j) => {
-      const enMano = mano.cartasPorJugador[j.id] || [];
-      return enMano.length === 3 && enMano.every((c) => c.palo === enMano[0].palo);
-    });
+  // Caso A: consulta de envido en baza 1 (bot es pie y ventana abierta).
+  //          Si hay flor pendiente la salteamos — la flor manda.
+  const enBaza1 = mano.bazas.length === 1;
+  if (enBaza1) {
+    let alguienConFlor = false;
+    if (estado.conFlor) {
+      if (mano.florResuelta || mano.florCantores.length > 0) return null;
+      alguienConFlor = estado.jugadores.some((j) => {
+        const enMano = mano.cartasPorJugador[j.id] || [];
+        return (
+          enMano.length === 3 && enMano.every((c) => c.palo === enMano[0].palo)
+        );
+      });
+    }
     if (alguienConFlor) return null;
+    const envidoCantable =
+      !mano.envidoResuelto &&
+      mano.bazas[0].jugadas.length < estado.jugadores.length;
+    if (envidoCantable) {
+      const cartas = mano.cartasPorJugador[bot.id] || [];
+      const envidoBot = calcularEnvido(cartas);
+      return { tipo: "envido", botJugadorId: bot.id, envidoBot };
+    }
+    return null;
   }
 
-  // Sólo consultamos si la ventana de envido sigue abierta — sino ya no
-  // hay nada que preguntar.
-  const envidoCantable =
-    mano.bazas.length === 1 &&
-    !mano.envidoResuelto &&
-    mano.bazas[0].jugadas.length < estado.jugadores.length;
-  if (!envidoCantable) return null;
-  const cartas = mano.cartasPorJugador[bot.id] || [];
-  const envidoBot = calcularEnvido(cartas);
-  return { tipo: "envido", botJugadorId: bot.id, envidoBot };
+  // Caso B: consulta de jugá/vení en baza 2 o 3 cuando el bot ABRE la
+  // baza (todavía no tiró nadie). Acá la decisión "matar con la brava o
+  // venir con poco" se la pasamos al humano para que coordine. Si la
+  // baza ya tiene jugadas, no consultamos — el bot ya tiene info y
+  // elige por su cuenta.
+  const baza = mano.bazas[mano.bazas.length - 1];
+  if (baza.jugadas.length === 0) {
+    return { tipo: "jugar", botJugadorId: bot.id };
+  }
+  return null;
 }
 
 function quienActuaSiBot(estado: EstadoJuego): Jugador | undefined {
