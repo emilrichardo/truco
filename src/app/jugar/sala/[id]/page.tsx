@@ -197,7 +197,10 @@ export default function SalaPage() {
         consultaFinal = {
           tipo: "truco",
           botJugadorId: actor.id,
-          cantoTipo: accionPreview.tipo
+          cantoTipo: accionPreview.tipo as
+            | "cantar_truco"
+            | "cantar_retruco"
+            | "cantar_vale4"
         };
       }
     }
