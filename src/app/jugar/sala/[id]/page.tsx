@@ -901,12 +901,18 @@ function SalaEspera({
   const todosListos = faltan === 0;
   const [mezclarEquipos, setMezclarEquipos] = useState(false);
 
-  // Grid: 2 cols × 1 fila (1v1) o 2 cols × 2 filas (2v2).
-  const gridCls = total === 4 ? "grid-cols-2 grid-rows-2" : "grid-cols-2 grid-rows-1";
+  // Grid: 2 cols × 1 fila (1v1) o 2 cols × 2 filas (2v2). En 1v1 no
+  // estiramos el grid (sin `flex-1`) — sino el slot único ocupaba toda
+  // la altura libre y la tarjeta quedaba enorme. En 2v2 sí se estira
+  // para repartir las 2 filas en el espacio disponible.
+  const gridCls =
+    total === 4
+      ? "flex-1 grid grid-cols-2 grid-rows-2 gap-3 p-3 sm:p-4"
+      : "grid grid-cols-2 auto-rows-min gap-3 p-3 sm:p-4";
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className={`flex-1 grid ${gridCls} gap-3 p-3 sm:p-4`}>
+      <div className={gridCls}>
         {slots.map(({ i, j }) => (
           <SlotEspera
             key={i}
