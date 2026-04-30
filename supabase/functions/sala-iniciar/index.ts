@@ -46,16 +46,50 @@ Deno.serve(async (req) => {
 
   // Mezclar asientos antes de iniciar. El creador (asiento 0) puede caer
   // en cualquier asiento; los equipos se recalculan por asiento%2.
+  //
+  // En 2v2 garantizamos que la pareja del primer jugador cambie respecto
+  // a la actual — sino el shuffle plano deja la misma sociedad 1/3 de las
+  // veces y al usuario se le hace que "siempre toca lo mismo".
   if (body.mezclar_equipos) {
-    const asientos = estado.jugadores.map((j) => j.asiento);
-    for (let i = asientos.length - 1; i > 0; i--) {
-      const k = Math.floor(Math.random() * (i + 1));
-      [asientos[i], asientos[k]] = [asientos[k], asientos[i]];
+    const n = estado.jugadores.length;
+    if (n === 4) {
+      const ids = estado.jugadores.map((j) => j.id);
+      const j0 = estado.jugadores[0];
+      const parejaActualId = estado.jugadores.find(
+        (j) => j.id !== j0.id && j.equipo === j0.equipo
+      )?.id;
+      // 3 sociedades posibles: el primer jugador puede ir con cualquiera
+      // de los otros 3. Sacamos la actual y elegimos al azar entre las 2.
+      const candidatosCompi = ids.slice(1).filter((id) => id !== parejaActualId);
+      const compi = candidatosCompi[Math.floor(Math.random() * candidatosCompi.length)];
+      const rivales = ids.slice(1).filter((id) => id !== compi);
+      // Asignamos asientos: equipoA → 0,2; equipoB → 1,3. Orden interno
+      // al azar para que también se mueva quién es mano.
+      const equipoA = [ids[0], compi];
+      const equipoB = [...rivales].sort(() => Math.random() - 0.5);
+      if (Math.random() < 0.5) equipoA.reverse();
+      const asientoPorId: Record<string, number> = {
+        [equipoA[0]]: 0,
+        [equipoB[0]]: 1,
+        [equipoA[1]]: 2,
+        [equipoB[1]]: 3
+      };
+      estado.jugadores.forEach((j) => {
+        j.asiento = asientoPorId[j.id];
+        j.equipo = (j.asiento % 2) as 0 | 1;
+      });
+    } else {
+      // 1v1 — un único swap posible.
+      const asientos = estado.jugadores.map((j) => j.asiento);
+      for (let i = asientos.length - 1; i > 0; i--) {
+        const k = Math.floor(Math.random() * (i + 1));
+        [asientos[i], asientos[k]] = [asientos[k], asientos[i]];
+      }
+      estado.jugadores.forEach((j, idx) => {
+        j.asiento = asientos[idx];
+        j.equipo = (asientos[idx] % 2) as 0 | 1;
+      });
     }
-    estado.jugadores.forEach((j, idx) => {
-      j.asiento = asientos[idx];
-      j.equipo = (asientos[idx] % 2) as 0 | 1;
-    });
   }
 
   iniciarPartida(estado);

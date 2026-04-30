@@ -9,7 +9,7 @@
     "start": "next start",
     "start:legacy-socket": "NODE_ENV=production tsx server.ts",
     "lint": "next lint",
-    "deploy:functions": "supabase functions deploy sala-accion sala-iniciar sala-cerrar sala-chat sala-crear sala-unirse sala-abandonar"
+    "deploy:functions": "supabase functions deploy sala-accion sala-iniciar sala-cerrar sala-chat sala-crear sala-unirse sala-abandonar sala-agregar-bot sala-revancha"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.1",

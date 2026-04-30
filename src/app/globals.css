@@ -6,8 +6,11 @@
   color-scheme: dark;
   /* Paleta oficial Truco Entre Primos (manual de marca) — hex + tripletes RGB
    * para soportar opacidad en utilidades Tailwind via rgb(var(--x) / alpha) */
-  --carbon: #1e1b18; /* Negro Carbón */
-  --carbon-rgb: 30 27 24;
+  /* Carbón neutral — antes #1e1b18 con tinte cálido (amarronado).
+   * Ahora un gris oscuro plano para que el fondo no compita con la
+   * madera de la mesa. */
+  --carbon: #1c1c1d;
+  --carbon-rgb: 28 28 29;
   --crema: #f1e0b8; /* Crema */
   --crema-rgb: 241 224 184;
   --crema-2: #e8d4a0;
@@ -24,14 +27,16 @@
   --madera-oscura: #3d2715;
 
   /* Tokens semánticos del UI */
+  /* Surfaces y bordes neutrales — antes tenían tinte cálido (#2a2521,
+   * #3a3026, #4a3d31) que pintaba todo de marrón. Ahora grises planos. */
   --bg: var(--carbon);
-  --surface: #2a2521;
-  --surface-rgb: 42 37 33;
-  --surface-2: #3a3026;
-  --surface-2-rgb: 58 48 38;
-  --border: #4a3d31;
-  --border-rgb: 74 61 49;
-  --border-fuerte: #6b5440;
+  --surface: #262626;
+  --surface-rgb: 38 38 38;
+  --surface-2: #333333;
+  --surface-2-rgb: 51 51 51;
+  --border: #3f3f3f;
+  --border-rgb: 63 63 63;
+  --border-fuerte: #5a5a5a;
   --text: var(--crema);
   --text-dim: #b3a486;
   --text-dim-rgb: 179 164 134;
@@ -53,14 +58,8 @@ html,
 body {
   background: var(--bg);
   color: var(--text);
-  /* Leve textura de papel rugoso sobre el fondo carbón */
-  background-image:
-    radial-gradient(
-      circle at 20% 10%,
-      rgba(217, 164, 65, 0.04),
-      transparent 40%
-    ),
-    radial-gradient(circle at 80% 90%, rgba(53, 92, 138, 0.05), transparent 40%);
+  /* Sin tintes radiales — antes había halos dorado/azul que sumaban
+   * calidez al fondo. El usuario pidió un fondo neutral. */
   padding-top: env(safe-area-inset-top);
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -349,6 +348,29 @@ body {
   }
   50% {
     opacity: 0.55;
+  }
+}
+
+/* Animación más llamativa para invitar a ver las cartas del compañero
+ * antes de que el usuario las haya espiado por primera vez. Combina
+ * pulso de escala con destello dorado en el ring. Una vez que las ve,
+ * removemos esta clase y queda quieta. */
+.invitar-ver {
+  animation: invitar-ver 1.4s ease-in-out infinite;
+}
+@keyframes invitar-ver {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 2px rgba(217, 164, 65, 0.6),
+      0 0 6px rgba(217, 164, 65, 0.3);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow:
+      0 0 0 3px rgba(217, 164, 65, 1),
+      0 0 16px rgba(217, 164, 65, 0.7);
   }
 }
 

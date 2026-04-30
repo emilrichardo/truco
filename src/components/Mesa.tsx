@@ -44,20 +44,53 @@ export function Mesa({
 }) {
   // Toggle estable para "espiar" las cartas del compañero (solo en 2v2).
   const [verCompañero, setVerCompañero] = useState(false);
+  // Trackeamos si en ESTA mano el usuario ya espió las cartas del
+  // compañero al menos una vez. Antes de eso mostramos una animación
+  // llamativa para invitarlo a verlas. Una vez vistas, las cartas
+  // quedan quietas (sin parpadeo) — opcional volver a abrirlas.
+  const [yaVioCompañero, setYaVioCompañero] = useState(false);
+  // Reset de "ya vio" cuando arranca una mano nueva (cambia el número).
+  const manoNumero = estado.manoActual?.numero ?? 0;
+  useEffect(() => {
+    setYaVioCompañero(false);
+    setVerCompañero(false);
+  }, [manoNumero]);
   const [panelCompañero, setPanelCompañero] = useState<{
     jugador: Jugador;
     pos: Posicion;
   } | null>(null);
-  const toggleCompañero = useCallback(
-    () => setVerCompañero((v) => !v),
-    []
-  );
+  const toggleCompañero = useCallback(() => {
+    setVerCompañero((v) => {
+      if (!v) setYaVioCompañero(true);
+      return !v;
+    });
+  }, []);
   // Auto-ocultar las cartas del compañero después de 5s para no espiar
   // permanentemente (y que el rival no vea por encima del hombro).
   useEffect(() => {
     if (!verCompañero) return;
     const t = window.setTimeout(() => setVerCompañero(false), 5000);
     return () => clearTimeout(t);
+  }, [verCompañero]);
+  // Tap en cualquier lugar fuera de la mini-mano del compañero también
+  // las oculta — antes había que tocarlas exactamente, lo que era
+  // incómodo en mobile cuando estaban arrinconadas en una esquina.
+  useEffect(() => {
+    if (!verCompañero) return;
+    const onPointer = (e: PointerEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && t.closest('[data-mano-compañero="true"]')) return;
+      setVerCompañero(false);
+    };
+    // Damos un tick antes de armar el listener — sino el mismo tap que
+    // abrió las cartas dispara el cierre inmediato (capture vs bubble).
+    const id = window.setTimeout(() => {
+      window.addEventListener("pointerdown", onPointer);
+    }, 0);
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("pointerdown", onPointer);
+    };
   }, [verCompañero]);
 
   const {
@@ -172,6 +205,7 @@ export function Mesa({
             esCompañero={esCompañero}
             cartasEnMano={cartasEnMano}
             mostrarCompañero={verCompañero}
+            yaVioCompañero={yaVioCompañero}
             onToggleCompañero={toggleCompañero}
             onMensajeCompañero={
               esCompañero && enviarChat
@@ -227,6 +261,7 @@ function PuestoJugador({
   esCompañero,
   cartasEnMano,
   mostrarCompañero,
+  yaVioCompañero,
   onToggleCompañero,
   onMensajeCompañero,
   hablando,
@@ -244,6 +279,7 @@ function PuestoJugador({
   esCompañero: boolean;
   cartasEnMano: Carta[];
   mostrarCompañero: boolean;
+  yaVioCompañero: boolean;
   onToggleCompañero: () => void;
   onMensajeCompañero?: () => void;
   hablando?: boolean;
@@ -322,6 +358,7 @@ function PuestoJugador({
           cartas={cartasEnMano}
           ocultas={cartasOcultas}
           esCompañero={esCompañero}
+          yaVioCompañero={yaVioCompañero}
           onTap={esCompañero ? onToggleCompañero : undefined}
           posReparto={pos}
         />
@@ -493,21 +530,30 @@ function ManoOculta({
   cartas,
   ocultas,
   esCompañero,
+  yaVioCompañero,
   onTap,
   posReparto
 }: {
   cartas: Carta[];
   ocultas: boolean;
   esCompañero: boolean;
+  yaVioCompañero?: boolean;
   onTap?: () => void;
   posReparto?: Posicion;
 }) {
   const offsets = repartoOffset(posReparto);
+  // Animación llamativa sólo mientras el usuario todavía no espió las
+  // cartas del compañero en esta mano. Una vez vistas, queda quieta.
+  const invitando = esCompañero && ocultas && !yaVioCompañero;
+  // Cuando el usuario las descubrió, las agrandamos a "sm" (antes "xs")
+  // para que se lean cómodas; mientras siguen tapadas, "xs" alcanza.
+  const tamañoCarta = esCompañero && !ocultas ? "sm" : "xs";
   return (
     <div
       role={onTap ? "button" : undefined}
       tabIndex={onTap ? 0 : undefined}
       onClick={onTap}
+      data-mano-compañero={esCompañero ? "true" : undefined}
       onKeyDown={(e) => {
         if (onTap && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
@@ -517,7 +563,8 @@ function ManoOculta({
       className={clsx(
         "flex -space-x-3 transition-transform",
         esCompañero && "cursor-pointer hover:scale-110",
-        esCompañero && ocultas && "ring-2 ring-dorado/40 rounded p-0.5 parpadeo"
+        esCompañero && ocultas && !invitando && "ring-2 ring-dorado/40 rounded p-0.5",
+        invitando && "rounded p-0.5 invitar-ver"
       )}
       title={
         esCompañero
@@ -542,7 +589,7 @@ function ManoOculta({
               } as React.CSSProperties
             }
           >
-            <CartaEspanola carta={c} oculta={ocultas} tamanio="xs" />
+            <CartaEspanola carta={c} oculta={ocultas} tamanio={tamañoCarta} />
           </div>
         </div>
       ))}

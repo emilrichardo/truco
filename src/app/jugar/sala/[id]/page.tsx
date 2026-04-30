@@ -152,9 +152,21 @@ export default function SalaPage() {
       );
     }
     if (!actor) {
+      console.debug("[bot-dispatch] sin actor", {
+        turno: mano.turnoJugadorId,
+        envido: !!mano.envidoCantoActivo,
+        truco: !!mano.trucoCantoActivo,
+        version: estado.version
+      });
       setConsulta(null);
       return;
     }
+    console.debug("[bot-dispatch] actor detectado", {
+      bot: actor.id,
+      asiento: actor.asiento,
+      esMiTurno: mano.turnoJugadorId === actor.id,
+      version: estado.version
+    });
 
     // ¿Debería consultarle al humano antes de actuar?
     //   - Envido (baza 1, ventana abierta, bot es pie): consulta envido.
@@ -227,13 +239,32 @@ export default function SalaPage() {
 
     botTimerRef.current = window.setTimeout(() => {
       const accion = decidirAccionBot(estado, actor!.id);
-      ultimaAccionBotRef.current = {
-        jugadorId: actor!.id,
-        version: estado.version
-      };
-      enviarAccionOnline(salaId, miId, accion).catch((e) =>
-        console.warn("[bot-dispatch]", actor!.id, e)
+      const versionAlMandar = estado.version;
+      console.debug(
+        "[bot-dispatch] enviando",
+        { bot: actor!.id, accion: accion.tipo, version: versionAlMandar }
       );
+      enviarAccionOnline(salaId, miId, accion)
+        .then((r) => {
+          if (r.ok) {
+            // Sólo bloqueamos retries si el server aceptó. Antes seteábamos
+            // el ref antes de mandar — un rechazo del server dejaba el bot
+            // trabado para siempre en esa versión (no había retry).
+            ultimaAccionBotRef.current = {
+              jugadorId: actor!.id,
+              version: versionAlMandar
+            };
+          } else {
+            console.warn(
+              "[bot-dispatch] rechazado",
+              { bot: actor!.id, accion: accion.tipo, error: r.error }
+            );
+            setError(`Bot trabado: ${r.error || "rechazo del server"}`);
+          }
+        })
+        .catch((e) =>
+          console.warn("[bot-dispatch] error red", actor!.id, e)
+        );
     }, retraso);
 
     return () => {

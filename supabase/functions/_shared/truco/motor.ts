@@ -711,14 +711,9 @@ function cantarTruco(
   const respondiendoAlRival =
     !!cantoPendiente && cantoPendiente.equipoQueDebeResponder === jugador.equipo;
 
-  // El truco se canta SIEMPRE en el turno propio (a diferencia del envido
-  // que en baza 1 lo puede cantar cualquiera). Sólo se permite cantar
-  // fuera de turno si es respuesta directa al canto del rival (retruco
-  // sobre truco, vale 4 sobre retruco) — en ese caso responde cualquier
-  // jugador del equipo que debe responder.
-  if (!respondiendoAlRival && mano.turnoJugadorId !== jugador.id) {
-    return { ok: false, error: "Tenés que esperar tu turno para cantar.", estado };
-  }
+  // El truco se puede cantar en cualquier momento (igual que el envido en
+  // baza 1) — no hace falta esperar el turno propio. La validación de
+  // que sea el equipo que corresponde la hacen los if's de progresión.
 
   if (subir === "truco" && mano.trucoEstado !== "ninguno") {
     return { ok: false, error: "Ya se cantó truco.", estado };
@@ -1128,15 +1123,17 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
   if (mano.turnoJugadorId === j.id) {
     out.push("jugar_carta");
     out.push("ir_al_mazo");
-    if (
-      mano.trucoEstado === "ninguno" ||
-      (mano.trucoEstado === "truco" && mano.equipoConTruco !== j.equipo) ||
-      (mano.trucoEstado === "retruco" && mano.equipoConTruco !== j.equipo)
-    ) {
-      if (mano.trucoEstado === "ninguno") out.push("cantar_truco");
-      else if (mano.trucoEstado === "truco") out.push("cantar_retruco");
-      else if (mano.trucoEstado === "retruco") out.push("cantar_vale4");
-    }
+  }
+  // Truco / retruco / vale 4: se ofrecen también fuera de turno mientras
+  // no haya un envido pendiente. Es la regla que la mayoría espera —
+  // querés gritar truco ni bien ves la mano, sin tener que esperar a que
+  // termine de jugar el rival. El motor sigue validando.
+  if (!mano.envidoCantoActivo) {
+    if (mano.trucoEstado === "ninguno") out.push("cantar_truco");
+    else if (mano.trucoEstado === "truco" && mano.equipoConTruco !== j.equipo)
+      out.push("cantar_retruco");
+    else if (mano.trucoEstado === "retruco" && mano.equipoConTruco !== j.equipo)
+      out.push("cantar_vale4");
   }
   return out;
 }

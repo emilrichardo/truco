@@ -33,16 +33,18 @@ Deno.serve(async (req) => {
   // Resolución de quién actúa:
   //  - Caso normal: la acción es del propio jugador. Forzamos
   //    accion.jugadorId = body.jugador_id (default seguro).
-  //  - Caso bot: el creador (asiento 0) puede despachar acciones de
-  //    bots de la sala. En ese caso accion.jugadorId viene seteado al
-  //    bot y debe quedar así para que el motor lo procese.
-  //  - "iniciar_prox_mano" es un trigger sin jugadorId — sólo el
-  //    creador puede dispararla.
+  //  - Caso bot: cualquier humano de la sala puede despachar acciones
+  //    de bots. Antes sólo permitíamos al creador (asiento 0), pero si
+  //    cerraba la pestaña los bots quedaban congelados — el cliente ya
+  //    eligió un humano "primario" por menor asiento, acá sólo
+  //    validamos que el dispatcher sea humano y el target sea bot.
+  //  - "iniciar_prox_mano" es un trigger sin jugadorId — cualquier
+  //    humano lo puede disparar (mismo motivo).
   const estadoSala = sala.estado as EstadoJuego;
   if (body.accion.tipo === "iniciar_prox_mano") {
     const dispatcher = estadoSala.jugadores.find((j) => j.id === body.jugador_id);
-    if (!dispatcher || dispatcher.asiento !== 0) {
-      return fail("solo_creador", 403);
+    if (!dispatcher || dispatcher.esBot) {
+      return fail("solo_humano", 403);
     }
     body.accion.jugadorId = "";
   } else if (
@@ -53,8 +55,8 @@ Deno.serve(async (req) => {
     const target = estadoSala.jugadores.find(
       (j) => j.id === body.accion.jugadorId
     );
-    if (!dispatcher || dispatcher.asiento !== 0) {
-      return fail("solo_creador_despacha_bots", 403);
+    if (!dispatcher || dispatcher.esBot) {
+      return fail("solo_humano_despacha_bots", 403);
     }
     if (!target || !target.esBot) {
       return fail("target_no_es_bot", 403);

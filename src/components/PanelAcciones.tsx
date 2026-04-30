@@ -67,6 +67,16 @@ export function PanelAcciones({
   const [arrastrandoId, setArrastrandoId] = useState<string | null>(null);
   const [delta, setDelta] = useState({ x: 0, y: 0 });
   const inicioPunteroRef = useRef<{ x: number; y: number } | null>(null);
+  // Para fluidez en mobile: throteamos los pointermove a 60fps con
+  // requestAnimationFrame en vez de hacer setState en cada evento (que
+  // re-renderea todo el panel y se sentía lagueado).
+  const deltaPendienteRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   // UI optimista: en online, `enviar` es async — entre que solté la carta y
   // que el server confirma, la carta volvía a snap-back al abanico (con
@@ -77,30 +87,55 @@ export function PanelAcciones({
   useEffect(() => {
     setCartasJugadas(new Set());
   }, [idsKey]);
+  // Carta en proceso de "lanzamiento": durante ~250ms la animamos
+  // volando hacia arriba y se desvanece. Después se marca como jugada
+  // (cartasJugadas) y desmonta limpio. Sino el snap-back del abanico
+  // se ejecutaba antes que el filtro de cartasJugadas y la carta
+  // visualmente "volvía a bajar" antes de aparecer en la mesa.
+  const [lanzandoId, setLanzandoId] = useState<string | null>(null);
+  const lanzamientoTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (lanzamientoTimerRef.current !== null)
+        clearTimeout(lanzamientoTimerRef.current);
+    };
+  }, []);
 
   function onPointerDown(e: React.PointerEvent, cartaId: string) {
-    if (!puedeJugarCarta) return;
+    // Permitimos arrastrar siempre, así el usuario puede ordenar su mano
+    // mientras espera a que jueguen los demás. La acción real de tirar
+    // la carta a la mesa la chequeamos en onPointerUp.
     inicioPunteroRef.current = { x: e.clientX, y: e.clientY };
     setArrastrandoId(cartaId);
     setDelta({ x: 0, y: 0 });
+    deltaPendienteRef.current = { x: 0, y: 0 };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   }
 
   function onPointerMove(e: React.PointerEvent) {
     if (!arrastrandoId || !inicioPunteroRef.current) return;
-    setDelta({
+    deltaPendienteRef.current = {
       x: e.clientX - inicioPunteroRef.current.x,
       y: e.clientY - inicioPunteroRef.current.y
+    };
+    if (rafRef.current !== null) return;
+    rafRef.current = requestAnimationFrame(() => {
+      setDelta(deltaPendienteRef.current);
+      rafRef.current = null;
     });
   }
 
   function onPointerUp(e: React.PointerEvent, cartaId: string) {
     if (!arrastrandoId) return;
-    const movX = delta.x;
-    const movY = delta.y;
+    // Usamos el delta más reciente (puede haber un frame pendiente en rAF).
+    const movX = deltaPendienteRef.current.x || delta.x;
+    const movY = deltaPendienteRef.current.y || delta.y;
     const distancia = Math.hypot(movX, movY);
-    setArrastrandoId(null);
-    setDelta({ x: 0, y: 0 });
+    deltaPendienteRef.current = { x: 0, y: 0 };
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     inicioPunteroRef.current = null;
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
@@ -108,21 +143,46 @@ export function PanelAcciones({
       /* ignore */
     }
 
-    // Tap / clic suelto: jugar la carta directamente (compatibilidad).
-    if (distancia < 8) {
-      setCartasJugadas((prev) => new Set(prev).add(cartaId));
+    const dispararLanzamiento = () => {
+      // Mantenemos la carta arrastrada visible y disparamos la animación
+      // de lanzamiento — el render del isLanzando pinta el transform de
+      // vuelo hacia arriba. A los 240ms la marcamos como jugada
+      // (cartasJugadas la filtra → unmount limpio).
+      setLanzandoId(cartaId);
+      setArrastrandoId(null);
       enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
+      lanzamientoTimerRef.current = window.setTimeout(() => {
+        setCartasJugadas((prev) => new Set(prev).add(cartaId));
+        setLanzandoId(null);
+        setDelta({ x: 0, y: 0 });
+      }, 240);
+    };
+
+    // Tap / clic suelto: jugar la carta directamente (sólo en mi turno).
+    if (distancia < 8) {
+      if (!puedeJugarCarta) {
+        setArrastrandoId(null);
+        setDelta({ x: 0, y: 0 });
+        return;
+      }
+      dispararLanzamiento();
       return;
     }
     // Arrastre vertical hacia arriba con suficiente fuerza → tirar a la mesa.
     if (movY < -80) {
-      setCartasJugadas((prev) => new Set(prev).add(cartaId));
-      enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
+      if (!puedeJugarCarta) {
+        setArrastrandoId(null);
+        setDelta({ x: 0, y: 0 });
+        return;
+      }
+      dispararLanzamiento();
       return;
     }
     // Arrastre horizontal con poco vertical → reordenar en la mano. Se
     // calcula el desplazamiento entero por ancho de carta (~64px en
     // móvil con el solapado del abanico).
+    setArrastrandoId(null);
+    setDelta({ x: 0, y: 0 });
     if (Math.abs(movY) < 60 && Math.abs(movX) > 30) {
       const anchoSlot = 64;
       const idxActual = ordenLocal.indexOf(cartaId);
@@ -171,7 +231,10 @@ export function PanelAcciones({
   const centro = (total - 1) / 2;
 
   return (
-    <div className="px-2 py-2 relative">
+    // z-[600] crea un stacking context que pone toda esta zona arriba de
+    // la mesa — sino una carta arrastrada hacia arriba quedaba por
+    // debajo de las cartas tiradas y los avatares (que tienen z-[500]).
+    <div className="px-2 py-2 relative z-[600]">
       {/* Sutil borde dorado superior */}
       <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-dorado/40 to-transparent" />
 
@@ -189,18 +252,28 @@ export function PanelAcciones({
           cartasOrdenadas.map((c, i) => {
             const offset = i - centro;
             const rot = offset * 9;
-            // Cartas exteriores ya no bajan — antes con translateY(8px)
-            // se montaban sobre el área de los botones y robaban clicks.
             const dy = 0;
             const isDragging = arrastrandoId === c.id;
-            // Cuando arrastro: usamos transform inline con delta del
-            // puntero + un leve scale-up para que se sienta "agarrada".
-            // Sin transición durante el arrastre (sigue al dedo 1:1).
-            // Cuando suelto, transición de 200ms vuelve a la posición
-            // del abanico (snap-back) o al nuevo slot (reordenado).
-            const transform = isDragging
-              ? `translate(${delta.x}px, ${delta.y}px) scale(1.06)`
-              : `translateY(${dy}px) rotate(${rot}deg)`;
+            const isLanzando = lanzandoId === c.id;
+            // Tres estados de transform/transition:
+            //  - Lanzándose: vuela hacia arriba off-screen (snap-back evitado)
+            //  - Arrastrando: sigue al dedo 1:1 sin transición
+            //  - Quieto: en su slot del abanico con snap suave
+            let transform: string;
+            let transition: string;
+            let opacity = 1;
+            if (isLanzando) {
+              transform = "translate(0, -360px) scale(0.55) rotate(0deg)";
+              transition =
+                "transform 240ms cubic-bezier(0.32, 0.72, 0.4, 1), opacity 200ms ease 60ms";
+              opacity = 0;
+            } else if (isDragging) {
+              transform = `translate(${delta.x}px, ${delta.y}px) scale(1.06)`;
+              transition = "none";
+            } else {
+              transform = `translateY(${dy}px) rotate(${rot}deg)`;
+              transition = "transform 200ms ease";
+            }
             return (
               <div
                 key={c.id}
@@ -208,12 +281,12 @@ export function PanelAcciones({
                 style={
                   {
                     marginLeft: i === 0 ? 0 : "-1.25rem",
-                    zIndex: isDragging ? 100 : i + 1,
+                    zIndex: isDragging || isLanzando ? 9999 : i + 1,
                     transform,
-                    transition: isDragging
-                      ? "none"
-                      : "transform 200ms ease",
-                    touchAction: "none"
+                    transition,
+                    opacity,
+                    touchAction: "none",
+                    pointerEvents: isLanzando ? "none" : undefined
                   } as React.CSSProperties
                 }
                 onPointerDown={(e) => onPointerDown(e, c.id)}
