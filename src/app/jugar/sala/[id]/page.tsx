@@ -27,7 +27,6 @@ import { MenuCompartir } from "@/components/MenuCompartir";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { HeaderMarca } from "@/components/HeaderMarca";
 import { MiAvatarBR } from "@/components/MiAvatarBR";
-import { setMusicaUIOculta } from "@/components/MusicaAmbiental";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 import { usePreloadCartas } from "@/lib/preload";
 import { decidirAccionBot } from "@/lib/truco/ia";
@@ -461,13 +460,9 @@ export default function SalaPage() {
 
   // Detectar abandonos: si la lista de jugadores se achica o uno pasa a
   // desconectado, mostramos un cartel arriba con quién se fue.
-  // En la pantalla de espera (sala creada pero partida no iniciada) el
-  // botón de música se solapa con "Compartir enlace" del header. Lo
-  // ocultamos hasta que arranque la partida.
-  useEffect(() => {
-    setMusicaUIOculta(!estado?.iniciada);
-    return () => setMusicaUIOculta(false);
-  }, [estado?.iniciada]);
+  // (El botón de música ahora está siempre visible — antes lo ocultábamos
+  // en la pantalla de espera porque chocaba con "Compartir enlace", pero
+  // el usuario pidió que esté siempre arriba a la derecha.)
 
   useEffect(() => {
     if (!estado) return;

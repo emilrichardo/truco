@@ -54,10 +54,13 @@ function leerEstado(): Estado {
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { silenciado: false, volumen: VOLUMEN_DEFAULT };
+    // Default silenciado=true: la música se activa SOLO si el usuario
+    // toca el botón. Antes arrancaba sola y muchos navegadores
+    // bloqueaban el autoplay igual, dejando un estado inconsistente.
+    if (!raw) return { silenciado: true, volumen: VOLUMEN_DEFAULT };
     const p = JSON.parse(raw);
     return {
-      silenciado: !!p.silenciado,
+      silenciado: p.silenciado !== false, // default true si falta el campo
       volumen:
         typeof p.volumen === "number" && p.volumen >= 0 && p.volumen <= 1
           ? p.volumen
@@ -228,14 +231,11 @@ export function MusicaAmbiental() {
   const ocultoExterno = useMusicaUIOculta();
   if (!hidratado || pistas.length === 0 || ocultoExterno) return null;
 
-  // Único UI: un botón compacto fijo arriba a la derecha (en partida) o
-  // abajo a la izquierda (en home). Solo togglea silencio. Antes había
-  // skip y volumen — los sacamos para no ensuciar el header. El volumen
-  // queda en su default y el skip se puede agregar más adelante si se
-  // pide.
-  const claseFija = enPartida
-    ? "fixed top-1.5 right-2 z-50"
-    : "fixed bottom-2 left-2 z-50";
+  // Único UI: un botón compacto fijo SIEMPRE arriba a la derecha (antes
+  // alternaba entre top-right en partida y bottom-left en home — el
+  // usuario pidió consistencia). Solo togglea silencio.
+  const claseFija = "fixed top-1.5 right-2 z-50";
+  void enPartida;
   return (
     <button
       type="button"

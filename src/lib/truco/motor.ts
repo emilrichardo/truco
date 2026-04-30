@@ -1124,10 +1124,14 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
     out.push("ir_al_mazo");
   }
   // Truco / retruco / vale 4: se ofrecen también fuera de turno mientras
-  // no haya un envido pendiente. Es la regla que la mayoría espera —
-  // querés gritar truco ni bien ves la mano, sin tener que esperar a que
-  // termine de jugar el rival. El motor sigue validando.
-  if (!mano.envidoCantoActivo) {
+  // no haya un envido o truco pendiente. Es la regla que la mayoría
+  // espera — querés gritar truco ni bien ves la mano, sin tener que
+  // esperar a que termine de jugar el rival. El motor sigue validando.
+  // ¡Importante! `!mano.trucoCantoActivo` evita ofrecer "cantar_truco"
+  // cuando MI equipo ya cantó y está esperando respuesta del rival;
+  // sino el botón seguía habilitado y mandar otra vez sobreescribía
+  // el canto pendiente o disparaba el "ya se cantó" del server.
+  if (!mano.envidoCantoActivo && !mano.trucoCantoActivo) {
     if (mano.trucoEstado === "ninguno") out.push("cantar_truco");
     else if (mano.trucoEstado === "truco" && mano.equipoConTruco !== j.equipo)
       out.push("cantar_retruco");

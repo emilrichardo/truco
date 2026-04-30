@@ -87,13 +87,15 @@ export function PanelAcciones({
   useEffect(() => {
     setCartasJugadas(new Set());
   }, [idsKey]);
-  // Carta en proceso de "lanzamiento": durante ~250ms la animamos
-  // volando hacia arriba y se desvanece. Después se marca como jugada
-  // (cartasJugadas) y desmonta limpio. Sino el snap-back del abanico
-  // se ejecutaba antes que el filtro de cartasJugadas y la carta
-  // visualmente "volvía a bajar" antes de aparecer en la mesa.
+  // Carta en proceso de "lanzamiento": durante ~360ms la animamos
+  // hacia el slot real donde Mesa pinta MI carta jugada (data-mi-jugada-
+  // target). Después se marca como jugada (cartasJugadas) y desmonta
+  // limpio. El delta se calcula en pointerUp comparando el rect inicial
+  // de la carta vs el rect del marcador en la mesa.
   const [lanzandoId, setLanzandoId] = useState<string | null>(null);
+  const [lanzandoDelta, setLanzandoDelta] = useState({ x: 0, y: 0 });
   const lanzamientoTimerRef = useRef<number | null>(null);
+  const rectCartaRef = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     return () => {
       if (lanzamientoTimerRef.current !== null)
@@ -106,6 +108,13 @@ export function PanelAcciones({
     // mientras espera a que jueguen los demás. La acción real de tirar
     // la carta a la mesa la chequeamos en onPointerUp.
     inicioPunteroRef.current = { x: e.clientX, y: e.clientY };
+    // Guardamos el centro de la carta en viewport coords — sirve para
+    // calcular el delta hacia el slot de la mesa cuando el usuario tire.
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    rectCartaRef.current = {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
     setArrastrandoId(cartaId);
     setDelta({ x: 0, y: 0 });
     deltaPendienteRef.current = { x: 0, y: 0 };
@@ -144,10 +153,24 @@ export function PanelAcciones({
     }
 
     const dispararLanzamiento = () => {
-      // Mantenemos la carta arrastrada visible y disparamos la animación
-      // de lanzamiento — el render del isLanzando pinta el transform de
-      // vuelo hacia arriba. A los 240ms la marcamos como jugada
-      // (cartasJugadas la filtra → unmount limpio).
+      // Calculamos el delta desde la posición actual de la carta hacia
+      // el slot real donde Mesa va a pintar la carta jugada — así el
+      // movimiento aterriza exactamente en su posición final en lugar
+      // de ir a un punto fijo arbitrario y "saltar" al final.
+      let dx = 0;
+      let dy = -260; // fallback: derecho hacia arriba a la zona de mesa
+      const target = document.querySelector<HTMLElement>(
+        '[data-mi-jugada-target]'
+      );
+      const origen = rectCartaRef.current;
+      if (target && origen) {
+        const r = target.getBoundingClientRect();
+        const targetX = r.left + r.width / 2;
+        const targetY = r.top + r.height / 2;
+        dx = targetX - origen.x;
+        dy = targetY - origen.y;
+      }
+      setLanzandoDelta({ x: dx, y: dy });
       setLanzandoId(cartaId);
       setArrastrandoId(null);
       enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
@@ -155,7 +178,8 @@ export function PanelAcciones({
         setCartasJugadas((prev) => new Set(prev).add(cartaId));
         setLanzandoId(null);
         setDelta({ x: 0, y: 0 });
-      }, 240);
+        setLanzandoDelta({ x: 0, y: 0 });
+      }, 360);
     };
 
     // Tap / clic suelto: jugar la carta directamente (sólo en mi turno).
@@ -256,16 +280,20 @@ export function PanelAcciones({
             const isDragging = arrastrandoId === c.id;
             const isLanzando = lanzandoId === c.id;
             // Tres estados de transform/transition:
-            //  - Lanzándose: vuela hacia arriba off-screen (snap-back evitado)
+            //  - Lanzándose: vuela al slot real de la mesa (delta calculado)
             //  - Arrastrando: sigue al dedo 1:1 sin transición
             //  - Quieto: en su slot del abanico con snap suave
             let transform: string;
             let transition: string;
             let opacity = 1;
             if (isLanzando) {
-              transform = "translate(0, -360px) scale(0.55) rotate(0deg)";
+              // Vuela hasta el slot real (lanzandoDelta) y se "asienta"
+              // ahí — escalamos un poco menos para que el match con la
+              // carta de mesa tamaño "lg" se sienta más limpio. Opacity
+              // se mantiene alta casi todo el trayecto y baja al final.
+              transform = `translate(${lanzandoDelta.x}px, ${lanzandoDelta.y}px) scale(1.15) rotate(0deg)`;
               transition =
-                "transform 240ms cubic-bezier(0.32, 0.72, 0.4, 1), opacity 200ms ease 60ms";
+                "transform 360ms cubic-bezier(0.22, 1, 0.36, 1), opacity 120ms ease 280ms";
               opacity = 0;
             } else if (isDragging) {
               transform = `translate(${delta.x}px, ${delta.y}px) scale(1.06)`;

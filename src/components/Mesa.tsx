@@ -144,6 +144,18 @@ export function Mesa({
        * afuera para conservar la UI sin deformaciones. */}
       <div className="absolute inset-0">
         <div className="absolute inset-1 sm:inset-2 tapete" />
+        {/* Marcador invisible donde aterriza MI próxima carta. PanelAcciones
+         * lo busca por data-attribute para animar el lanzamiento hasta acá
+         * (sino la carta volaba hacia un punto fijo arbitrario y aparecía
+         * de golpe en otro lado al confirmar el server). */}
+        <div
+          data-mi-jugada-target
+          aria-hidden
+          className={clsx(
+            "absolute w-1 h-1 pointer-events-none",
+            clasePosicionArm(posiciones[0] || "abajo-izquierda")
+          )}
+        />
         {/* Cartas jugadas: cada jugador en su arm desde el centro */}
         {orden.map((j, idx) => {
           const pos = posiciones[idx];

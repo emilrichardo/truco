@@ -14,8 +14,8 @@ export default function CrearSalaPage() {
   const [miSlug, setMiSlug, listo] = usePersonajeLocal();
   const [cambiar, setCambiar] = useState(false);
   const [conFlor, setConFlor] = useState(false);
-  // Por ahora la única modalidad ofrecida es 2v2 a 18 (9 malas + 9 buenas).
-  const tamanio = 4 as const;
+  const [tamanio, setTamanio] = useState<2 | 4>(4);
+  // Puntos siempre a 18 (9 malas + 9 buenas) por ahora.
   const puntos = 18 as const;
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,10 +103,20 @@ export default function CrearSalaPage() {
           </div>
         )}
 
-        <div className="mb-4 text-center text-text-dim text-xs">
-          Partida en parejas <span className="text-crema">a 18</span>
-          <span className="text-text-dim/60"> · 9 malas y 9 buenas</span>
-        </div>
+        <Opcion label="Modo">
+          <ChoiceModo
+            activo={tamanio === 2}
+            onClick={() => setTamanio(2)}
+            icono="/brand/iconos/1vs1.webp"
+            label="Solo a solo"
+          />
+          <ChoiceModo
+            activo={tamanio === 4}
+            onClick={() => setTamanio(4)}
+            icono="/brand/iconos/2vs2.webp"
+            label="En parejas"
+          />
+        </Opcion>
 
         <Opcion label="Flor">
           <Choice activo={!conFlor} onClick={() => setConFlor(false)}>
@@ -116,6 +126,10 @@ export default function CrearSalaPage() {
             Con flor (+3 pts)
           </Choice>
         </Opcion>
+
+        <div className="mb-4 text-center text-text-dim/70 text-[11px]">
+          Partida <span className="text-crema">a 18</span> · 9 malas y 9 buenas
+        </div>
 
         <button
           onClick={crear}
@@ -166,6 +180,46 @@ function Choice({
       }`}
     >
       {children}
+    </button>
+  );
+}
+
+/** Botón de modo con ícono PNG arriba y label abajo. Mismo criterio
+ *  visual que Choice (activo = borde dorado, no fondo lleno). */
+function ChoiceModo({
+  activo,
+  onClick,
+  icono,
+  label
+}: {
+  activo: boolean;
+  onClick: () => void;
+  icono: string;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={activo}
+      className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border-2 transition min-h-[120px] ${
+        activo
+          ? "border-dorado text-dorado"
+          : "border-border text-crema hover:border-azul-criollo/60"
+      }`}
+    >
+      <img
+        src={icono}
+        alt=""
+        aria-hidden
+        draggable={false}
+        className={`w-16 h-16 sm:w-20 sm:h-20 object-contain select-none transition-transform ${
+          activo ? "scale-105" : ""
+        }`}
+      />
+      <span className="font-display text-sm sm:text-base leading-tight">
+        {label}
+      </span>
     </button>
   );
 }
