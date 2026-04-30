@@ -68,6 +68,16 @@ export function PanelAcciones({
   const [delta, setDelta] = useState({ x: 0, y: 0 });
   const inicioPunteroRef = useRef<{ x: number; y: number } | null>(null);
 
+  // UI optimista: en online, `enviar` es async — entre que solté la carta y
+  // que el server confirma, la carta volvía a snap-back al abanico (con
+  // z-index al fondo, lo que hacía que las cartas vecinas la pisaran).
+  // Al ocultarla apenas la mandamos, la mesa "recibe" la carta al instante
+  // como en solo. Cuando el motor confirma (idsKey cambia), limpiamos.
+  const [cartasJugadas, setCartasJugadas] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    setCartasJugadas(new Set());
+  }, [idsKey]);
+
   function onPointerDown(e: React.PointerEvent, cartaId: string) {
     if (!puedeJugarCarta) return;
     inicioPunteroRef.current = { x: e.clientX, y: e.clientY };
@@ -100,11 +110,13 @@ export function PanelAcciones({
 
     // Tap / clic suelto: jugar la carta directamente (compatibilidad).
     if (distancia < 8) {
+      setCartasJugadas((prev) => new Set(prev).add(cartaId));
       enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
       return;
     }
     // Arrastre vertical hacia arriba con suficiente fuerza → tirar a la mesa.
     if (movY < -80) {
+      setCartasJugadas((prev) => new Set(prev).add(cartaId));
       enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
       return;
     }
@@ -134,9 +146,12 @@ export function PanelAcciones({
 
   // Reordenamos las cartas según el orden local. Si el motor envía una
   // carta que no está en ordenLocal todavía (caso borde), la dejamos al
-  // final.
+  // final. Excluimos las que mandamos jugar pero el server todavía no
+  // confirma — así la mano "se vacía" al instante igual que en solo.
   const cartasOrdenadas = (() => {
-    const porId = new Map(misCartas.map((c) => [c.id, c]));
+    const porId = new Map(
+      misCartas.filter((c) => !cartasJugadas.has(c.id)).map((c) => [c.id, c])
+    );
     const visto = new Set<string>();
     const out = [] as typeof misCartas;
     for (const id of ordenLocal) {
@@ -147,7 +162,7 @@ export function PanelAcciones({
       }
     }
     for (const c of misCartas) {
-      if (!visto.has(c.id)) out.push(c);
+      if (!visto.has(c.id) && !cartasJugadas.has(c.id)) out.push(c);
     }
     return out;
   })();

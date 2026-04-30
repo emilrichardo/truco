@@ -10,10 +10,17 @@ import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
  *    y deja que el humano decida si cantar o no.
  *  - tipo "jugar": baza 2 o 3 cuando el bot abre la baza. No se canta
  *    nada — el humano elige si tira la carta más alta (jugá) o la más
- *    baja (vení), o si pasa y deja que el bot decida solo. */
+ *    baja (vení), o si pasa y deja que el bot decida solo.
+ *  - tipo "truco": el bot tiene mano fuerte y quiere cantar truco/
+ *    retruco/vale4. Pide permiso al humano. Si rechaza, juega carta. */
 export type ConsultaCompañero =
   | { tipo: "envido"; botJugadorId: string; envidoBot: number }
-  | { tipo: "jugar"; botJugadorId: string };
+  | { tipo: "jugar"; botJugadorId: string }
+  | {
+      tipo: "truco";
+      botJugadorId: string;
+      cantoTipo: "cantar_truco" | "cantar_retruco" | "cantar_vale4";
+    };
 
 export type DecisionConsulta =
   | "envido"
@@ -21,7 +28,9 @@ export type DecisionConsulta =
   | "falta_envido"
   | "juga"
   | "veni"
-  | "pasar";
+  | "pasar"
+  | "confirmar_truco"
+  | "rechazar_truco";
 
 /** Decide si el bot que está por actuar debe pedir input al humano antes
  *  de tirar carta. Aplica cuando el bot es PIE de su equipo y el
@@ -82,15 +91,40 @@ export function deberiaConsultar(
  *  - "envido"/"real_envido"/"falta_envido": cantar esa apuesta.
  *  - "juga": carta más alta del bot.
  *  - "veni": carta más baja.
- *  - "pasar": deja que la IA del bot decida (puede cantar truco o jugar
- *    cualquier carta según lo que considere mejor). */
+ *  - "pasar": deja que la IA del bot decida.
+ *  - "confirmar_truco" / "rechazar_truco": llegan junto a una consulta de
+ *    tipo "truco" — confirmar canta el nivel propuesto, rechazar fuerza
+ *    al bot a jugar carta (la más alta — "matar" la baza).
+ */
 export function accionDesdeConsulta(
   estado: EstadoJuego,
   botId: string,
-  decision: DecisionConsulta
+  decision: DecisionConsulta,
+  consulta?: ConsultaCompañero
 ): Accion {
   if (decision === "pasar") {
     return decidirAccionBot(estado, botId);
+  }
+  if (decision === "confirmar_truco") {
+    const tipo =
+      consulta && consulta.tipo === "truco"
+        ? consulta.cantoTipo
+        : "cantar_truco";
+    return { tipo, jugadorId: botId };
+  }
+  if (decision === "rechazar_truco") {
+    // El humano rechaza el canto — el bot juega la carta más alta para
+    // intentar ganar la baza igual sin abrir el canto.
+    const cartas = estado.manoActual?.cartasPorJugador[botId] || [];
+    if (cartas.length === 0) return decidirAccionBot(estado, botId);
+    const ordenadas = [...cartas].sort(
+      (a, b) => jerarquia(a) - jerarquia(b)
+    );
+    return {
+      tipo: "jugar_carta",
+      jugadorId: botId,
+      cartaId: ordenadas[ordenadas.length - 1].id
+    };
   }
   if (decision === "juga" || decision === "veni") {
     const cartas = estado.manoActual?.cartasPorJugador[botId] || [];

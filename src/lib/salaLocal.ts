@@ -241,26 +241,44 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     // tomaría — si decide cantar truco / retruco, lo dejamos hacer
     // y no consultamos sobre la carta.
     const c = deberiaConsultar(estado, actor);
+    let consultaFinal: ConsultaCompañero | null = null;
     if (c) {
-      let consultaFinal: ConsultaCompañero | null = c;
+      consultaFinal = c;
       if (c.tipo === "jugar") {
         const accionPreview = decidirAccionBot(estado, actor.id);
-        if (accionPreview.tipo !== "jugar_carta") {
-          consultaFinal = null;
-        }
+        if (accionPreview.tipo !== "jugar_carta") consultaFinal = null;
       }
-      if (consultaFinal) {
-        setConsulta((prev) => {
-          if (
-            prev &&
-            prev.botJugadorId === consultaFinal!.botJugadorId &&
-            prev.tipo === consultaFinal!.tipo
-          )
-            return prev;
-          return consultaFinal;
-        });
-        return;
+    }
+    // Consulta de truco: la IA quiere cantar y el bot tiene compañero
+    // humano — pedimos confirmación antes de despachar.
+    if (!consultaFinal) {
+      const accionPreview = decidirAccionBot(estado, actor.id);
+      const esCantoTruco =
+        accionPreview.tipo === "cantar_truco" ||
+        accionPreview.tipo === "cantar_retruco" ||
+        accionPreview.tipo === "cantar_vale4";
+      const tieneCompañeroHumano = estado.jugadores.some(
+        (j) => j.equipo === actor.equipo && j.id !== actor.id && !j.esBot
+      );
+      if (esCantoTruco && tieneCompañeroHumano) {
+        consultaFinal = {
+          tipo: "truco",
+          botJugadorId: actor.id,
+          cantoTipo: accionPreview.tipo
+        };
       }
+    }
+    if (consultaFinal) {
+      setConsulta((prev) => {
+        if (
+          prev &&
+          prev.botJugadorId === consultaFinal!.botJugadorId &&
+          prev.tipo === consultaFinal!.tipo
+        )
+          return prev;
+        return consultaFinal;
+      });
+      return;
     }
     setConsulta(null);
 

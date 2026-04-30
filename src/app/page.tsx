@@ -56,28 +56,22 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Acciones principales: dos caminos lado a lado */}
-      <section className="grid grid-cols-2 gap-3 mb-3">
-        <OpcionMenu
+      {/* Acción principal: una sola CTA — adentro de la sala
+       *  decidís si sumás bots o invitás primos. */}
+      <section className="mb-6 text-center">
+        <Link
           href="/jugar/crear"
-          icono="/brand/iconos/online.webp"
-          titulo="Crear sala online"
-          subtitulo="Generá un link para los primos"
-          variante="primario"
-        />
-        <OpcionMenu
-          href="/jugar/solo"
-          icono="/brand/iconos/maquina.webp"
-          titulo="Contra la máquina"
-          subtitulo="1 vs 1 o 2 vs 2 con bots"
-          variante="secundario"
-        />
+          className="btn btn-primary w-full !text-base !py-3.5"
+        >
+          Crear partida de truco
+        </Link>
+        <p className="text-text-dim text-xs mt-2 leading-snug">
+          Invitá a tus primos a jugar online o sumá bots para arrancar ya
+        </p>
       </section>
 
-      <BotonCompartirJuego />
-
-      <footer className="text-center mt-8 space-y-2">
-        <div className="flex items-center justify-center gap-4">
+      <footer className="text-center mt-20 sm:mt-24 pt-6 border-t border-border/40 space-y-2">
+        <div className="flex items-center justify-center gap-4 flex-wrap">
           <Link
             href="/reglas"
             className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
@@ -91,6 +85,8 @@ export default function HomePage() {
           >
             🏆 Tabla de posiciones
           </Link>
+          <span className="text-text-dim/40">·</span>
+          <BotonCompartirJuego />
         </div>
         <div className="text-text-dim/60 text-[10px] subtitulo-claim">
           Hecho con asado y mate · {new Date().getFullYear()}
@@ -142,58 +138,42 @@ function BotonCompartirJuego() {
     <button
       type="button"
       onClick={compartir}
-      className="btn w-full mb-6 justify-center gap-2 border-dorado/40 hover:border-dorado"
+      className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
       aria-label="Compartir el juego con amigos"
     >
-      <span aria-hidden>{copiado ? "✓" : "📲"}</span>
+      {copiado ? (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ) : (
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          className="w-3.5 h-3.5"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="18" cy="5" r="3" />
+          <circle cx="6" cy="12" r="3" />
+          <circle cx="18" cy="19" r="3" />
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+        </svg>
+      )}
       <span>{copiado ? "Enlace copiado" : "Compartir con amigos"}</span>
     </button>
-  );
-}
-
-function OpcionMenu({
-  href,
-  icono,
-  titulo,
-  subtitulo,
-  variante
-}: {
-  href: string;
-  icono: string;
-  titulo: string;
-  subtitulo: string;
-  variante: "primario" | "secundario";
-}) {
-  const esPrimario = variante === "primario";
-  return (
-    <Link
-      href={href}
-      className={`card p-5 flex flex-col items-center text-center gap-2 transition group min-h-[180px] justify-center ${
-        esPrimario
-          ? "border-2 border-dorado bg-gradient-to-br from-dorado/15 to-surface hover:from-dorado/25"
-          : "border-2 border-azul-criollo/60 bg-gradient-to-br from-azul-criollo/10 to-surface hover:border-azul-criollo"
-      }`}
-    >
-      <img
-        src={icono}
-        alt=""
-        aria-hidden
-        draggable={false}
-        className="w-20 h-20 sm:w-24 sm:h-24 object-contain select-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.6)] group-hover:scale-110 transition-transform"
-      />
-      <div className="flex-1 flex flex-col justify-center">
-        <div
-          className={`font-display text-base sm:text-lg leading-tight ${
-            esPrimario ? "text-dorado" : "text-crema"
-          }`}
-        >
-          {titulo}
-        </div>
-        <div className="text-text-dim text-[11px] mt-1 leading-snug">
-          {subtitulo}
-        </div>
-      </div>
-    </Link>
   );
 }
 

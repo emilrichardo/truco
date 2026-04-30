@@ -13,9 +13,10 @@ export default function CrearSalaPage() {
   const router = useRouter();
   const [miSlug, setMiSlug, listo] = usePersonajeLocal();
   const [cambiar, setCambiar] = useState(false);
-  const [tamanio, setTamanio] = useState<2 | 4>(4);
-  const [puntos, setPuntos] = useState<18 | 30>(30);
   const [conFlor, setConFlor] = useState(false);
+  // Por ahora la única modalidad ofrecida es 2v2 a 18 (9 malas + 9 buenas).
+  const tamanio = 4 as const;
+  const puntos = 18 as const;
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,7 +69,7 @@ export default function CrearSalaPage() {
       <DivisorCriollo className="my-5" />
 
       <h1 className="titulo-marca text-2xl text-center mb-4">
-        Crear <span className="acento">sala</span> online
+        Crear <span className="acento">partida</span>
       </h1>
 
       <div className="card p-4">
@@ -102,29 +103,11 @@ export default function CrearSalaPage() {
           </div>
         )}
 
-        <Opcion label="Modo">
-          <ChoiceModo
-            activo={tamanio === 2}
-            onClick={() => setTamanio(2)}
-            icono="/brand/iconos/1vs1.webp"
-            label="Solo a solo"
-          />
-          <ChoiceModo
-            activo={tamanio === 4}
-            onClick={() => setTamanio(4)}
-            icono="/brand/iconos/2vs2.webp"
-            label="En parejas"
-          />
-        </Opcion>
+        <div className="mb-4 text-center text-text-dim text-xs">
+          Partida en parejas <span className="text-crema">a 18</span>
+          <span className="text-text-dim/60"> · 9 malas y 9 buenas</span>
+        </div>
 
-        <Opcion label="A cuántos">
-          <Choice activo={puntos === 18} onClick={() => setPuntos(18)}>
-            A 18 (9 + 9)
-          </Choice>
-          <Choice activo={puntos === 30} onClick={() => setPuntos(30)}>
-            A 30 (15 + 15)
-          </Choice>
-        </Opcion>
         <Opcion label="Flor">
           <Choice activo={!conFlor} onClick={() => setConFlor(false)}>
             Sin flor
@@ -139,13 +122,13 @@ export default function CrearSalaPage() {
           disabled={creando}
           className="btn btn-primary w-full mt-2"
         >
-          {creando ? "Generando…" : "Generar sala"}
+          {creando ? "Entrando…" : "Entrar"}
         </button>
         {error && (
           <p className="text-red text-xs mt-2 text-center font-bold">{error}</p>
         )}
         <p className="text-text-dim text-xs mt-3 text-center italic">
-          Después podés copiar el link y mandarlo a los primos.
+          Adentro podés sumar bots o compartir el enlace con los primos.
         </p>
       </div>
     </main>
@@ -170,50 +153,19 @@ function Choice({
   onClick: () => void;
   children: React.ReactNode;
 }) {
-  return (
-    <button onClick={onClick} className={`btn ${activo ? "btn-primary" : ""}`}>
-      {children}
-    </button>
-  );
-}
-
-/** Botón grande para elegir modo: ícono PNG arriba, label abajo. */
-function ChoiceModo({
-  activo,
-  onClick,
-  icono,
-  label
-}: {
-  activo: boolean;
-  onClick: () => void;
-  icono: string;
-  label: string;
-}) {
+  // Activo: solo se diferencia por borde dorado + texto dorado, sin
+  // pintar el fondo (queda más sobrio que btn-primary lleno).
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border-2 transition min-h-[150px] ${
+      aria-pressed={activo}
+      className={`btn ${
         activo
-          ? "border-dorado bg-gradient-to-br from-dorado/20 to-surface-2 shadow-marca"
-          : "border-border bg-surface hover:border-azul-criollo/60"
+          ? "!border-dorado !text-dorado"
+          : ""
       }`}
     >
-      <img
-        src={icono}
-        alt=""
-        aria-hidden
-        draggable={false}
-        className={`w-20 h-20 sm:w-24 sm:h-24 object-contain select-none transition-transform ${
-          activo ? "scale-110" : ""
-        }`}
-      />
-      <span
-        className={`font-display text-base sm:text-lg leading-tight ${
-          activo ? "text-dorado" : "text-crema"
-        }`}
-      >
-        {label}
-      </span>
+      {children}
     </button>
   );
 }

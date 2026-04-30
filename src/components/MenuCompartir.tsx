@@ -62,7 +62,7 @@ export function MenuCompartir({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center mb-2">
-          <div className="label-slim acento-azul">Compartir sala</div>
+          <div className="label-slim acento-azul">Invitar a un primo</div>
           <div className="font-display text-lg text-dorado">{salaId}</div>
         </div>
 

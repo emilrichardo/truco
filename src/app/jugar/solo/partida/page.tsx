@@ -162,6 +162,7 @@ function PartidaSoloInterno() {
             <ContadorPuntos
               valor={miEquipoEs0 ? estado.puntos[0] : estado.puntos[1]}
               esMio
+              objetivo={estado.puntosObjetivo}
             />
           </div>
           <span className="text-dorado/60 text-base">—</span>
@@ -169,6 +170,7 @@ function PartidaSoloInterno() {
             <ContadorPuntos
               valor={miEquipoEs0 ? estado.puntos[1] : estado.puntos[0]}
               esMio={false}
+              objetivo={estado.puntosObjetivo}
             />
             <span className="text-crema truncate max-w-[90px]">
               {tituloEllos}

@@ -29,12 +29,21 @@ export function ConsultaCompañero({
       | "juga"
       | "veni"
       | "pasar"
+      | "confirmar_truco"
+      | "rechazar_truco"
   ) => void;
 }) {
   const bot = estado.jugadores.find((j) => j.id === consulta.botJugadorId);
   if (!bot) return null;
 
   const esEnvido = consulta.tipo === "envido";
+  const esTruco = consulta.tipo === "truco";
+
+  const labelCanto: Record<string, string> = {
+    cantar_truco: "truco",
+    cantar_retruco: "retruco",
+    cantar_vale4: "vale 4"
+  };
 
   return (
     // Anclado a la esquina superior derecha — donde vive el avatar del
@@ -60,6 +69,19 @@ export function ConsultaCompañero({
               </div>
               <div className="text-text-dim text-[11px] subtitulo-claim">
                 ¿Qué hago?
+              </div>
+            </>
+          ) : esTruco ? (
+            <>
+              <div className="font-display text-base text-crema mt-0.5">
+                Tengo mano fuerte
+              </div>
+              <div className="text-text-dim text-[11px] subtitulo-claim">
+                ¿Canto{" "}
+                <span className="text-dorado">
+                  {labelCanto[consulta.cantoTipo] || "truco"}
+                </span>
+                ?
               </div>
             </>
           ) : (
@@ -101,34 +123,55 @@ export function ConsultaCompañero({
           </div>
         )}
 
-        {/* Jugá / Vení / Pasar: tirá la más alta, la más baja, o dejá que
-         *  el bot decida (incluso cantar truco si tiene macho). */}
-        <div className="grid grid-cols-3 gap-1">
-          <button
-            type="button"
-            onClick={() => onResolver("juga")}
-            className="btn btn-primary !text-[10px] !px-1 !py-1.5 !min-h-0"
-            title="Tirá la carta más alta — matar la baza"
-          >
-            💪 Jugá
-          </button>
-          <button
-            type="button"
-            onClick={() => onResolver("veni")}
-            className="btn !text-[10px] !px-1 !py-1.5 !min-h-0"
-            title="Tirá la carta más baja — venir con poco"
-          >
-            🤏 Vení
-          </button>
-          <button
-            type="button"
-            onClick={() => onResolver("pasar")}
-            className="btn btn-ghost !text-[10px] !px-1 !py-1.5 !min-h-0"
-            title="Dejá que el bot decida solo"
-          >
-            ⏭ Pasar
-          </button>
-        </div>
+        {esTruco ? (
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              onClick={() => onResolver("confirmar_truco")}
+              className="btn btn-primary !text-[10px] !px-1 !py-1.5 !min-h-0"
+              title="Cantar el truco propuesto"
+            >
+              🔥 Sí, cantá
+            </button>
+            <button
+              type="button"
+              onClick={() => onResolver("rechazar_truco")}
+              className="btn !text-[10px] !px-1 !py-1.5 !min-h-0"
+              title="Mejor no — tirá la carta más alta"
+            >
+              🤐 No, jugá
+            </button>
+          </div>
+        ) : (
+          /* Jugá / Vení / Pasar: tirá la más alta, la más baja, o dejá que
+           *  el bot decida. */
+          <div className="grid grid-cols-3 gap-1">
+            <button
+              type="button"
+              onClick={() => onResolver("juga")}
+              className="btn btn-primary !text-[10px] !px-1 !py-1.5 !min-h-0"
+              title="Tirá la carta más alta — matar la baza"
+            >
+              💪 Jugá
+            </button>
+            <button
+              type="button"
+              onClick={() => onResolver("veni")}
+              className="btn !text-[10px] !px-1 !py-1.5 !min-h-0"
+              title="Tirá la carta más baja — venir con poco"
+            >
+              🤏 Vení
+            </button>
+            <button
+              type="button"
+              onClick={() => onResolver("pasar")}
+              className="btn btn-ghost !text-[10px] !px-1 !py-1.5 !min-h-0"
+              title="Dejá que el bot decida solo"
+            >
+              ⏭ Pasar
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

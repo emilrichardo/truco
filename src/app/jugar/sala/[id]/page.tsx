@@ -71,7 +71,7 @@ export default function SalaPage() {
     null
   );
 
-  const { estado, salaMeta, error: errorSala } = useSalaOnline(salaId);
+  const { estado, salaMeta, error: errorSala, setEstado } = useSalaOnline(salaId);
   const chatVisibleCount = useMemo(() => {
     if (!estado || !miId) return 0;
     return estado.chat.filter(
@@ -159,27 +159,48 @@ export default function SalaPage() {
     // ¿Debería consultarle al humano antes de actuar?
     //   - Envido (baza 1, ventana abierta, bot es pie): consulta envido.
     //   - Jugar (baza 2/3 cuando el bot abre la baza): consulta jugá/vení.
-    // Para "jugar" precomputamos la acción — si la IA decidió cantar
-    // truco (mano fuerte / macho), lo dejamos hacer sin consultar.
+    //   - Truco: si la IA quiere cantar truco/retruco/vale4 y el bot
+    //     tiene compañero humano, le pedimos permiso al humano antes.
     const c = deberiaConsultar(estado, actor);
+    let consultaFinal: ConsultaT | null = null;
     if (c) {
-      let consultaFinal: ConsultaT | null = c;
+      consultaFinal = c;
       if (c.tipo === "jugar") {
         const accionPreview = decidirAccionBot(estado, actor.id);
         if (accionPreview.tipo !== "jugar_carta") consultaFinal = null;
       }
-      if (consultaFinal) {
-        setConsulta((prev) => {
-          if (
-            prev &&
-            prev.botJugadorId === consultaFinal!.botJugadorId &&
-            prev.tipo === consultaFinal!.tipo
-          )
-            return prev;
-          return consultaFinal;
-        });
-        return;
+    }
+    // Si no hay consulta de envido/jugar, evaluamos la acción que la IA
+    // tomaría — si es un canto de truco y el bot tiene compañero humano,
+    // disparamos la consulta de truco.
+    if (!consultaFinal) {
+      const accionPreview = decidirAccionBot(estado, actor.id);
+      const esCantoTruco =
+        accionPreview.tipo === "cantar_truco" ||
+        accionPreview.tipo === "cantar_retruco" ||
+        accionPreview.tipo === "cantar_vale4";
+      const tieneCompañeroHumano = estado.jugadores.some(
+        (j) => j.equipo === actor.equipo && j.id !== actor.id && !j.esBot
+      );
+      if (esCantoTruco && tieneCompañeroHumano) {
+        consultaFinal = {
+          tipo: "truco",
+          botJugadorId: actor.id,
+          cantoTipo: accionPreview.tipo
+        };
       }
+    }
+    if (consultaFinal) {
+      setConsulta((prev) => {
+        if (
+          prev &&
+          prev.botJugadorId === consultaFinal!.botJugadorId &&
+          prev.tipo === consultaFinal!.tipo
+        )
+          return prev;
+        return consultaFinal;
+      });
+      return;
     }
     setConsulta(null);
 
@@ -285,7 +306,12 @@ export default function SalaPage() {
   const resolverConsulta = useCallback(
     (decision: DecisionConsulta) => {
       if (!estado || !consulta || !miId) return;
-      const accion = accionDesdeConsulta(estado, consulta.botJugadorId, decision);
+      const accion = accionDesdeConsulta(
+        estado,
+        consulta.botJugadorId,
+        decision,
+        consulta
+      );
       setConsulta(null);
       enviarAccionOnline(salaId, miId, accion);
     },
@@ -314,25 +340,40 @@ export default function SalaPage() {
     },
     [salaId, miId]
   );
-  // Trackeamos en qué asiento está cargando el bot — así sólo ese slot
-  // muestra "Cargando bot…" en vez de pintar todos los slots vacíos a la
-  // vez. Si hay un asiento cargando, los otros botones se deshabilitan
-  // para evitar doble pedido a la edge function.
-  const [cargandoEnAsiento, setCargandoEnAsiento] = useState<number | null>(
-    null
-  );
+  // Asiento del modal abierto: cuando el creador pulsa "Sumar bot" en un
+  // slot, abrimos un selector de primo; null = cerrado.
+  const [asientoElegirBot, setAsientoElegirBot] = useState<number | null>(null);
   const sumarBot = useCallback(
-    async (asiento: number) => {
-      if (cargandoEnAsiento !== null) return;
-      setCargandoEnAsiento(asiento);
-      try {
-        const r = await agregarBotOnline(salaId, miId ?? undefined, asiento);
-        if (!r.ok) setError(r.error || "No se pudo agregar bot.");
-      } finally {
-        setCargandoEnAsiento(null);
+    async (asiento: number, personaje: string) => {
+      // UX optimista: pintamos el bot en el asiento al toque y disparamos
+      // la edge function en paralelo. Cuando vuelve por realtime con el
+      // id real, reemplaza al optimista (mismo asiento + mismo personaje
+      // → no hay flicker visible).
+      const meta = getPersonaje(personaje);
+      if (estado && meta) {
+        const optimista: Jugador = {
+          id: `tmp-${asiento}-${Date.now()}`,
+          nombre: meta.nombre,
+          personaje,
+          equipo: (asiento % 2) as 0 | 1,
+          asiento,
+          conectado: true,
+          esBot: true
+        };
+        setEstado({
+          ...estado,
+          jugadores: [...estado.jugadores, optimista]
+        });
       }
+      const r = await agregarBotOnline(
+        salaId,
+        miId ?? undefined,
+        asiento,
+        personaje
+      );
+      if (!r.ok) setError(r.error || "No se pudo agregar bot.");
     },
-    [salaId, miId, cargandoEnAsiento]
+    [salaId, miId, estado, setEstado]
   );
   const quitarBot = useCallback(
     async (botId: string) => {
@@ -520,7 +561,7 @@ export default function SalaPage() {
           <button
             onClick={() => setMenuCompartir(true)}
             className="btn btn-primary !px-3 !py-1.5 !min-h-0 text-xs flex items-center gap-1.5 shrink-0 font-bold"
-            title="Compartir enlace de la sala"
+            title="Invitar a un primo"
           >
             <svg
               viewBox="0 0 24 24"
@@ -536,7 +577,7 @@ export default function SalaPage() {
               <path d="M10 13a5 5 0 0 0 7.07 0l3.54-3.54a5 5 0 0 0-7.07-7.07l-1.41 1.41" />
               <path d="M14 11a5 5 0 0 0-7.07 0l-3.54 3.54a5 5 0 0 0 7.07 7.07l1.41-1.41" />
             </svg>
-            <span>Compartir sala</span>
+            <span>Invitar a un primo</span>
           </button>
         </header>
       ) : (
@@ -556,6 +597,7 @@ export default function SalaPage() {
               <ContadorPuntos
                 valor={miEquipoEs0 ? estado.puntos[0] : estado.puntos[1]}
                 esMio
+                objetivo={estado.puntosObjetivo}
               />
             </div>
             <span className="text-dorado/60 text-base">—</span>
@@ -563,6 +605,7 @@ export default function SalaPage() {
               <ContadorPuntos
                 valor={miEquipoEs0 ? estado.puntos[1] : estado.puntos[0]}
                 esMio={false}
+                objetivo={estado.puntosObjetivo}
               />
               <span className="text-crema truncate max-w-[90px]">
                 {tituloEllos}
@@ -594,11 +637,25 @@ export default function SalaPage() {
           estado={estado}
           miId={miId}
           onIniciar={iniciar}
-          onSumarBot={soyCreador ? sumarBot : undefined}
+          onAbrirSumarBot={
+            soyCreador ? (asiento) => setAsientoElegirBot(asiento) : undefined
+          }
           onQuitarBot={soyCreador ? quitarBot : undefined}
-          cargandoEnAsiento={cargandoEnAsiento}
           onCerrar={() => setConfirmSalir(true)}
           cerrando={cerrando}
+        />
+      )}
+
+      {/* Modal: elegir primo para el bot */}
+      {asientoElegirBot !== null && (
+        <ElegirBotModal
+          ocupados={estado.jugadores.map((j) => j.personaje)}
+          onCerrar={() => setAsientoElegirBot(null)}
+          onConfirmar={async (slug) => {
+            const asiento = asientoElegirBot;
+            setAsientoElegirBot(null);
+            if (asiento !== null) await sumarBot(asiento, slug);
+          }}
         />
       )}
 
@@ -796,18 +853,16 @@ function SalaEspera({
   miId,
   onIniciar,
   onCerrar,
-  onSumarBot,
+  onAbrirSumarBot,
   onQuitarBot,
-  cargandoEnAsiento,
   cerrando
 }: {
   estado: EstadoJuego;
   miId: string | null;
   onIniciar: (mezclarEquipos: boolean) => void;
   onCerrar: () => void;
-  onSumarBot?: (asiento: number) => void;
+  onAbrirSumarBot?: (asiento: number) => void;
   onQuitarBot?: (botId: string) => void;
-  cargandoEnAsiento?: number | null;
   cerrando: boolean;
 }) {
   const total = estado.modo === "2v2" ? 4 : 2;
@@ -826,24 +881,20 @@ function SalaEspera({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className={`flex-1 grid ${gridCls} gap-3 p-3 sm:p-4`}>
-        {slots.map(({ i, j }) => {
-          const hayCargando = cargandoEnAsiento != null;
-          const esEstaSlotCargando = cargandoEnAsiento === i;
-          return (
-            <SlotEspera
-              key={i}
-              asiento={i}
-              jugador={j}
-              esYo={j?.id === miId}
-              onSumarBot={!j && onSumarBot ? () => onSumarBot(i) : undefined}
-              cargandoBot={esEstaSlotCargando}
-              deshabilitarBot={hayCargando && !esEstaSlotCargando}
-              onQuitarBot={
-                j?.esBot && onQuitarBot ? () => onQuitarBot(j.id) : undefined
-              }
-            />
-          );
-        })}
+        {slots.map(({ i, j }) => (
+          <SlotEspera
+            key={i}
+            asiento={i}
+            jugador={j}
+            esYo={j?.id === miId}
+            onSumarBot={
+              !j && onAbrirSumarBot ? () => onAbrirSumarBot(i) : undefined
+            }
+            onQuitarBot={
+              j?.esBot && onQuitarBot ? () => onQuitarBot(j.id) : undefined
+            }
+          />
+        ))}
       </div>
       {/* Toggle: solo en 2v2, donde tiene sentido sortear compañeros */}
       {total === 4 && (
@@ -894,17 +945,13 @@ function SlotEspera({
   jugador,
   esYo,
   onSumarBot,
-  onQuitarBot,
-  cargandoBot,
-  deshabilitarBot
+  onQuitarBot
 }: {
   asiento: number;
   jugador?: Jugador;
   esYo: boolean;
   onSumarBot?: () => void;
   onQuitarBot?: () => void;
-  cargandoBot?: boolean;
-  deshabilitarBot?: boolean;
 }) {
   const equipo = (asiento % 2) as 0 | 1;
   const colorEquipo = equipo === 0 ? "border-dorado" : "border-azul-criollo";
@@ -943,7 +990,7 @@ function SlotEspera({
               <button
                 type="button"
                 onClick={onQuitarBot}
-                className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rojo-fernet/90 hover:bg-rojo-fernet text-crema text-[10px] font-bold flex items-center justify-center shadow-md border border-carbon"
+                className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-red text-crema text-sm font-black flex items-center justify-center shadow-lg ring-2 ring-carbon transition hover:scale-110 hover:bg-red/80"
                 title={`Quitar a ${jugador.nombre}`}
                 aria-label={`Quitar a ${jugador.nombre}`}
               >
@@ -969,18 +1016,26 @@ function SlotEspera({
             <button
               type="button"
               onClick={onSumarBot}
-              disabled={cargandoBot || deshabilitarBot}
-              className="btn btn-ghost !px-2 !py-1 !min-h-0 text-[10px] mt-1 disabled:opacity-50"
-              title="Llenar este lugar con un bot"
+              className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-dorado/60 bg-gradient-to-br from-dorado/15 to-surface text-dorado text-xs font-bold uppercase tracking-wider hover:border-dorado hover:from-dorado/25 transition shadow-md"
+              title="Sumar un bot en este asiento"
             >
-              {cargandoBot ? (
-                <span className="flex items-center gap-1">
-                  <span className="parpadeo">⏳</span>
-                  <span>Cargando bot…</span>
-                </span>
-              ) : (
-                "+ Sumar bot"
-              )}
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <rect x="3" y="8" width="18" height="12" rx="2" />
+                <path d="M12 8V4M9 4h6" />
+                <circle cx="9" cy="14" r="1" fill="currentColor" />
+                <circle cx="15" cy="14" r="1" fill="currentColor" />
+              </svg>
+              <span>Sumar bot</span>
             </button>
           )}
         </>
@@ -1054,6 +1109,57 @@ function legibilizarError(crudo: string): string {
     "Acción rechazada.": "Acción rechazada."
   };
   return map[code] || crudo;
+}
+
+/** Modal: el creador elige qué primo entra como bot. Filtra los primos
+ *  ya ocupados (tanto humanos como bots ya sentados). */
+function ElegirBotModal({
+  ocupados,
+  onCerrar,
+  onConfirmar
+}: {
+  ocupados: string[];
+  onCerrar: () => void;
+  onConfirmar: (slug: string) => void;
+}) {
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sheet-bg"
+      onClick={onCerrar}
+    >
+      <div
+        className="card p-4 max-w-md w-full max-h-[90vh] overflow-y-auto border-l-4 border-l-dorado"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-3">
+          <div className="titulo-marca text-xl">
+            Elegí un <span className="acento">primo</span>
+          </div>
+          <p className="text-xs text-text-dim mt-1 subtitulo-claim">
+            Va a jugar como bot en este asiento.
+          </p>
+        </div>
+        <SelectorPersonaje
+          seleccionado={seleccionado}
+          ocupados={ocupados}
+          onSeleccionar={setSeleccionado}
+        />
+        <div className="flex gap-2 mt-4">
+          <button onClick={onCerrar} className="btn flex-1">
+            Cancelar
+          </button>
+          <button
+            onClick={() => seleccionado && onConfirmar(seleccionado)}
+            disabled={!seleccionado}
+            className="btn btn-primary flex-1"
+          >
+            Sumar bot
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /** Modal de error: aparece centrado, se cierra al click o solo a los 4s. */

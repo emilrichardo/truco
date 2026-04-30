@@ -335,11 +335,13 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
         : null;
   if (!cantoLegal) return null;
 
-  // Con compañero humano, en general NO canto truco — la decisión es del
-  // humano. PERO si tengo una mano excepcional (fuerza ≥ 80, o tengo un
-  // "macho efectivo": una carta que dado lo ya jugado nadie puede matar,
-  // tipo el 1 de basto cuando ya cayó el 1 de espada), canto igual.
-  // Sería un desperdicio quedarse callado con cartas que ganan seguro.
+  // Con compañero humano: la IA puede DECIDIR cantar truco (devuelve la
+  // acción), pero el dispatcher de bots NO la despacha directo — la
+  // muestra como una consulta al humano ("tengo mano fuerte, ¿canto?").
+  // Filtramos acá los casos donde no tiene fuerza suficiente para no
+  // molestar al humano con una consulta innecesaria. Antes había una
+  // excepción "manoExcepcional" que dejaba al bot cantar solo: la
+  // sacamos — siempre se le pregunta al humano cuando es compañero.
   const tengoCompañeroHumano = estado.jugadores.some(
     (j) => j.equipo === yo.equipo && j.id !== jugadorId && !j.esBot
   );
@@ -349,12 +351,11 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
       b.jugadas.map((j) => j.carta)
     );
     const tieneMacho = vista.enMano.some((c) =>
-      // La carta sería macho si se jugara ahora — chequeamos contra el
-      // historial actual de jugadas, sin contarla como ya tirada.
       esMachoEfectivo(c, cartasYaJugadas)
     );
-    const manoExcepcional = fuerzaActual >= 80 || tieneMacho;
-    if (!manoExcepcional) return null;
+    // Sólo proponemos canto si la mano lo amerita — el humano siempre
+    // puede rechazar pero no queremos popups vacíos.
+    if (fuerzaActual < 60 && !tieneMacho) return null;
   }
 
   // Etiqueta trucera: en baza 1 con la ventana de envido todavía abierta

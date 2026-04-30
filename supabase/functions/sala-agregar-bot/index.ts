@@ -15,6 +15,10 @@ interface Payload {
    *  cae al primer asiento libre. Sin esto la function siempre llenaba
    *  el de menor número aunque el usuario hubiese clickeado en otro. */
   asiento?: number;
+  /** Slug del primo elegido por el creador. Si está libre, se usa; sino
+   *  se elige uno aleatorio entre los disponibles (mismo fallback que
+   *  cuando no se especifica). */
+  personaje?: string;
 }
 
 // Mismo catálogo que /src/data/jugadores.ts. Lo duplicamos acá para que la
@@ -29,7 +33,8 @@ const PERSONAJES = [
   { slug: "richi", nombre: "Richi" },
   { slug: "jorge", nombre: "Jorge" },
   { slug: "rodrigo", nombre: "Rodrigo" },
-  { slug: "dani", nombre: "Dani" }
+  { slug: "dani", nombre: "Dani" },
+  { slug: "gonzalo", nombre: "Gonzalo" }
 ];
 
 Deno.serve(async (req) => {
@@ -79,12 +84,18 @@ Deno.serve(async (req) => {
   if (asiento < 0) return fail("sala_llena", 409);
 
   // Elegimos personaje libre — los que ya están en la mesa quedan afuera.
+  // Si el cliente pidió uno puntual y está libre, lo respetamos.
   const usados = new Set(estado.jugadores.map((j) => j.personaje));
   const libres = PERSONAJES.filter((p) => !usados.has(p.slug));
-  const meta =
-    libres.length > 0
-      ? libres[Math.floor(Math.random() * libres.length)]
-      : PERSONAJES[0];
+  let meta = libres.length > 0 ? libres[0] : PERSONAJES[0];
+  if (body.personaje) {
+    const pedido = libres.find((p) => p.slug === body.personaje);
+    if (pedido) meta = pedido;
+    else if (libres.length > 0)
+      meta = libres[Math.floor(Math.random() * libres.length)];
+  } else if (libres.length > 0) {
+    meta = libres[Math.floor(Math.random() * libres.length)];
+  }
 
   const bot: Jugador = {
     id: crypto.randomUUID(),
