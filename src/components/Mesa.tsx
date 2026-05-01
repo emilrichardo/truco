@@ -6,7 +6,11 @@ import { jerarquia } from "@/lib/truco/cartas";
 import { CartaEspanola } from "./CartaEspanola";
 import { JugadorPanel } from "./JugadorPanel";
 import { useHablando } from "@/lib/useHablando";
-import { ICONOS_COMPANERO, ORDENES_COMPANERO } from "@/lib/chatRapido";
+import {
+  ICONOS_COMPANERO,
+  ICONOS_EMOCIONES,
+  ORDENES_COMPANERO
+} from "@/lib/chatRapido";
 import { urlPersonaje } from "@/data/jugadores";
 import { useCartasLanzando } from "@/lib/cartasLanzando";
 
@@ -442,18 +446,42 @@ function PanelMensajeCompañero({
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-1 mt-2">
-          {ICONOS_COMPANERO.map((icono) => (
-            <button
-              key={icono}
-              type="button"
-              onClick={() => onEnviar({ reaccion: icono })}
-              className="text-xl active:scale-90 transition px-1.5 hover:bg-dorado/15 rounded border border-dorado/20"
-              title={`Enviar ${icono}`}
-            >
-              {icono}
-            </button>
-          ))}
+        <div className="mt-2">
+          <div className="text-[9px] uppercase tracking-widest text-text-dim/70 mb-1">
+            Señas
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {ICONOS_COMPANERO.map((icono) => (
+              <button
+                key={icono}
+                type="button"
+                onClick={() => onEnviar({ reaccion: icono })}
+                className="text-xl active:scale-90 transition px-1.5 hover:bg-dorado/15 rounded border border-dorado/20"
+                title={`Enviar ${icono}`}
+              >
+                {icono}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-2">
+          <div className="text-[9px] uppercase tracking-widest text-text-dim/70 mb-1">
+            Emociones
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {ICONOS_EMOCIONES.map((icono) => (
+              <button
+                key={icono}
+                type="button"
+                onClick={() => onEnviar({ reaccion: icono })}
+                className="text-xl active:scale-90 transition px-1.5 hover:bg-azul-criollo/20 rounded border border-azul-criollo/30"
+                title={`Reaccionar ${icono}`}
+              >
+                {icono}
+              </button>
+            ))}
+          </div>
         </div>
 
         <form
