@@ -87,6 +87,13 @@ export const metadata: Metadata = {
     telephone: false,
     email: false,
     address: false
+  },
+  // PWA: manifest + integración con iOS para "Agregar a pantalla de inicio".
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Truco Primos"
   }
 };
 

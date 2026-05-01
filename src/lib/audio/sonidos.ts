@@ -28,10 +28,15 @@ export type CategoriaCanto =
   | "son_mejores";
 
 // Voces disponibles: argentinas (locale=es-AR) generadas via ElevenLabs.
-// La asignación es por ASIENTO en la mesa, no por hash del id — con
-// hash, en 1v1 había 25% de probabilidad que ambos jugadores cayeran
-// en la misma voz y "se cruzaban". Ahora cada asiento (0..3) toma una
-// voz distinta determinísticamente.
+// La asignación es por PERSONAJE (slug del primo) — así "Lucas" suena
+// siempre con la misma voz, partida tras partida y aún después de un
+// shuffle de asientos (revancha o "sortear compañeros"). Antes la voz
+// se ataba al asiento, lo que hacía que el mismo primo cambiara de voz
+// si se movía de silla.
+//
+// Trade-off: con 11 personajes y 4 voces puede haber colisión dentro
+// de una misma partida (dos primos con la misma voz). Es preferible a
+// que un mismo primo cambie de voz a media sesión.
 const VOCES = ["lalo", "juan", "manuel", "agustin"] as const;
 type Voz = (typeof VOCES)[number];
 
@@ -45,22 +50,25 @@ function hashStr(s: string): number {
   return Math.abs(h);
 }
 
-// Mapa jugadorId → asiento, mantenido al día por useAudioJuego cuando
-// cambia el estado. Permite asignar voces por asiento (sin colisiones).
-const asientoPorJugador = new Map<string, number>();
+// Mapa jugadorId → personaje slug. Se mantiene al día en useAudioJuego.
+// Sirve para asignar la voz por PERSONAJE en lugar de por id (que cambia
+// entre sesiones) o asiento (que cambia entre partidas tras shuffle).
+const personajePorJugador = new Map<string, string>();
 
 export function setAsientosJugadores(
-  jugadores: { id: string; asiento: number }[]
+  jugadores: { id: string; asiento: number; personaje?: string }[]
 ) {
-  asientoPorJugador.clear();
-  for (const j of jugadores) asientoPorJugador.set(j.id, j.asiento);
+  personajePorJugador.clear();
+  for (const j of jugadores) {
+    if (j.personaje) personajePorJugador.set(j.id, j.personaje);
+  }
 }
 
 function vozDeJugador(jugadorId: string): Voz {
-  const asiento = asientoPorJugador.get(jugadorId);
-  if (asiento !== undefined) return VOCES[asiento % VOCES.length];
-  // Fallback al hash si todavía no se cargaron los asientos (no debería
-  // pasar en partida normal — useAudioJuego setea apenas hay jugadores).
+  const personaje = personajePorJugador.get(jugadorId);
+  if (personaje) return VOCES[hashStr(personaje) % VOCES.length];
+  // Fallback al hash del id si todavía no se cargó el personaje
+  // (no debería pasar en partida normal).
   return VOCES[hashStr(jugadorId) % VOCES.length];
 }
 

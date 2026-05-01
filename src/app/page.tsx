@@ -5,6 +5,7 @@ import { urlPersonaje, getPersonaje } from "@/data/jugadores";
 import { usePersonajeLocal } from "@/lib/personaje";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
+import { BotonInstalarApp } from "@/components/BotonInstalarApp";
 
 export default function HomePage() {
   const [miSlug, setMiSlug, listo] = usePersonajeLocal();
@@ -87,6 +88,8 @@ export default function HomePage() {
           </Link>
           <span className="text-text-dim/40">·</span>
           <BotonCompartirJuego />
+          <span className="text-text-dim/40">·</span>
+          <BotonInstalarApp />
         </div>
         <div className="text-text-dim/60 text-[10px] subtitulo-claim">
           Hecho con asado y mate · {new Date().getFullYear()}

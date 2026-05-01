@@ -296,6 +296,22 @@ function intentarCantarEnvido(ctx: ContextoCanto): Accion | null {
   const tengoCompañeroHumano = compañeros.some((j) => !j.esBot);
   if (tengoCompañeroHumano) return null;
 
+  // El envido lo canta el PIE del equipo, no el mano. Si soy el primero
+  // en jugar de mi equipo (menor distancia desde el mano de la mano),
+  // me callo y espero a que decida el pie — él tiene más info y la
+  // costumbre dice que es su canto. En 1v1 cada equipo tiene un único
+  // jugador → es trivialmente pie y no entra a este return.
+  const manoJ = estado.jugadores.find((j) => j.id === mano.manoJugadorId);
+  if (manoJ && compañeros.length > 0) {
+    const n = estado.jugadores.length;
+    const dist = (asiento: number) => (asiento - manoJ.asiento + n) % n;
+    const miDist = dist(yo.asiento);
+    const algunoMasAtrasEnElEquipo = compañeros.some(
+      (c) => dist(c.asiento) > miDist
+    );
+    if (algunoMasAtrasEnElEquipo) return null;
+  }
+
   const miEnvido = calcularEnvido(vista.originales);
   const distancia = estado.puntos[yo.equipo] - estado.puntos[1 - yo.equipo];
 

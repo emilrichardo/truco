@@ -84,7 +84,11 @@ export function useAudioJuego(
   useEffect(() => {
     if (!estado || estado.jugadores.length === 0) return;
     setAsientosJugadores(
-      estado.jugadores.map((j) => ({ id: j.id, asiento: j.asiento }))
+      estado.jugadores.map((j) => ({
+        id: j.id,
+        asiento: j.asiento,
+        personaje: j.personaje
+      }))
     );
     if (precargado.current) return;
     precargado.current = true;
