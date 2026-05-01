@@ -986,17 +986,28 @@ function SalaEspera({
   const todosListos = faltan === 0;
   const [mezclarEquipos, setMezclarEquipos] = useState(false);
   const [completarConBots, setCompletarConBots] = useState(false);
+  const [iniciando, setIniciando] = useState(false);
   // Si el usuario activó "Completar con bots", al iniciar lanzamos
   // primero un sumarBot por cada asiento libre y después invocamos
-  // onIniciar con un pequeño delay (el server necesita ver los bots ya
-  // sentados). Habilitamos el botón Iniciar aunque falten primos.
-  const puedeIniciar = todosListos || (completarConBots && !!onAutoCompletarBots);
+  // onIniciar. El botón muestra "Cargando…" durante toda esa
+  // secuencia para que se vea que la acción está en curso.
+  const puedeIniciar =
+    !iniciando &&
+    (todosListos || (completarConBots && !!onAutoCompletarBots));
   const handleIniciar = async () => {
     if (!puedeIniciar) return;
-    if (faltan > 0 && completarConBots && onAutoCompletarBots) {
-      await onAutoCompletarBots();
+    setIniciando(true);
+    try {
+      if (faltan > 0 && completarConBots && onAutoCompletarBots) {
+        await onAutoCompletarBots();
+      }
+      onIniciar(mezclarEquipos);
+    } finally {
+      // Si onIniciar falla por algún error, liberamos el botón. En el
+      // happy path la sala transita a "iniciada" y SalaEspera se
+      // desmonta antes de que importe.
+      setIniciando(false);
     }
-    onIniciar(mezclarEquipos);
   };
 
   // Grid: 2 cols × 1 fila (1v1) o 2 cols × 2 filas (2v2). En 1v1 no
@@ -1080,10 +1091,22 @@ function SalaEspera({
           title={
             puedeIniciar
               ? "Empezar partida"
-              : "Esperá a que se sienten todos o tocá Completar con bots"
+              : iniciando
+                ? "Sumando bots…"
+                : "Esperá a que se sienten todos o tocá Completar con bots"
           }
         >
-          Iniciar
+          {iniciando ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className="inline-block w-3 h-3 rounded-full border-2 border-carbon/40 border-t-carbon animate-spin"
+                aria-hidden
+              />
+              Cargando…
+            </span>
+          ) : (
+            "Iniciar"
+          )}
         </button>
       </div>
     </div>
