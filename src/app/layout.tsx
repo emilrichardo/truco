@@ -69,9 +69,12 @@ export const metadata: Metadata = {
   // a partir del logo porque algunos clientes viejos no leen WebP en la
   // preview. Los icons del browser apuntan al WebP optimizado.
   icons: {
-    icon: "/brand/logo.webp",
-    shortcut: "/brand/logo.webp",
-    apple: "/brand/og-logo.png"
+    icon: "/brand/icon-192.png",
+    shortcut: "/brand/icon-192.png",
+    // apple-touch-icon debe ser cuadrado (mínimo 180x180). Antes
+    // usábamos og-logo.png 800x652 — iOS lo aceptaba pero quedaba
+    // recortado raro. icon-512 cuadrado se ve bien escalado.
+    apple: "/brand/icon-512.png"
   },
   robots: {
     index: true,
