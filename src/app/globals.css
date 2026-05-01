@@ -520,6 +520,31 @@ body {
   animation-delay: var(--reparto-delay, 0ms);
 }
 
+/* Mazo apilado en el centro durante el reparto. Aparece al toque
+ * cuando arranca la mano y se desvanece a los ~1.5s, mientras las
+ * cartas vuelan a sus dueños. */
+.mazo-reparto-fade {
+  animation: mazo-reparto 1500ms ease-in-out forwards;
+}
+@keyframes mazo-reparto {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  75% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+}
+
 /* Badge "MANO" — para marcar quién es el mano de la ronda */
 .badge-mano {
   background: linear-gradient(

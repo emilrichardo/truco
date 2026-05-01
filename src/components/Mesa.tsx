@@ -13,6 +13,7 @@ import {
 } from "@/lib/chatRapido";
 import { urlPersonaje } from "@/data/jugadores";
 import { useCartasLanzando } from "@/lib/cartasLanzando";
+import { MazoReparto } from "./MazoReparto";
 
 type Posicion =
   | "abajo-izquierda"
@@ -155,6 +156,9 @@ export function Mesa({
        * afuera para conservar la UI sin deformaciones. */}
       <div className="absolute inset-0">
         <div className="absolute inset-1 sm:inset-2 tapete" />
+        {/* Mazo apilado en el centro mientras se reparte. Aparece al
+         * cambiar el numero de mano y se desvanece a los ~1.5s. */}
+        <MazoReparto manoNumero={estado.manoActual?.numero ?? 0} />
         {/* Marcador invisible donde aterriza MI próxima carta. PanelAcciones
          * lo busca por data-attribute para animar el lanzamiento hasta acá
          * (sino la carta volaba hacia un punto fijo arbitrario y aparecía
