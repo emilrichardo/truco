@@ -61,6 +61,10 @@ export function Chat({
   }, [estado.chat.length, filtro]);
 
   const items = estado.chat.filter((m) => {
+    // Mensajes solo-audio (canto personalizado broadcasteado al chat)
+    // no se muestran como burbuja — son un canal lateral para audio.
+    if (m.audioCantoDataUrl && !m.texto && !m.reaccion && !m.sticker)
+      return false;
     if (!esVisibleParaMi(m, miId)) return false;
     if (filtro === "companiero") {
       return (

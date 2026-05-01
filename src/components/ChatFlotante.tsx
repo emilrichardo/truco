@@ -24,12 +24,15 @@ export function ChatFlotante({
    *  mostrando el botón — se renderiza encima del input de enviar. */
   oculto?: boolean;
 }) {
-  // Mensajes humanos (no eventos del juego).
+  // Mensajes humanos (no eventos del juego). Excluimos los solo-audio
+  // (audioCantoDataUrl sin texto) — son un canal lateral, no se muestran
+  // como burbuja ni cuentan como notificación.
   const humanos = useMemo(
     () =>
       estado.chat.filter(
         (m) =>
           !m.evento &&
+          !(m.audioCantoDataUrl && !m.texto && !m.reaccion && !m.sticker) &&
           (!m.destinatarioId ||
             m.destinatarioId === miId ||
             m.jugadorId === miId)

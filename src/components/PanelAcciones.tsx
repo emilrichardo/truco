@@ -9,6 +9,7 @@ import {
   cantoDeAccion,
   leerAudio
 } from "@/lib/audiosLocales";
+import { marcarAudioReciente } from "@/lib/audio/useAudioJuego";
 
 interface EnviarChatFn {
   (m: {
@@ -489,6 +490,12 @@ function BotoneraMenu({
         try {
           const blob = await leerAudio(miSlug, canto);
           if (!blob) return;
+          // Marcamos suppression LOCAL ya — sin esperar el round-trip
+          // del chat. Cuando el evento del canto vuelva por realtime a
+          // mi propio cliente, ya va a encontrar la flag y suprimir
+          // la voz default. Para los receivers, el chat va por la red
+          // (delay default lo cubre).
+          marcarAudioReciente(miId, canto);
           const dataUrl = await blobADataUrl(blob);
           enviarChat({ audioCantoDataUrl: dataUrl, audioCantoTipo: canto });
         } catch {

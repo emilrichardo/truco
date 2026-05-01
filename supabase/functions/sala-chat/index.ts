@@ -16,7 +16,9 @@ interface Payload {
   audio_canto_tipo?: string;
 }
 
-const AUDIO_MAX_BYTES = 150_000;
+// 300KB cubre WAV 22kHz mono 16-bit de ~3.5s + base64 overhead. Antes
+// 150KB se pasaba con grabaciones cortas y rechazaba el audio entero.
+const AUDIO_MAX_BYTES = 300_000;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return preflight();

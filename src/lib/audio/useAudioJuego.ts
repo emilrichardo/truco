@@ -29,7 +29,19 @@ const NUMEROS_CARTAS = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12] as const;
 // default del mismo canto durante una ventana de 3.5s. Sin esto, el
 // canto del jugador suena dos veces (su audio + la voz default).
 const audiosPersonalizadosRecientes = new Map<string, number>();
-const SUPPRESS_VENTANA_MS = 3500;
+const SUPPRESS_VENTANA_MS = 4500;
+// Cuando un cliente sabe localmente que está por mandar un audio
+// (lo grabó este mismo dispositivo), llama marcarAudioReciente ANTES
+// de despachar la acción — así su propio cliente suprime la voz
+// default sin depender de la latencia del realtime.
+export function marcarAudioReciente(jugadorId: string, canto: string) {
+  audiosPersonalizadosRecientes.set(`${jugadorId}:${canto}`, Date.now());
+}
+// Delay antes de reproducir la voz default cuando el canto es
+// "personalizable" — le damos tiempo al chat con el audio personal a
+// llegar y registrarse como suppression. 850ms cubre el peor caso
+// observado (chat más lento que canto).
+const DELAY_DEFAULT_MS = 850;
 
 function reproducirDataUrl(dataUrl: string) {
   if (typeof Audio === "undefined") return;
@@ -238,9 +250,9 @@ function procesarMensaje(m: MensajeChat) {
         if (cantoKey) {
           // El audio personalizado y el evento del canto viajan por
           // mensajes de chat distintos — en el peor caso el evento
-          // llega primero. Esperamos 250ms para darle tiempo al audio
-          // de aterrizar y registrarse como suppression.
-          window.setTimeout(reproducirDefault, 250);
+          // llega primero. Esperamos DELAY_DEFAULT_MS para darle
+          // tiempo al audio de aterrizar y registrarse como suppression.
+          window.setTimeout(reproducirDefault, DELAY_DEFAULT_MS);
         } else {
           reproducirDefault();
         }

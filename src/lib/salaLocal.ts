@@ -312,6 +312,15 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     [estado, miId]
   );
 
+  // Mantenemos el estado vigente en un ref. enviarChat es típicamente
+  // llamado desde un async (await leerAudio), y para entonces el estado
+  // capturado en el closure quedó stale — si lo despachábamos, le
+  // sobreescribíamos el envido recién cantado. Con el ref leemos
+  // siempre el estado actual al momento del push.
+  const estadoRef = useRef(estado);
+  useEffect(() => {
+    estadoRef.current = estado;
+  }, [estado]);
   const enviarChat = useCallback(
     (m: {
       texto?: string;
@@ -321,14 +330,15 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
       audioCantoDataUrl?: string;
       audioCantoTipo?: string;
     }) => {
-      if (!estado || !miId) return;
+      const e = estadoRef.current;
+      if (!e || !miId) return;
       const destinatario = m.destinatarioId
-        ? estado.jugadores.find((j) => j.id === m.destinatarioId)
+        ? e.jugadores.find((j) => j.id === m.destinatarioId)
         : undefined;
-      const yo = estado.jugadores.find((j) => j.id === miId);
+      const yo = e.jugadores.find((j) => j.id === miId);
       const esCompaniero =
         !!destinatario && !!yo && destinatario.equipo === yo.equipo;
-      estado.chat.push({
+      e.chat.push({
         id: nuevoIdLocal().slice(6),
         jugadorId: miId,
         destinatarioId: esCompaniero ? destinatario.id : undefined,
@@ -340,11 +350,11 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
         audioCantoDataUrl: m.audioCantoDataUrl,
         audioCantoTipo: m.audioCantoTipo
       });
-      if (estado.chat.length > 80) estado.chat.shift();
-      estado.version++;
-      dispatch({ tipo: "set", estado: { ...estado } });
+      if (e.chat.length > 80) e.chat.shift();
+      e.version++;
+      dispatch({ tipo: "set", estado: { ...e } });
     },
-    [estado, miId]
+    [miId]
   );
 
   // Resolver consulta: el humano decide qué hace su bot compañero.

@@ -75,7 +75,11 @@ export default function SalaPage() {
     if (!estado || !miId) return 0;
     return estado.chat.filter(
       (m) =>
-        !m.destinatarioId || m.destinatarioId === miId || m.jugadorId === miId
+        // Excluimos mensajes solo-audio (audioCantoDataUrl sin texto):
+        // son canal lateral para los cantos personalizados, no cuentan
+        // como notificación de chat.
+        !(m.audioCantoDataUrl && !m.texto && !m.reaccion && !m.sticker) &&
+        (!m.destinatarioId || m.destinatarioId === miId || m.jugadorId === miId)
     ).length;
   }, [estado, miId]);
 
@@ -670,6 +674,22 @@ export default function SalaPage() {
             soyCreador ? (asiento) => setAsientoElegirBot(asiento) : undefined
           }
           onQuitarBot={soyCreador ? quitarBot : undefined}
+          onAutoCompletarBots={
+            soyCreador
+              ? async () => {
+                  const total = estado.modo === "2v2" ? 4 : 2;
+                  const ocupados = new Set(
+                    estado.jugadores.map((j) => j.asiento)
+                  );
+                  // Slug vacío → server elige uno random entre los libres.
+                  const promesas: Promise<unknown>[] = [];
+                  for (let i = 0; i < total; i++) {
+                    if (!ocupados.has(i)) promesas.push(sumarBot(i, ""));
+                  }
+                  await Promise.all(promesas);
+                }
+              : undefined
+          }
           onCerrar={() => setConfirmSalir(true)}
           cerrando={cerrando}
         />
@@ -886,6 +906,7 @@ function SalaEspera({
   onCerrar,
   onAbrirSumarBot,
   onQuitarBot,
+  onAutoCompletarBots,
   cerrando
 }: {
   estado: EstadoJuego;
@@ -894,6 +915,8 @@ function SalaEspera({
   onCerrar: () => void;
   onAbrirSumarBot?: (asiento: number) => void;
   onQuitarBot?: (botId: string) => void;
+  /** Llena los slots vacíos con bots aleatorios. Sólo lo provee el creador. */
+  onAutoCompletarBots?: () => void | Promise<void>;
   cerrando: boolean;
 }) {
   const total = estado.modo === "2v2" ? 4 : 2;
@@ -905,6 +928,19 @@ function SalaEspera({
   const faltan = total - ocupados;
   const todosListos = faltan === 0;
   const [mezclarEquipos, setMezclarEquipos] = useState(false);
+  const [completarConBots, setCompletarConBots] = useState(false);
+  // Si el usuario activó "Completar con bots", al iniciar lanzamos
+  // primero un sumarBot por cada asiento libre y después invocamos
+  // onIniciar con un pequeño delay (el server necesita ver los bots ya
+  // sentados). Habilitamos el botón Iniciar aunque falten primos.
+  const puedeIniciar = todosListos || (completarConBots && !!onAutoCompletarBots);
+  const handleIniciar = async () => {
+    if (!puedeIniciar) return;
+    if (faltan > 0 && completarConBots && onAutoCompletarBots) {
+      await onAutoCompletarBots();
+    }
+    onIniciar(mezclarEquipos);
+  };
 
   // Grid: 2 cols × 1 fila (1v1) o 2 cols × 2 filas (2v2). En 1v1 no
   // estiramos el grid (sin `flex-1`) — sino el slot único ocupaba toda
@@ -933,20 +969,34 @@ function SalaEspera({
           />
         ))}
       </div>
-      {/* Toggle: solo en 2v2, donde tiene sentido sortear compañeros */}
-      {total === 4 && (
-        <div className="px-3 sm:px-4 py-2 flex items-center justify-center">
-          <label className="flex items-center gap-2 text-xs text-text-dim cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={mezclarEquipos}
-              onChange={(e) => setMezclarEquipos(e.target.checked)}
-              className="accent-[var(--dorado)] w-4 h-4"
-            />
-            <span>Sortear compañeros al azar</span>
-          </label>
-        </div>
-      )}
+      {/* Toggles estilo botón ocupando media pantalla cada uno. En 1v1
+       *  el "Sortear compañeros" no tiene sentido, así que el "Completar
+       *  con bots" toma todo el ancho. */}
+      <div className="px-3 sm:px-4 py-2 flex gap-2">
+        {total === 4 && (
+          <ToggleBoton
+            activo={mezclarEquipos}
+            onClick={() => setMezclarEquipos((v) => !v)}
+            icono={<IconoBarajar />}
+            label="Sortear compañeros"
+            sublabel="Al azar"
+          />
+        )}
+        {onAutoCompletarBots && (
+          <ToggleBoton
+            activo={completarConBots}
+            onClick={() => setCompletarConBots((v) => !v)}
+            icono={<IconoBotAuto />}
+            label="Completar con bots"
+            sublabel={
+              faltan > 0
+                ? `Llena ${faltan} ${faltan === 1 ? "asiento" : "asientos"}`
+                : "Todos sentados"
+            }
+            disabled={faltan === 0}
+          />
+        )}
+      </div>
       <div className="border-t border-border bg-surface/40 p-3 flex items-center gap-2">
         <button
           onClick={onCerrar}
@@ -958,6 +1008,8 @@ function SalaEspera({
         <div className="flex-1 text-center text-xs subtitulo-claim">
           {todosListos ? (
             <span className="text-dorado">¡Todos listos!</span>
+          ) : completarConBots ? (
+            <span className="text-dorado">Completaremos con bots</span>
           ) : (
             <span className="text-text-dim">
               {faltan === 1 ? "Falta 1 primo" : `Faltan ${faltan} primos`}
@@ -965,15 +1017,135 @@ function SalaEspera({
           )}
         </div>
         <button
-          onClick={() => onIniciar(mezclarEquipos)}
-          disabled={!todosListos}
+          onClick={handleIniciar}
+          disabled={!puedeIniciar}
           className="btn btn-primary flex-1 sm:flex-initial sm:px-6"
-          title={todosListos ? "Empezar partida" : "Esperá a que se sienten todos"}
+          title={
+            puedeIniciar
+              ? "Empezar partida"
+              : "Esperá a que se sienten todos o tocá Completar con bots"
+          }
         >
           Iniciar
         </button>
       </div>
     </div>
+  );
+}
+
+/** Botón estilo toggle: ocupa la mitad de la pantalla, tiene ícono +
+ *  label + sublabel. Cuando está activo, borde y texto dorados. */
+function ToggleBoton({
+  activo,
+  onClick,
+  icono,
+  label,
+  sublabel,
+  disabled
+}: {
+  activo: boolean;
+  onClick: () => void;
+  icono: React.ReactNode;
+  label: string;
+  sublabel?: string;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-pressed={activo}
+      className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 transition text-left ${
+        disabled
+          ? "border-border/40 bg-surface/20 opacity-50 cursor-not-allowed"
+          : activo
+            ? "border-dorado bg-dorado/10 text-dorado"
+            : "border-border bg-surface/60 text-crema hover:border-azul-criollo/60"
+      }`}
+    >
+      <span
+        className={`flex-shrink-0 w-9 h-9 rounded-md flex items-center justify-center border-2 ${
+          activo ? "border-dorado/60 bg-dorado/15" : "border-border bg-carbon/40"
+        }`}
+      >
+        {icono}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block font-display text-xs sm:text-sm leading-tight truncate">
+          {label}
+        </span>
+        {sublabel && (
+          <span className="block text-[10px] text-text-dim leading-tight truncate">
+            {sublabel}
+          </span>
+        )}
+      </span>
+      <span
+        className={`flex-shrink-0 w-4 h-4 rounded border-2 ${
+          activo ? "border-dorado bg-dorado" : "border-border"
+        }`}
+        aria-hidden
+      >
+        {activo && (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--carbon)"
+            strokeWidth="3.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-full h-full"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        )}
+      </span>
+    </button>
+  );
+}
+
+function IconoBarajar() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M16 3h5v5" />
+      <path d="M4 20l17-17" />
+      <path d="M21 16v5h-5" />
+      <path d="M15 15l6 6" />
+      <path d="M4 4l5 5" />
+    </svg>
+  );
+}
+
+function IconoBotAuto() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="8" width="18" height="12" rx="2" />
+      <path d="M12 8V4M9 4h6" />
+      <circle cx="9" cy="14" r="1" fill="currentColor" />
+      <circle cx="15" cy="14" r="1" fill="currentColor" />
+      <path d="M3 13h-1M21 13h1" />
+    </svg>
   );
 }
 
