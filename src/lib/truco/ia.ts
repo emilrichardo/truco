@@ -434,7 +434,7 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
 // ============================================================
 
 function elegirCarta(ctx: ContextoCanto): Accion {
-  const { estado, jugadorId, vista, yo, personalidad: p } = ctx;
+  const { estado, jugadorId, legales, vista, yo, personalidad: p } = ctx;
   const mano = estado.manoActual!;
   const baza = mano.bazas[mano.bazas.length - 1];
   const numBaza = mano.bazas.length;
@@ -500,6 +500,35 @@ function elegirCarta(ctx: ContextoCanto): Accion {
         return { tipo: "jugar_carta", jugadorId, cartaId: top.id };
       }
       return { tipo: "jugar_carta", jugadorId, cartaId: ganadora.id };
+    }
+    // No puedo ganar la baza. Si tampoco puedo empatarla (ningún
+    // sample de jerarquía igual al mejor del rival), y perder esta
+    // baza me hace perder la mano SÍ O SÍ, me voy al mazo en vez
+    // de tirar una carta inútil. Los puntos en juego son los mismos
+    // (rival gana la mano igual) pero se cierra rápido.
+    //
+    // Condición de "mano perdida sí o sí":
+    //  - Baza 2 con baza 1 ya perdida → 0-2 = mano lost.
+    //  - Baza 3 con bazasPerdidas >= bazasGanadas Y al menos 1
+    //    perdida (descarta el 0-0-2 pardas, que va a mano de la
+    //    mano y podría ganar). Cubre 1-1 → 1-2 y 0-1 con parda → 0-2.
+    //  - El caso 1-0 con parda (1 ganada, 1 parda) — losing baza 3
+    //    queda 1-1 con parda y según reglas de parda gano: NO al
+    //    mazo, juego para defender.
+    const puedoEmpatar = ordenadas.some(
+      (c) => jerarquia(c) === mejorRivalEnBaza
+    );
+    const perderiaLaMano =
+      (numBaza === 2 && bazasPerdidas >= 1) ||
+      (numBaza === 3 &&
+        bazasPerdidas >= bazasGanadas &&
+        bazasPerdidas > 0);
+    if (
+      !puedoEmpatar &&
+      perderiaLaMano &&
+      legales.includes("ir_al_mazo")
+    ) {
+      return { tipo: "ir_al_mazo", jugadorId };
     }
     // No puedo ganar — tiro la más chica (sacrificio).
     return { tipo: "jugar_carta", jugadorId, cartaId: ordenadas[0].id };

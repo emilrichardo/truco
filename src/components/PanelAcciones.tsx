@@ -205,7 +205,7 @@ export function PanelAcciones({
         setLanzandoId(null);
         setDelta({ x: 0, y: 0 });
         setLanzandoDelta({ x: 0, y: 0 });
-      }, 500);
+      }, 280);
     };
 
     // Tap / clic suelto: jugar la carta directamente (sólo en mi turno).
@@ -306,27 +306,27 @@ export function PanelAcciones({
             const isDragging = arrastrandoId === c.id;
             const isLanzando = lanzandoId === c.id;
             // Tres estados:
-            //  - Lanzándose: viaja desde su posición actual al slot
-            //    real de la mesa, sin escalar (sale tamaño "sm" y
-            //    aterriza tamaño "sm" — la carta canónica de la mesa
-            //    es "lg", ligero pop al swappear). Mantiene opacity 1
-            //    casi todo el trayecto y se desvanece al final cuando
-            //    ya está sobre el slot.
+            //  - Lanzándose: viaja directo al slot real de la mesa
+            //    sin escalar ni desvanecerse — al terminar la
+            //    transición se desmonta y la carta canónica de la
+            //    mesa toma su lugar.
             //  - Arrastrando: sigue al dedo 1:1, sin transición.
             //  - Quieto: en su slot del abanico, snap suave.
             let transform: string;
             let transition: string;
-            let opacity = 1;
             // .fan-card tiene transform-origin: bottom center para que
             // la rotación del abanico se vea natural. Cuando lanzo,
             // necesito origin: center para que el translate aterrice
             // donde indica el delta sin sesgo del bottom.
             let transformOrigin: string | undefined = undefined;
             if (isLanzando) {
+              // Movimiento snappy y directo al slot — sin fade que
+              // distrae. Cuando termina la transición la carta se
+              // desmonta (en solo mode el motor ya tiene la canónica
+              // pintada en la mesa, así no hay gap visible).
               transform = `translate(${lanzandoDelta.x}px, ${lanzandoDelta.y}px) rotate(0deg)`;
               transition =
-                "transform 480ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 140ms ease 360ms";
-              opacity = 0;
+                "transform 260ms cubic-bezier(0.25, 1, 0.5, 1)";
               transformOrigin = "center center";
             } else if (isDragging) {
               transform = `translate(${delta.x}px, ${delta.y}px) scale(1.06)`;
@@ -345,7 +345,6 @@ export function PanelAcciones({
                     zIndex: isDragging || isLanzando ? 9999 : i + 1,
                     transform,
                     transition,
-                    opacity,
                     transformOrigin,
                     touchAction: "none",
                     pointerEvents: isLanzando ? "none" : undefined
