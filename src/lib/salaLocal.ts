@@ -315,12 +315,14 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   // Mantenemos el estado vigente en un ref. enviarChat es típicamente
   // llamado desde un async (await leerAudio), y para entonces el estado
   // capturado en el closure quedó stale — si lo despachábamos, le
-  // sobreescribíamos el envido recién cantado. Con el ref leemos
+  // sobreescribíamos el envido/truco recién cantado. Con el ref leemos
   // siempre el estado actual al momento del push.
+  // OJO: actualizamos durante el render, no en useEffect — los effects
+  // corren después del commit, y la async chain podía leer el ref VIEJO
+  // entre el commit y el effect. Con asignación durante render, el ref
+  // refleja la última estado tan pronto como React la procesa.
   const estadoRef = useRef(estado);
-  useEffect(() => {
-    estadoRef.current = estado;
-  }, [estado]);
+  estadoRef.current = estado;
   const enviarChat = useCallback(
     (m: {
       texto?: string;

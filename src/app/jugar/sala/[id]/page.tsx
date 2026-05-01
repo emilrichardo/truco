@@ -681,12 +681,13 @@ export default function SalaPage() {
                   const ocupados = new Set(
                     estado.jugadores.map((j) => j.asiento)
                   );
+                  // Serializamos las llamadas: si las disparamos en
+                  // paralelo, las ediciones concurrentes a salas.estado
+                  // (JSONB) pisan unas a otras → quedan bots fantasma.
                   // Slug vacío → server elige uno random entre los libres.
-                  const promesas: Promise<unknown>[] = [];
                   for (let i = 0; i < total; i++) {
-                    if (!ocupados.has(i)) promesas.push(sumarBot(i, ""));
+                    if (!ocupados.has(i)) await sumarBot(i, "");
                   }
-                  await Promise.all(promesas);
                 }
               : undefined
           }
@@ -972,13 +973,13 @@ function SalaEspera({
       {/* Toggles estilo botón ocupando media pantalla cada uno. En 1v1
        *  el "Sortear compañeros" no tiene sentido, así que el "Completar
        *  con bots" toma todo el ancho. */}
-      <div className="px-3 sm:px-4 py-2 flex gap-2">
+      <div className="px-2 sm:px-4 py-2 grid grid-cols-2 gap-2">
         {total === 4 && (
           <ToggleBoton
             activo={mezclarEquipos}
             onClick={() => setMezclarEquipos((v) => !v)}
             icono={<IconoBarajar />}
-            label="Sortear compañeros"
+            label="Sortear"
             sublabel="Al azar"
           />
         )}
@@ -987,11 +988,11 @@ function SalaEspera({
             activo={completarConBots}
             onClick={() => setCompletarConBots((v) => !v)}
             icono={<IconoBotAuto />}
-            label="Completar con bots"
+            label="Completar"
             sublabel={
               faltan > 0
-                ? `Llena ${faltan} ${faltan === 1 ? "asiento" : "asientos"}`
-                : "Todos sentados"
+                ? `${faltan} bot${faltan === 1 ? "" : "s"}`
+                : "Listos"
             }
             disabled={faltan === 0}
           />
@@ -1033,8 +1034,9 @@ function SalaEspera({
   );
 }
 
-/** Botón estilo toggle: ocupa la mitad de la pantalla, tiene ícono +
- *  label + sublabel. Cuando está activo, borde y texto dorados. */
+/** Botón estilo toggle compacto. Diseñado para entrar en mobile en 2
+ *  columnas. Cuando está activo, borde y texto dorados, con un check
+ *  chiquito en la esquina. */
 function ToggleBoton({
   activo,
   onClick,
@@ -1056,7 +1058,7 @@ function ToggleBoton({
       onClick={onClick}
       disabled={disabled}
       aria-pressed={activo}
-      className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-lg border-2 transition text-left ${
+      className={`relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition text-left min-w-0 ${
         disabled
           ? "border-border/40 bg-surface/20 opacity-50 cursor-not-allowed"
           : activo
@@ -1065,42 +1067,40 @@ function ToggleBoton({
       }`}
     >
       <span
-        className={`flex-shrink-0 w-9 h-9 rounded-md flex items-center justify-center border-2 ${
+        className={`flex-shrink-0 w-7 h-7 rounded flex items-center justify-center border ${
           activo ? "border-dorado/60 bg-dorado/15" : "border-border bg-carbon/40"
         }`}
       >
         {icono}
       </span>
-      <span className="flex-1 min-w-0">
-        <span className="block font-display text-xs sm:text-sm leading-tight truncate">
+      <span className="flex-1 min-w-0 text-left">
+        <span className="block font-display text-[11px] sm:text-xs leading-tight truncate">
           {label}
         </span>
         {sublabel && (
-          <span className="block text-[10px] text-text-dim leading-tight truncate">
+          <span className="block text-[9px] text-text-dim leading-tight truncate">
             {sublabel}
           </span>
         )}
       </span>
-      <span
-        className={`flex-shrink-0 w-4 h-4 rounded border-2 ${
-          activo ? "border-dorado bg-dorado" : "border-border"
-        }`}
-        aria-hidden
-      >
-        {activo && (
+      {activo && (
+        <span
+          className="absolute top-1 right-1 w-3 h-3 rounded-full bg-dorado flex items-center justify-center"
+          aria-hidden
+        >
           <svg
             viewBox="0 0 24 24"
             fill="none"
             stroke="var(--carbon)"
-            strokeWidth="3.5"
+            strokeWidth="4"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="w-full h-full"
+            className="w-2.5 h-2.5"
           >
             <polyline points="20 6 9 17 4 12" />
           </svg>
-        )}
-      </span>
+        </span>
+      )}
     </button>
   );
 }

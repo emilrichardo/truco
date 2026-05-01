@@ -39,9 +39,17 @@ export function marcarAudioReciente(jugadorId: string, canto: string) {
 }
 // Delay antes de reproducir la voz default cuando el canto es
 // "personalizable" — le damos tiempo al chat con el audio personal a
-// llegar y registrarse como suppression. 850ms cubre el peor caso
-// observado (chat más lento que canto).
+// llegar y registrarse como suppression. SOLO se aplica para cantos
+// de OTROS HUMANOS, no para los nuestros (marcarAudioReciente ya seteó
+// el flag) ni para bots (que no tienen audio personal). Sin esto, los
+// "Tengo X" / "Son buenas" sonaban antes que el "Quiero" porque el
+// quiero estaba diferido pero los puntos no.
 const DELAY_DEFAULT_MS = 850;
+// Set de jugadorId que son bots — actualizado desde useAudioJuego al
+// detectar cambios en estado.jugadores.
+const botIds = new Set<string>();
+// Mi propio jugadorId — actualizado cuando llega.
+let miIdActual: string | null = null;
 
 function reproducirDataUrl(dataUrl: string) {
   if (typeof Audio === "undefined") return;
@@ -77,6 +85,8 @@ function cantoDefaultASuppressionKey(canto: string): string | null {
       return "quiero";
     case "no_quiero":
       return "no_quiero";
+    case "ir_al_mazo":
+      return "mazo";
     default:
       return null;
   }
@@ -96,11 +106,20 @@ function precargarCartas() {
 
 export function useAudioJuego(
   estado: EstadoJuego | null,
-  _miId: string | null
+  miId: string | null
 ) {
   const ultimoChatId = useRef<string | null>(null);
   const ultimoManoNum = useRef<number>(0);
   const precargado = useRef(false);
+
+  // Sincronizamos el set de bots y el miId al modulo cada vez que el
+  // estado/miId cambian — procesarMensaje los usa para decidir si
+  // delaya o no la voz default (sólo otros humanos = delay).
+  miIdActual = miId;
+  if (estado) {
+    botIds.clear();
+    for (const j of estado.jugadores) if (j.esBot) botIds.add(j.id);
+  }
 
   // Desbloquear AudioContext en el primer click (browser autoplay policy).
   useEffect(() => {
@@ -247,11 +266,18 @@ function procesarMensaje(m: MensajeChat) {
           if (id.canto === "ir_al_mazo") sonidoMazo();
         };
 
-        if (cantoKey) {
-          // El audio personalizado y el evento del canto viajan por
-          // mensajes de chat distintos — en el peor caso el evento
-          // llega primero. Esperamos DELAY_DEFAULT_MS para darle
-          // tiempo al audio de aterrizar y registrarse como suppression.
+        // Decidimos si delayamos o no:
+        //  - Si el canto es de OTRO humano: delay (puede llegar audio
+        //    custom de él vía chat, hay que esperar el race).
+        //  - Si es mío: marcarAudioReciente ya seteó el flag sync
+        //    (si tengo audio); reproducir inmediato (suppress chequea
+        //    el flag y skipea si corresponde).
+        //  - Si es de un bot: no tiene audio custom posible, inmediato.
+        // Sin esto, "Tengo X" / "Son buenas" sonaban antes del "Quiero"
+        // porque el quiero estaba diferido pero los puntos no.
+        const esOtroHumano =
+          jugadorId !== miIdActual && !botIds.has(jugadorId);
+        if (cantoKey && esOtroHumano) {
           window.setTimeout(reproducirDefault, DELAY_DEFAULT_MS);
         } else {
           reproducirDefault();

@@ -17,7 +17,8 @@ export type CantoConAudio =
   | "retruco"
   | "vale4"
   | "quiero"
-  | "no_quiero";
+  | "no_quiero"
+  | "mazo";
 
 export const CANTOS_CON_AUDIO: { canto: CantoConAudio; label: string }[] = [
   { canto: "envido", label: "Envido" },
@@ -27,7 +28,8 @@ export const CANTOS_CON_AUDIO: { canto: CantoConAudio; label: string }[] = [
   { canto: "retruco", label: "Retruco" },
   { canto: "vale4", label: "Vale 4" },
   { canto: "quiero", label: "Quiero" },
-  { canto: "no_quiero", label: "No quiero" }
+  { canto: "no_quiero", label: "No quiero" },
+  { canto: "mazo", label: "Me voy al mazo" }
 ];
 
 const DB_NAME = "truco-audios";
@@ -150,6 +152,9 @@ export function cantoDeAccion(tipo: string): CantoConAudio | null {
       return "quiero";
     case "responder_no_quiero":
       return "no_quiero";
+    case "ir_al_mazo":
+    case "mazo":
+      return "mazo";
     default:
       return null;
   }
