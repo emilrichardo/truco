@@ -596,6 +596,14 @@ function cantarEnvido(
   if (mano.trucoEstado !== "ninguno" && !mano.trucoCantoActivo) {
     return { ok: false, error: "Ya se cantó truco antes que envido.", estado };
   }
+  // Si MI equipo ya tiene un canto pendiente esperando respuesta del
+  // rival, rechazamos (anti-spam).
+  if (
+    mano.envidoCantoActivo &&
+    mano.envidoCantoActivo.equipoQueCanto === jugador.equipo
+  ) {
+    return { ok: false, error: "Ya cantaste envido; esperá la respuesta.", estado };
+  }
 
   const nivelNuevo = tipo === "cantar_envido" ? "envido" : tipo === "cantar_real_envido" ? "real_envido" : "falta_envido";
   let cadena = mano.envidoCantoActivo ? mano.envidoCantoActivo.cadena.slice() : [];
@@ -1043,6 +1051,9 @@ function resolverTrucoRespuesta(
       motivo: `${cantoTexto(canto.nivel)} no querido (+${valorAnterior})`
     });
     anuncio(estado, jugador.id, fraseAleatoria("no_quiero"), "respuesta");
+    // Los puntos del "no quiero" YA son el valor del mano que el cantor
+    // gana. Si dejamos valorMano > 0, cerrarMano daría puntos dobles.
+    mano.valorMano = 0;
     cerrarMano(estado, canto.equipoQueCanto, "Truco no querido");
     mano.trucoCantoActivo = null;
     return { ok: true, estado };

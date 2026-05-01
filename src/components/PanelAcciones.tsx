@@ -212,17 +212,16 @@ export function PanelAcciones({
       setLanzandoId(cartaId);
       setArrastrandoId(null);
       enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
-      // A los 300ms (animación 260 + 40 de margen) marcamos la carta
-      // como jugada y desmontamos. Para entonces el padre ya hizo
-      // setEstado optimista (la carta está en la baza visible) — no
-      // hay gap percibido. Cuando llega la canónica, idsKey cambia y
-      // el effect limpia cualquier estado residual.
+      // Animación corta (140ms) + desmonte a 160ms. La carta vuela
+      // veloz al slot — el setEstado optimista del padre ya pintó la
+      // canónica en la mesa, así que se siente inmediato. Antes 260ms+
+      // 300ms se percibía como "espera".
       lanzamientoTimerRef.current = window.setTimeout(() => {
         setCartasJugadas((prev) => new Set(prev).add(cartaId));
         setLanzandoId(null);
         setDelta({ x: 0, y: 0 });
         setLanzandoDelta({ x: 0, y: 0 });
-      }, 300);
+      }, 160);
     };
 
     // Tap / clic suelto: jugar la carta directamente (sólo en mi turno).
@@ -337,13 +336,13 @@ export function PanelAcciones({
             // donde indica el delta sin sesgo del bottom.
             let transformOrigin: string | undefined = undefined;
             if (isLanzando) {
-              // Movimiento snappy y directo al slot — sin fade que
-              // distrae. Cuando termina la transición la carta se
-              // desmonta (en solo mode el motor ya tiene la canónica
-              // pintada en la mesa, así no hay gap visible).
+              // Movimiento súper snappy (140ms) directo al slot. La
+              // canónica/optimista ya está pintada en mesa por el
+              // padre, así que apenas termina la transición se
+              // desmonta sin gap.
               transform = `translate(${lanzandoDelta.x}px, ${lanzandoDelta.y}px) rotate(0deg)`;
               transition =
-                "transform 260ms cubic-bezier(0.25, 1, 0.5, 1)";
+                "transform 140ms cubic-bezier(0.4, 0, 0.2, 1)";
               transformOrigin = "center center";
             } else if (isDragging) {
               transform = `translate(${delta.x}px, ${delta.y}px) scale(1.06)`;
