@@ -457,6 +457,13 @@ function chequearFinPartida(estado: EstadoJuego): boolean {
 
 function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
   const mano = estado.manoActual!;
+  // Solo se va al mazo en tu turno. Sino un bot mal-dispachado (o un
+  // jugador haciendo trampa) podría cerrar la mano accidentalmente
+  // mientras el rival está respondiendo a un canto. Esto matchea la
+  // regla en accionesLegales — ir_al_mazo solo se ofrece en turno.
+  if (mano.turnoJugadorId !== jugador.id) {
+    return { ok: false, error: "Solo te podés ir al mazo en tu turno.", estado };
+  }
   // Si hay envido pendiente y se va al mazo, perdés envido (1) + truco (valor actual).
   const eq = jugador.equipo;
   const otro = equipoContrario(eq);
@@ -713,6 +720,17 @@ function cantarTruco(
   // El truco se puede cantar en cualquier momento (igual que el envido en
   // baza 1) — no hace falta esperar el turno propio. La validación de
   // que sea el equipo que corresponde la hacen los if's de progresión.
+
+  // Si MI equipo ya tiene un canto pendiente esperando respuesta del
+  // rival, rechazamos. Sino el usuario podía spam-clickar Truco y cada
+  // click anunciaba "¡Truco!" otra vez (y el audio se acumulaba 5
+  // veces). Cada equipo solo puede tener UN canto activo a la vez.
+  if (
+    cantoPendiente &&
+    cantoPendiente.equipoQueCanto === jugador.equipo
+  ) {
+    return { ok: false, error: "Ya cantaste; esperá la respuesta.", estado };
+  }
 
   if (subir === "truco" && mano.trucoEstado !== "ninguno") {
     return { ok: false, error: "Ya se cantó truco.", estado };

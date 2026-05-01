@@ -528,7 +528,7 @@ function BotoneraMenu({
     debounceTimerRef.current = window.setTimeout(() => {
       setAccionPendiente(false);
       debounceTimerRef.current = null;
-    }, 700);
+    }, 1500);
     enviar({ tipo, jugadorId: miId } as Accion);
     // Si tengo audio personalizado para este canto, lo broadcasteamos
     // por el chat — los demás clientes lo reproducen al recibirlo.

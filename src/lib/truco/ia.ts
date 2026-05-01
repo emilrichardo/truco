@@ -635,6 +635,14 @@ export function decidirAccionBot(estado: EstadoJuego, jugadorId: string): Accion
     return elegirCarta(ctx);
   }
 
-  // Sin opciones — fallback.
-  return { tipo: "ir_al_mazo", jugadorId };
+  // Sin opciones legales en este momento. Solo nos vamos al mazo si
+  // realmente es una opción legal (es nuestro turno) — sino el
+  // fallback "siempre ir_al_mazo" hacía que un bot mal-dispachado
+  // (ej. compañero del que cantó truco, fuera de turno) cerrara la
+  // mano sin sentido. Devolvemos jugar_carta vacío como sentinela —
+  // el server lo rechaza silenciosamente, sin tocar el estado.
+  if (legales.includes("ir_al_mazo")) {
+    return { tipo: "ir_al_mazo", jugadorId };
+  }
+  return { tipo: "jugar_carta", jugadorId, cartaId: "" };
 }
