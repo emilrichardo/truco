@@ -104,7 +104,8 @@ export function Mesa({
     hablandoKey,
     hablandoTexto,
     hablandoEvento,
-    hablandoSticker
+    hablandoSticker,
+    hablandoReaccion
   } = useHablando(estado);
 
   const me = estado.jugadores.find((j) => j.id === miId);
@@ -244,6 +245,7 @@ export function Mesa({
             hablandoTexto={esQuienHabla ? hablandoTexto : null}
             hablandoEvento={esQuienHabla ? hablandoEvento : null}
             hablandoSticker={esQuienHabla ? hablandoSticker : null}
+            hablandoReaccion={esQuienHabla ? hablandoReaccion : null}
           />
         );
       })}
@@ -295,7 +297,8 @@ function PuestoJugador({
   hablandoKey,
   hablandoTexto,
   hablandoEvento,
-  hablandoSticker
+  hablandoSticker,
+  hablandoReaccion
 }: {
   pos: Posicion;
   jugador: Jugador;
@@ -314,6 +317,7 @@ function PuestoJugador({
   hablandoTexto?: string | null;
   hablandoEvento?: import("@/lib/truco/types").CategoriaEvento | null;
   hablandoSticker?: string | null;
+  hablandoReaccion?: string | null;
 }) {
   const cartasOcultas = !esCompañero || !mostrarCompañero;
   const enLadoIzquierdo =
@@ -370,6 +374,7 @@ function PuestoJugador({
         hablandoTexto={hablandoTexto}
         hablandoEvento={hablandoEvento}
         hablandoSticker={hablandoSticker}
+        hablandoReaccion={hablandoReaccion}
         ladoBurbuja={ladoBurbuja}
         ladoNombre={ladoNombre}
         alineacionBurbujaH={alineacionBurbujaH}

@@ -40,6 +40,7 @@ import { ConsultaCompañero } from "@/components/ConsultaCompañero";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
 import { AlertaPuntos } from "@/components/AlertaPuntos";
+import { BarraEmociones } from "@/components/BarraEmociones";
 
 /** Aplica una jugada de carta de forma optimista al estado local —
  *  agrega la carta a la baza actual SIN sacarla todavía de la mano
@@ -789,6 +790,8 @@ export default function SalaPage() {
                 onAbrir={abrirChat}
                 oculto={chatAbierto}
               />
+              {/* Reacciones rápidas (😊) — visibles para todos. */}
+              <BarraEmociones enviarChat={enviarChat} />
             </div>
             {meEnCurso && (
               <PanelAcciones

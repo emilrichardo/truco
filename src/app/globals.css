@@ -520,6 +520,30 @@ body {
   animation-delay: var(--reparto-delay, 0ms);
 }
 
+/* Reacción emoji que aparece sobre el avatar cuando alguien envía un
+ * emoji desde la BarraEmociones. Pop in con bounce, hold corto, y
+ * se desvanece subiendo. */
+.reaccion-pop {
+  animation: reaccion-pop 2200ms ease-out forwards;
+}
+@keyframes reaccion-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.4);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -20%) scale(1.4);
+  }
+  40% {
+    transform: translate(-50%, -40%) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -120%) scale(0.95);
+  }
+}
+
 /* Mazo apilado en el centro durante el reparto. Aparece al toque
  * cuando arranca la mano y se desvanece a los ~1.5s, mientras las
  * cartas vuelan a sus dueños. */

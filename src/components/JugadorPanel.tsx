@@ -18,6 +18,7 @@ export function JugadorPanel({
   hablandoTexto,
   hablandoEvento,
   hablandoSticker,
+  hablandoReaccion,
   ladoBurbuja = "derecha",
   ladoNombre = "derecha",
   ocultarNombre,
@@ -43,6 +44,9 @@ export function JugadorPanel({
   /** URL del sticker enviado — si está presente la burbuja muestra la imagen
    *  en vez del texto. */
   hablandoSticker?: string | null;
+  /** Emoji de reacción rápida (BarraEmociones) — flota grande sobre la
+   *  foto, sin burbuja, con pulso corto. */
+  hablandoReaccion?: string | null;
   /** Lado del avatar donde apoyar la burbuja. */
   ladoBurbuja?: LadoBurbuja;
   /** De qué lado del avatar va el pill con el nombre. Apuntar siempre al
@@ -158,6 +162,16 @@ export function JugadorPanel({
             keyAnim={hablandoKey || ""}
             alineacionH={alineacionBurbujaH}
           />
+        )}
+        {hablando && hablandoReaccion && (
+          <span
+            key={hablandoKey || ""}
+            aria-hidden
+            className="absolute -top-3 left-1/2 -translate-x-1/2 text-3xl pointer-events-none reaccion-pop"
+            style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))" }}
+          >
+            {hablandoReaccion}
+          </span>
         )}
       </div>
       {!ocultarNombre && nombrePill}

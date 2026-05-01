@@ -20,7 +20,8 @@ export function MiAvatarBR({
     hablandoKey,
     hablandoTexto,
     hablandoEvento,
-    hablandoSticker
+    hablandoSticker,
+    hablandoReaccion
   } = useHablando(estado);
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me) return null;
@@ -39,6 +40,7 @@ export function MiAvatarBR({
         hablandoTexto={yoHablo ? hablandoTexto : null}
         hablandoEvento={yoHablo ? hablandoEvento : null}
         hablandoSticker={yoHablo ? hablandoSticker : null}
+        hablandoReaccion={yoHablo ? hablandoReaccion : null}
         ladoBurbuja="arriba"
         ladoNombre="derecha"
         ocultarNombre

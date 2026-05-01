@@ -24,11 +24,15 @@ export type HablandoData = {
   texto: string;
   evento: CategoriaEvento | null;
   sticker?: string;
+  reaccion?: string;
 };
 
 function esBurbuja(m: MensajeChat): boolean {
   if (m.evento && DESTACAR.has(m.evento)) return true;
   if (!m.evento && m.sticker && !m.destinatarioId) return true;
+  // Reacciones públicas (emoji enviado vía BarraEmociones) — toast
+  // efímero sobre el avatar del que reaccionó.
+  if (!m.evento && m.reaccion && !m.destinatarioId) return true;
   return false;
 }
 
@@ -38,6 +42,7 @@ export function useHablando(estado: EstadoJuego | null): {
   hablandoTexto: string | null;
   hablandoEvento: CategoriaEvento | null;
   hablandoSticker: string | null;
+  hablandoReaccion: string | null;
 } {
   const [data, setData] = useState<HablandoData | null>(null);
   const ultimoIdRef = useRef<string | null>(null);
@@ -75,12 +80,14 @@ export function useHablando(estado: EstadoJuego | null): {
     ultimoIdRef.current = ultimo.id;
 
     const esSticker = !!ultimo.sticker && !ultimo.evento;
+    const esReaccion = !!ultimo.reaccion && !ultimo.evento;
     setData({
       id: ultimo.jugadorId,
       key: ultimo.id,
       texto: ultimo.texto || "",
       evento: ultimo.evento ?? null,
-      sticker: esSticker ? ultimo.sticker : undefined
+      sticker: esSticker ? ultimo.sticker : undefined,
+      reaccion: esReaccion ? ultimo.reaccion : undefined
     });
     if (tRef.current) {
       clearTimeout(tRef.current);
@@ -117,6 +124,7 @@ export function useHablando(estado: EstadoJuego | null): {
     hablandoKey: data?.key || null,
     hablandoTexto: data?.texto || null,
     hablandoEvento: data?.evento || null,
-    hablandoSticker: data?.sticker || null
+    hablandoSticker: data?.sticker || null,
+    hablandoReaccion: data?.reaccion || null
   };
 }
