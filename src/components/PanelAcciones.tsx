@@ -114,9 +114,12 @@ export function PanelAcciones({
   const [cartasJugadas, setCartasJugadas] = useState<Set<string>>(new Set());
   // Cuando llega la carta canónica (idsKey cambia → misCartas updated)
   // limpiamos cartasJugadas Y la lanzandoCard — la canónica ya está
-  // sobre la mesa, no hay gap visual.
+  // sobre la mesa, no hay gap visual. También desmarcamos la carta
+  // del set global cartasLanzando (sino Mesa la sigue ocultando como
+  // "se está lanzando" → carta invisible para siempre).
   useEffect(() => {
     setCartasJugadas(new Set());
+    if (lanzandoId) desmarcarLanzando(lanzandoId);
     setLanzandoId(null);
     setLanzandoDelta({ x: 0, y: 0 });
     if (lanzamientoTimerRef.current !== null) {

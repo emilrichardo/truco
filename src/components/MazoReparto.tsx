@@ -24,9 +24,12 @@ export function MazoReparto({ manoNumero }: { manoNumero: number }) {
   // Stack de 5 cartas con offset progresivo en y/x para dar volumen.
   // La de arriba se "vuela" al final con un pequeño fade.
   const cantidad = 5;
+  // z-[50]: por debajo de las cartas jugadas (z 100+) — el mazo es
+  // decorativo y NO debe tapar la primera carta que tira un mano si
+  // juega rápido apenas se reparte.
   return (
     <div
-      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[440] pointer-events-none mazo-reparto-fade"
+      className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[50] pointer-events-none mazo-reparto-fade"
       aria-hidden
     >
       {Array.from({ length: cantidad }).map((_, i) => (

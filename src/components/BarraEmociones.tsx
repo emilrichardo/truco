@@ -36,10 +36,16 @@ export function BarraEmociones({ enviarChat }: Props) {
     setAbierto(false);
   };
 
+  // Posición: pegada arriba a la derecha de mi avatar (que vive en
+  // bottom-4 left-4 vía MiAvatarBR — w-12/14). Así el botón está al
+  // alcance del pulgar y visualmente "sale de mi" cuando reacciono.
   return (
-    <div ref={ref} className="absolute right-2 top-1/2 -translate-y-1/2 z-[490]">
+    <div
+      ref={ref}
+      className="absolute bottom-[5.5rem] sm:bottom-[7rem] left-2 z-[490]"
+    >
       {abierto && (
-        <div className="absolute right-12 top-1/2 -translate-y-1/2 flex flex-col gap-1 bg-carbon/95 backdrop-blur-sm border border-azul-criollo/50 rounded-xl p-1.5 shadow-2xl">
+        <div className="absolute left-0 bottom-12 grid grid-cols-4 gap-1 bg-carbon/95 backdrop-blur-sm border border-azul-criollo/50 rounded-xl p-1.5 shadow-2xl">
           {ICONOS_EMOCIONES.map((icono) => (
             <button
               key={icono}
@@ -56,7 +62,7 @@ export function BarraEmociones({ enviarChat }: Props) {
       <button
         type="button"
         onClick={() => setAbierto((v) => !v)}
-        className="w-10 h-10 rounded-full bg-carbon/85 backdrop-blur-sm border-2 border-azul-criollo/60 hover:border-azul-criollo flex items-center justify-center text-xl shadow-lg active:scale-95 transition"
+        className="w-9 h-9 rounded-full bg-carbon/85 backdrop-blur-sm border-2 border-azul-criollo/60 hover:border-azul-criollo flex items-center justify-center text-lg shadow-lg active:scale-95 transition"
         title="Reaccionar"
         aria-label="Abrir reacciones"
       >
