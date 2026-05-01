@@ -89,15 +89,35 @@ export function deberiaConsultar(
     }
   }
 
-  // Consulta de "jugar": SIEMPRE preguntamos al humano antes de que
-  // el bot tire carta — sea mano o pie de equipo, abriendo o
-  // respondiendo. El humano decide jugá (alta) / vení (baja) / pasar
-  // (deja a la IA). Sin la restricción "botEsPie" porque el usuario
-  // pidió control total sobre la estrategia del compañero, en
-  // CUALQUIER baza.
+  // Consulta de "jugar": preguntamos al humano antes de que el bot
+  // tire carta. Pero con un filtro: si el rival YA jugó en esta baza
+  // y el bot no tiene NI UNA carta que pueda ganar/empatar, la
+  // consulta es estéril — la única opción razonable es "vení" (tirar
+  // la chica como sacrificio). En ese caso skipeamos la consulta y
+  // el bot tira automáticamente la chica.
   const baza = mano.bazas[mano.bazas.length - 1];
   const yaJugoEnBaza = baza.jugadas.some((j) => j.jugadorId === bot.id);
   if (!yaJugoEnBaza) {
+    // Si rival ya jugó en esta baza, evaluamos si el bot puede ganar
+    // o empatar. Sino no preguntamos.
+    let mejorRivalEnBaza = -1;
+    for (const j of baza.jugadas) {
+      const jug = estado.jugadores.find((p) => p.id === j.jugadorId);
+      if (!jug || jug.equipo === bot.equipo) continue;
+      const v = jerarquia(j.carta);
+      if (v > mejorRivalEnBaza) mejorRivalEnBaza = v;
+    }
+    if (mejorRivalEnBaza >= 0) {
+      const cartas = mano.cartasPorJugador[bot.id] || [];
+      const puedoGanarOEmpatar = cartas.some(
+        (c) => jerarquia(c) >= mejorRivalEnBaza
+      );
+      if (!puedoGanarOEmpatar) {
+        // Pregunta inútil — el bot va a tirar la chica de todas
+        // formas. No molestamos al humano.
+        return null;
+      }
+    }
     return { tipo: "jugar", botJugadorId: bot.id };
   }
   return null;

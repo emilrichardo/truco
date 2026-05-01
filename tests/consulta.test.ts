@@ -66,6 +66,57 @@ describe("deberiaConsultar — consulta jugar en cualquier baza/posición", () =
     expect(c).toBeNull();
   });
 
+  it("no consulta si el bot no puede ganar ni empatar la baza (mid-baza)", () => {
+    // P0 humano + P2 bot vs P1 bot + P3 bot. Baza 2, rival ya jugó
+    // con 1 de espada. P2 (bot) tiene cartas chicas (4, 5, 6) y no
+    // puede ganar ni empatar — no debe consultar.
+    let e = estado2v2(["human", "bot", "bot", "bot"]);
+    e.manoActual!.envidoResuelto = true; // saltamos la consulta de envido
+    e.manoActual!.cartasPorJugador["P2"] = [
+      { id: "p2-1", numero: 4, palo: "espada" },
+      { id: "p2-2", numero: 5, palo: "basto" }
+    ];
+    // Abrimos baza 2 con jugada del rival (P1).
+    e.manoActual!.bazas.push({
+      jugadas: [
+        {
+          jugadorId: "P1",
+          carta: { id: "p1-x", numero: 1, palo: "espada" }
+        }
+      ],
+      ganadorEquipo: null,
+      pardada: false
+    });
+    e.manoActual!.turnoJugadorId = "P2";
+    const p2 = e.jugadores.find((j) => j.id === "P2")!;
+    const c = deberiaConsultar(e, p2);
+    expect(c).toBeNull();
+  });
+
+  it("SÍ consulta si el bot puede al menos empatar mid-baza", () => {
+    let e = estado2v2(["human", "bot", "bot", "bot"]);
+    e.manoActual!.envidoResuelto = true;
+    e.manoActual!.cartasPorJugador["P2"] = [
+      { id: "p2-1", numero: 4, palo: "espada" },
+      { id: "p2-2", numero: 1, palo: "espada" } // jerarquía 14, iguala al rival
+    ];
+    e.manoActual!.bazas.push({
+      jugadas: [
+        {
+          jugadorId: "P1",
+          carta: { id: "p1-x", numero: 1, palo: "espada" }
+        }
+      ],
+      ganadorEquipo: null,
+      pardada: false
+    });
+    e.manoActual!.turnoJugadorId = "P2";
+    const p2 = e.jugadores.find((j) => j.id === "P2")!;
+    const c = deberiaConsultar(e, p2);
+    expect(c).not.toBeNull();
+    expect(c?.tipo).toBe("jugar");
+  });
+
   it("no consulta si hay envido pendiente (debe responder)", () => {
     let e = estado2v2(["human", "bot", "bot", "bot"]);
     e = aplicar(e, { tipo: "cantar_envido", jugadorId: "P0" });
