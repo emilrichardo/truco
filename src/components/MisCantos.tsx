@@ -20,10 +20,18 @@ const MIME_PREF = "audio/webm;codecs=opus";
 
 export function MisCantos({
   miSlug,
-  onCerrar
+  onCerrar,
+  tituloIntro,
+  ctaCerrar = "Cerrar"
 }: {
   miSlug: string;
   onCerrar: () => void;
+  /** Texto opcional que reemplaza la línea "Grabá tu voz —…" del header.
+   *  Sirve para customizar el modal cuando se abre como onboarding tras
+   *  elegir el personaje. */
+  tituloIntro?: string;
+  /** Texto del botón de cerrar (por defecto "Cerrar"). */
+  ctaCerrar?: string;
 }) {
   const [grabados, setGrabados] = useState<Set<CantoConAudio>>(new Set());
   const [grabandoCanto, setGrabandoCanto] = useState<CantoConAudio | null>(
@@ -192,7 +200,7 @@ export function MisCantos({
             Mis <span className="acento">cantos</span>
           </div>
           <p className="text-xs text-text-dim mt-1 subtitulo-claim">
-            Grabá tu voz — la van a escuchar todos cuando cantes.
+            {tituloIntro || "Grabá tu voz — la van a escuchar todos cuando cantes."}
           </p>
           <p className="text-[10px] text-text-dim/70 mt-1">
             Máx. {DURACION_MAX_MS / 1000}s · queda guardado en este dispositivo
@@ -271,7 +279,7 @@ export function MisCantos({
           onClick={onCerrar}
           className="btn w-full mt-4"
         >
-          Cerrar
+          {ctaCerrar}
         </button>
       </div>
     </div>

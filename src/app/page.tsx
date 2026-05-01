@@ -6,10 +6,12 @@ import { usePersonajeLocal } from "@/lib/personaje";
 import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
 import { BotonInstalarApp } from "@/components/BotonInstalarApp";
+import { MisCantos } from "@/components/MisCantos";
 
 export default function HomePage() {
   const [miSlug, setMiSlug, listo] = usePersonajeLocal();
   const [editando, setEditando] = useState(false);
+  const [mostrarMisCantos, setMostrarMisCantos] = useState(false);
 
   if (!listo) return <main className="min-h-[100dvh]" />;
   if (!miSlug) return <ElegirPrimero onElegir={(s) => setMiSlug(s)} />;
@@ -36,13 +38,45 @@ export default function HomePage() {
             {yo.nombre}
           </div>
         </div>
-        <button
-          onClick={() => setEditando((v) => !v)}
-          className="btn btn-ghost !px-3 !py-2 text-xs"
-        >
-          Cambiar
-        </button>
+        <div className="flex flex-col gap-1">
+          <button
+            onClick={() => setEditando((v) => !v)}
+            className="btn btn-ghost !px-3 !py-1.5 !min-h-0 text-[11px]"
+          >
+            Cambiar
+          </button>
+          <button
+            onClick={() => setMostrarMisCantos(true)}
+            className="btn btn-ghost !px-3 !py-1.5 !min-h-0 text-[11px] inline-flex items-center gap-1"
+            title="Grabar mis cantos"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="11"
+              height="11"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <rect x="9" y="3" width="6" height="11" rx="3" />
+              <path d="M5 11a7 7 0 0 0 14 0" />
+              <path d="M12 18v3" />
+              <path d="M9 21h6" />
+            </svg>
+            Mis cantos
+          </button>
+        </div>
       </section>
+
+      {mostrarMisCantos && (
+        <MisCantos
+          miSlug={miSlug}
+          onCerrar={() => setMostrarMisCantos(false)}
+        />
+      )}
 
       {editando && (
         <section className="card p-3 mb-5">
@@ -182,7 +216,25 @@ function BotonCompartirJuego() {
 
 function ElegirPrimero({ onElegir }: { onElegir: (slug: string) => void }) {
   const [seleccionado, setSeleccionado] = useState<string | null>(null);
+  // Tras confirmar el primo, abrimos el modal de "Mis cantos" para que
+  // pueda grabar su voz para cada canto antes de entrar al juego. Es
+  // opcional — el modal tiene "Cerrar" y desde el home siempre puede
+  // volver a abrirlo.
+  const [grabandoCantos, setGrabandoCantos] = useState<string | null>(null);
   const yo = seleccionado ? getPersonaje(seleccionado) : null;
+
+  const confirmar = () => {
+    if (!seleccionado) return;
+    setGrabandoCantos(seleccionado);
+  };
+
+  const continuar = () => {
+    if (!grabandoCantos) return;
+    const slug = grabandoCantos;
+    setGrabandoCantos(null);
+    onElegir(slug);
+  };
+
   return (
     <main className="min-h-[100dvh] px-4 py-6 max-w-xl mx-auto">
       <HeaderMarca variante="compacto" href={null} />
@@ -195,13 +247,21 @@ function ElegirPrimero({ onElegir }: { onElegir: (slug: string) => void }) {
           onSeleccionar={setSeleccionado}
         />
         <button
-          onClick={() => seleccionado && onElegir(seleccionado)}
+          onClick={confirmar}
           disabled={!seleccionado}
           className="btn btn-primary w-full mt-4"
         >
           {yo ? `Soy ${yo.nombre}` : "Elegí un primo"}
         </button>
       </div>
+      {grabandoCantos && (
+        <MisCantos
+          miSlug={grabandoCantos}
+          onCerrar={continuar}
+          tituloIntro="Grabá tus cantos (opcional)"
+          ctaCerrar="Listo, entrar"
+        />
+      )}
     </main>
   );
 }
