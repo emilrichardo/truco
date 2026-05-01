@@ -207,27 +207,46 @@ function procesarMensaje(m: MensajeChat) {
       //    serializados.
       const id = identificarCanto(m.texto);
       if (id && m.jugadorId) {
-        // Si este jugador mandó un audio personalizado para este canto
-        // hace poco, suprimimos la voz default — su voz ya sonó.
+        const jugadorId = m.jugadorId;
         const cantoKey = cantoDefaultASuppressionKey(id.canto);
-        if (cantoKey) {
-          const suppressKey = `${m.jugadorId}:${cantoKey}`;
-          const ts = audiosPersonalizadosRecientes.get(suppressKey);
-          if (ts && Date.now() - ts < SUPPRESS_VENTANA_MS) {
-            audiosPersonalizadosRecientes.delete(suppressKey);
-            if (id.canto === "ir_al_mazo") sonidoMazo();
-            break;
+
+        // Reproducción de la voz default — la encapsulamos para poder
+        // diferirla 250ms cuando el canto es "personalizable", así si el
+        // chat con el audio del jugador llega justo después del evento
+        // del motor, alcanzamos a verlo y suprimimos la default.
+        const reproducirDefault = () => {
+          if (cantoKey) {
+            const ts = audiosPersonalizadosRecientes.get(
+              `${jugadorId}:${cantoKey}`
+            );
+            if (ts && Date.now() - ts < SUPPRESS_VENTANA_MS) {
+              audiosPersonalizadosRecientes.delete(`${jugadorId}:${cantoKey}`);
+              if (id.canto === "ir_al_mazo") sonidoMazo();
+              return;
+            }
           }
+          const reproductor = esReaccion(id.canto)
+            ? reproducirReaccion
+            : reproducirCanto;
+          reproductor(id.canto, {
+            jugadorId,
+            variante: id.variante > 0 ? id.variante : undefined
+          });
+          if (id.canto === "ir_al_mazo") sonidoMazo();
+        };
+
+        if (cantoKey) {
+          // El audio personalizado y el evento del canto viajan por
+          // mensajes de chat distintos — en el peor caso el evento
+          // llega primero. Esperamos 250ms para darle tiempo al audio
+          // de aterrizar y registrarse como suppression.
+          window.setTimeout(reproducirDefault, 250);
+        } else {
+          reproducirDefault();
         }
-        const reproductor = esReaccion(id.canto)
-          ? reproducirReaccion
-          : reproducirCanto;
-        reproductor(id.canto, {
-          jugadorId: m.jugadorId,
-          variante: id.variante > 0 ? id.variante : undefined
-        });
+      } else if (id?.canto === "ir_al_mazo") {
+        sonidoMazo();
       }
-      if (id?.canto === "ir_al_mazo") sonidoMazo();
       break;
     }
   }

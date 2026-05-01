@@ -13,6 +13,7 @@ import {
   leerAudio,
   listarCantosConAudio
 } from "@/lib/audiosLocales";
+import { recortarSilencios } from "@/lib/audio/recortarSilencios";
 
 const DURACION_MAX_MS = 4000;
 const MIME_PREF = "audio/webm;codecs=opus";
@@ -70,7 +71,18 @@ export function MisCantos({
     setError(null);
     let stream: MediaStream;
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Activamos los filtros que tiene el browser por defecto (Chrome,
+      // Edge, Safari): cancelación de eco, supresión de ruido y AGC
+      // (auto gain control). Limpia bastante el sonido ambiente sin
+      // tener que correr DSP custom.
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        }
+      });
     } catch (e) {
       setError(
         e instanceof Error
@@ -89,20 +101,27 @@ export function MisCantos({
     };
     rec.onstop = async () => {
       stream.getTracks().forEach((t) => t.stop());
-      const blob = new Blob(chunksRef.current, { type: rec.mimeType || "audio/webm" });
+      const raw = new Blob(chunksRef.current, {
+        type: rec.mimeType || "audio/webm"
+      });
       chunksRef.current = [];
-      setGrabandoCanto(null);
-      if (blob.size === 0) {
+      if (raw.size === 0) {
+        setGrabandoCanto(null);
         setError("La grabación quedó vacía.");
         return;
       }
       try {
-        await guardarAudio(miSlug, canto, blob);
+        // Recortar silencios + gate suave + normalización. Si falla
+        // (Safari viejo sin AudioContext, etc.) cae al blob original.
+        const limpio = await recortarSilencios(raw);
+        await guardarAudio(miSlug, canto, limpio);
         await refrescarGrabados();
       } catch (e) {
         setError(
           e instanceof Error ? `No se pudo guardar: ${e.message}` : "Error al guardar"
         );
+      } finally {
+        setGrabandoCanto(null);
       }
     };
     recRef.current = rec;
