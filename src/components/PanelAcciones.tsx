@@ -212,15 +212,17 @@ export function PanelAcciones({
       setLanzandoId(cartaId);
       setArrastrandoId(null);
       enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
-      // Fallback: si la canónica nunca llega (server failure, etc.)
-      // sacamos la carta a los 4s para no dejarla "ghost". El path
-      // normal es que idsKey cambie antes y limpie el lanzamiento.
+      // A los 300ms (animación 260 + 40 de margen) marcamos la carta
+      // como jugada y desmontamos. Para entonces el padre ya hizo
+      // setEstado optimista (la carta está en la baza visible) — no
+      // hay gap percibido. Cuando llega la canónica, idsKey cambia y
+      // el effect limpia cualquier estado residual.
       lanzamientoTimerRef.current = window.setTimeout(() => {
         setCartasJugadas((prev) => new Set(prev).add(cartaId));
         setLanzandoId(null);
         setDelta({ x: 0, y: 0 });
         setLanzandoDelta({ x: 0, y: 0 });
-      }, 4000);
+      }, 300);
     };
 
     // Tap / clic suelto: jugar la carta directamente (sólo en mi turno).

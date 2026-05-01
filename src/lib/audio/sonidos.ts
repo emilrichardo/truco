@@ -258,11 +258,64 @@ export function esReaccion(_canto: CategoriaCanto): boolean {
   return false;
 }
 
-/** Canta el "tanto" (puntaje del envido) con la voz del jugador. */
+/** Canta el "tanto" (puntaje del envido) con la voz del jugador.
+ *  Hay clips para 0-7 y 20-33; los del rango 8-19 no se generaron y
+ *  rebotan en 404. Para no romper el orden de la cola (y que después
+ *  no suene "Las tuyas son buenas" antes que la declaración), para
+ *  ese rango caemos en el TTS del navegador como sustituto. */
 export function reproducirPuntosEnvido(jugadorId: string, puntos: number) {
   const voz = vozDeJugador(jugadorId);
+  if (puntos >= 8 && puntos <= 19) {
+    encolarTTS(`Tengo ${puntos}.`);
+    return;
+  }
   const archivo = String(puntos).padStart(2, "0") + ".mp3";
   reproducirArchivo(`/audio/voces/${voz}/envido_puntos/${archivo}`);
+}
+
+/** Encola un texto vía Web Speech API en el mismo FIFO que los cantos.
+ *  Si el navegador no soporta TTS o el speak falla, esperamos 900ms
+ *  como pausa equivalente para no atropellar el siguiente clip. */
+function encolarTTS(texto: string) {
+  encolar(() => {
+    if (muteado) {
+      avanzar();
+      return;
+    }
+    let avancado = false;
+    const seguir = () => {
+      if (avancado) return;
+      avancado = true;
+      avanzar();
+    };
+    const fallback = window.setTimeout(seguir, 1400);
+    const tieneTTS =
+      typeof window !== "undefined" && "speechSynthesis" in window;
+    if (!tieneTTS) {
+      // Mantenemos el timeout — seguir() ya está armado.
+      return;
+    }
+    try {
+      const utt = new SpeechSynthesisUtterance(texto);
+      utt.lang = "es-AR";
+      utt.rate = 1.05;
+      utt.pitch = 1;
+      utt.volume = 0.95;
+      utt.onend = () => {
+        window.clearTimeout(fallback);
+        seguir();
+      };
+      utt.onerror = () => {
+        window.clearTimeout(fallback);
+        seguir();
+      };
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utt);
+    } catch {
+      window.clearTimeout(fallback);
+      seguir();
+    }
+  });
 }
 
 /** Detecta una declaración de tanto en un texto del chat. El motor emite

@@ -38,6 +38,41 @@ import {
 } from "@/lib/consultaCompañero";
 import { ConsultaCompañero } from "@/components/ConsultaCompañero";
 
+/** Aplica una jugada de carta de forma optimista al estado local —
+ *  agrega la carta a la baza actual SIN sacarla todavía de la mano
+ *  del jugador. Esa retención permite que la animación de "lanzar" en
+ *  PanelAcciones siga visible (la carta vive en cartasOrdenadas) y a
+ *  los 280ms de la animación, cartasJugadas la filtra y la canónica
+ *  (que ya está en la mesa optimista) toma su lugar sin gap.
+ *  Cuando llega el estado canónico vía realtime, sobreescribe esto:
+ *  cartasPorJugador queda sin la carta y la baza la mantiene. */
+function aplicarJugadaOptimista(
+  estado: EstadoJuego,
+  miId: string,
+  cartaId: string
+): EstadoJuego | null {
+  if (!estado.manoActual) return null;
+  const cartas = estado.manoActual.cartasPorJugador[miId];
+  if (!cartas) return null;
+  const carta = cartas.find((c) => c.id === cartaId);
+  if (!carta) return null;
+  const bazaIdx = estado.manoActual.bazas.length - 1;
+  const baza = estado.manoActual.bazas[bazaIdx];
+  // Si por alguna razón ya estaba en la baza, no duplicar.
+  if (baza.jugadas.some((j) => j.carta.id === cartaId)) return null;
+  return {
+    ...estado,
+    manoActual: {
+      ...estado.manoActual,
+      bazas: estado.manoActual.bazas.map((b, i) =>
+        i === bazaIdx
+          ? { ...b, jugadas: [...b.jugadas, { jugadorId: miId, carta }] }
+          : b
+      )
+    }
+  };
+}
+
 export default function SalaPage() {
   // Preload de cartas al entrar a la sala — si el usuario abrió el link
   // directo o refrescó, no pasó por el lobby y nadie precargó. Idempotente.
@@ -335,10 +370,21 @@ export default function SalaPage() {
   const enviarAccion = useCallback(
     async (a: Accion) => {
       if (!miId) return;
+      // UX optimista para "jugar_carta": removemos la carta de mi mano
+      // y la agregamos a la baza actual al toque, sin esperar el
+      // round-trip de Supabase. Cuando el realtime trae el estado
+      // canónico (~500-1000ms después), reemplaza al optimista
+      // (mismo carta, misma baza → no hay flicker). Antes la carta
+      // arrastrada quedaba "esperando" en el slot hasta que llegara
+      // la canónica → más de 1s de espera percibida.
+      if (a.tipo === "jugar_carta" && estado && a.cartaId) {
+        const opt = aplicarJugadaOptimista(estado, miId, a.cartaId);
+        if (opt) setEstado(opt);
+      }
       const r = await enviarAccionOnline(salaId, miId, a);
       if (!r.ok) setError(r.error || "Acción rechazada.");
     },
-    [salaId, miId]
+    [salaId, miId, estado, setEstado]
   );
   const resolverConsulta = useCallback(
     (decision: DecisionConsulta) => {
