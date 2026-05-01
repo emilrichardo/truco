@@ -50,41 +50,51 @@ export function deberiaConsultar(
   if (mano.turnoJugadorId !== bot.id) return null;
   if (mano.envidoCantoActivo || mano.trucoCantoActivo) return null;
 
-  // Bot debe ser PIE del equipo (último en jugar en orden anti-horario
-  // desde el mano de la mano). Si el humano es pie no hace falta
-  // consultar — ya tiene el control en su propio panel.
-  const manoAsiento = estado.jugadores.find(
-    (j) => j.id === mano.manoJugadorId
-  )?.asiento;
-  if (manoAsiento === undefined) return null;
-  const n = estado.jugadores.length;
-  const distanciaDeJuego = (asiento: number) =>
-    (asiento - manoAsiento + n) % n;
-  const miDist = distanciaDeJuego(bot.asiento);
-  const botEsPie = compañeros.every(
-    (c) => distanciaDeJuego(c.asiento) < miDist
-  );
-  if (!botEsPie) return null;
-
+  // Para baza 1: si el envido está cantable, ofrecemos "consulta de
+  // envido" (revelamos puntos y dejamos que el humano decida). Esto
+  // lo seguimos limitando al pie del equipo — solo el pie sabe si
+  // corta o sigue. Sino el bot mano canta envido sin pensar.
   const enBaza1 = mano.bazas.length === 1;
   if (enBaza1) {
-    if (estado.conFlor && mano.florCantores.length > 0) return null;
-    const envidoCantable =
-      !mano.envidoResuelto &&
-      mano.trucoEstado === "ninguno" &&
-      mano.bazas[0].jugadas.length < estado.jugadores.length;
-    if (envidoCantable) {
-      const cartas = mano.cartasPorJugador[bot.id] || [];
-      const envidoBot = calcularEnvido(cartas);
-      return { tipo: "envido", botJugadorId: bot.id, envidoBot };
+    const manoAsiento = estado.jugadores.find(
+      (j) => j.id === mano.manoJugadorId
+    )?.asiento;
+    if (manoAsiento !== undefined) {
+      const n = estado.jugadores.length;
+      const distanciaDeJuego = (asiento: number) =>
+        (asiento - manoAsiento + n) % n;
+      const miDist = distanciaDeJuego(bot.asiento);
+      const botEsPie = compañeros.every(
+        (c) => distanciaDeJuego(c.asiento) < miDist
+      );
+      if (botEsPie) {
+        if (estado.conFlor && mano.florCantores.length > 0) {
+          // sin envido por flor — caemos al "consulta de jugar"
+        } else {
+          const envidoCantable =
+            !mano.envidoResuelto &&
+            mano.trucoEstado === "ninguno" &&
+            mano.bazas[0].jugadas.length < estado.jugadores.length;
+          if (envidoCantable) {
+            const cartas = mano.cartasPorJugador[bot.id] || [];
+            const envidoBot = calcularEnvido(cartas);
+            return {
+              tipo: "envido",
+              botJugadorId: bot.id,
+              envidoBot
+            };
+          }
+        }
+      }
     }
   }
 
-  // Consultamos cada vez que el bot va a tirar carta en una baza
-  // donde todavía no jugó — sea abriendo la baza o respondiendo a
-  // una carta del rival. El humano decide jugá (alta) / vení (baja)
-  // / pasar (que la IA elija). El usuario quiere control total sobre
-  // la estrategia del compañero.
+  // Consulta de "jugar": SIEMPRE preguntamos al humano antes de que
+  // el bot tire carta — sea mano o pie de equipo, abriendo o
+  // respondiendo. El humano decide jugá (alta) / vení (baja) / pasar
+  // (deja a la IA). Sin la restricción "botEsPie" porque el usuario
+  // pidió control total sobre la estrategia del compañero, en
+  // CUALQUIER baza.
   const baza = mano.bazas[mano.bazas.length - 1];
   const yaJugoEnBaza = baza.jugadas.some((j) => j.jugadorId === bot.id);
   if (!yaJugoEnBaza) {
