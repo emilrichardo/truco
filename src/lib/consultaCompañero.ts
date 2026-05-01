@@ -80,12 +80,14 @@ export function deberiaConsultar(
     }
   }
 
+  // Consultamos cada vez que el bot va a tirar carta en una baza
+  // donde todavía no jugó — sea abriendo la baza o respondiendo a
+  // una carta del rival. El humano decide jugá (alta) / vení (baja)
+  // / pasar (que la IA elija). El usuario quiere control total sobre
+  // la estrategia del compañero.
   const baza = mano.bazas[mano.bazas.length - 1];
-  if (baza.jugadas.length === 0) {
-    // Siempre consultamos al humano cuando el bot abre baza — el
-    // humano decide jugá / vení / pasar. Sin filtro por "carta
-    // valiosa" porque el usuario quiere control total sobre la
-    // estrategia del compañero, aún con cartas chicas.
+  const yaJugoEnBaza = baza.jugadas.some((j) => j.jugadorId === bot.id);
+  if (!yaJugoEnBaza) {
     return { tipo: "jugar", botJugadorId: bot.id };
   }
   return null;
