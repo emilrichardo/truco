@@ -10,6 +10,10 @@ import {
   leerAudio
 } from "@/lib/audiosLocales";
 import { marcarAudioReciente } from "@/lib/audio/useAudioJuego";
+import {
+  desmarcarLanzando,
+  marcarLanzando
+} from "@/lib/cartasLanzando";
 
 interface EnviarChatFn {
   (m: {
@@ -211,16 +215,18 @@ export function PanelAcciones({
       setLanzandoDelta({ x: dx, y: dy });
       setLanzandoId(cartaId);
       setArrastrandoId(null);
+      // Marcamos la carta como "lanzando" para que Mesa oculte la
+      // versión canónica/optimista de su slot durante la animación —
+      // sino se ven dos cartas (la dragged tamaño "sm" y la canónica
+      // tamaño "lg") solapadas con offset visible.
+      marcarLanzando(cartaId);
       enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
-      // Animación corta (140ms) + desmonte a 160ms. La carta vuela
-      // veloz al slot — el setEstado optimista del padre ya pintó la
-      // canónica en la mesa, así que se siente inmediato. Antes 260ms+
-      // 300ms se percibía como "espera".
       lanzamientoTimerRef.current = window.setTimeout(() => {
         setCartasJugadas((prev) => new Set(prev).add(cartaId));
         setLanzandoId(null);
         setDelta({ x: 0, y: 0 });
         setLanzandoDelta({ x: 0, y: 0 });
+        desmarcarLanzando(cartaId);
       }, 160);
     };
 

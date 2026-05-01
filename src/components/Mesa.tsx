@@ -8,6 +8,7 @@ import { JugadorPanel } from "./JugadorPanel";
 import { useHablando } from "@/lib/useHablando";
 import { ICONOS_COMPANERO, ORDENES_COMPANERO } from "@/lib/chatRapido";
 import { urlPersonaje } from "@/data/jugadores";
+import { useCartasLanzando } from "@/lib/cartasLanzando";
 
 type Posicion =
   | "abajo-izquierda"
@@ -124,9 +125,15 @@ export function Mesa({
   }
 
   const numeroDeBaza = estado.manoActual?.bazas.length || 0;
+  // Cartas que el usuario local está lanzando ahora mismo (animación
+  // del PanelAcciones). Las ocultamos de las jugadas de la mesa
+  // mientras dura la animación — sino se ven dos cartas (la dragged
+  // tamaño "sm" y la canónica/optimista tamaño "lg") con offset.
+  const cartasLanzando = useCartasLanzando();
   const jugadasPorJugador = new Map<string, JugadaEnMesa[]>();
   estado.manoActual?.bazas.forEach((b, bIdx) => {
     b.jugadas.forEach((j, jIdx) => {
+      if (cartasLanzando.has(j.carta.id)) return; // skip mientras vuela
       const arr = jugadasPorJugador.get(j.jugadorId) || [];
       arr.push({ ...j, bazaIdx: bIdx, jugIdx: jIdx });
       jugadasPorJugador.set(j.jugadorId, arr);
