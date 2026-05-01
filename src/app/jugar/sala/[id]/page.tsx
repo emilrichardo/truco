@@ -37,6 +37,9 @@ import {
   type DecisionConsulta
 } from "@/lib/consultaCompañero";
 import { ConsultaCompañero } from "@/components/ConsultaCompañero";
+import { ResultadoEnvido } from "@/components/ResultadoEnvido";
+import { ResultadoMano } from "@/components/ResultadoMano";
+import { AlertaPuntos } from "@/components/AlertaPuntos";
 
 /** Aplica una jugada de carta de forma optimista al estado local —
  *  agrega la carta a la baza actual SIN sacarla todavía de la mano
@@ -765,6 +768,13 @@ export default function SalaPage() {
               {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
                * para que quede arriba de mi mano de cartas. */}
               <MiAvatarBR estado={estado} miId={miId!} />
+              {/* Toast efímero del envido cuando se resuelve. */}
+              <ResultadoEnvido estado={estado} miId={miId!} />
+              {/* Banner grande del cierre de mano (puntos ganados/perdidos). */}
+              <ResultadoMano estado={estado} miId={miId!} />
+              {/* Toast en tiempo real cuando se otorgan puntos en la mano
+               * (envido no querido, truco no querido, ir al mazo, etc.). */}
+              <AlertaPuntos estado={estado} miId={miId!} />
               {consulta && (
                 <ConsultaCompañero
                   consulta={consulta}
