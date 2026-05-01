@@ -318,6 +318,8 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
       reaccion?: string;
       sticker?: string;
       destinatarioId?: string;
+      audioCantoDataUrl?: string;
+      audioCantoTipo?: string;
     }) => {
       if (!estado || !miId) return;
       const destinatario = m.destinatarioId
@@ -334,7 +336,9 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
         reaccion: m.reaccion,
         sticker: m.sticker,
         directo: esCompaniero,
-        ts: Date.now()
+        ts: Date.now(),
+        audioCantoDataUrl: m.audioCantoDataUrl,
+        audioCantoTipo: m.audioCantoTipo
       });
       if (estado.chat.length > 80) estado.chat.shift();
       estado.version++;

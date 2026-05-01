@@ -3,15 +3,38 @@ import { useEffect, useRef, useState } from "react";
 import type { Accion, EstadoJuego } from "@/lib/truco/types";
 import { accionesLegales } from "@/lib/truco/motor";
 import { CartaEspanola } from "./CartaEspanola";
+import { MisCantos } from "./MisCantos";
+import {
+  blobADataUrl,
+  cantoDeAccion,
+  leerAudio
+} from "@/lib/audiosLocales";
+
+interface EnviarChatFn {
+  (m: {
+    texto?: string;
+    reaccion?: string;
+    sticker?: string;
+    destinatarioId?: string;
+    audioCantoDataUrl?: string;
+    audioCantoTipo?: string;
+  }): void;
+}
 
 export function PanelAcciones({
   estado,
   miId,
-  enviar
+  enviar,
+  enviarChat,
+  miSlug
 }: {
   estado: EstadoJuego;
   miId: string;
   enviar: (a: Accion) => void;
+  /** Para broadcastear el audio personalizado del canto al resto. */
+  enviarChat?: EnviarChatFn;
+  /** Slug del primo del jugador local — clave de IndexedDB. */
+  miSlug?: string;
 }) {
   const me = estado.jugadores.find((j) => j.id === miId);
   if (!me || !estado.manoActual) return null;
@@ -95,6 +118,8 @@ export function PanelAcciones({
   const [lanzandoId, setLanzandoId] = useState<string | null>(null);
   const [lanzandoDelta, setLanzandoDelta] = useState({ x: 0, y: 0 });
   const lanzamientoTimerRef = useRef<number | null>(null);
+  // Modal de "Mis cantos" — grabar voces personales por canto.
+  const [mostrarMisCantos, setMostrarMisCantos] = useState(false);
   const rectCartaRef = useRef<{ x: number; y: number } | null>(null);
   useEffect(() => {
     return () => {
@@ -347,16 +372,26 @@ export function PanelAcciones({
        *  acción directo sin abrir popover. */}
       <BotoneraMenu
         miId={miId}
+        miSlug={miSlug}
         enviar={enviar}
+        enviarChat={enviarChat}
         puedo={puedo}
         debeResponderEnvido={debeResponderEnvido}
         debeResponderTruco={debeResponderTruco}
+        onAbrirMisCantos={miSlug ? () => setMostrarMisCantos(true) : undefined}
       />
 
       {legales.length === 0 && estado.ganadorPartida === null && (
         <div className="text-center text-text-dim text-xs py-1 italic">
           Esperando…
         </div>
+      )}
+
+      {mostrarMisCantos && miSlug && (
+        <MisCantos
+          miSlug={miSlug}
+          onCerrar={() => setMostrarMisCantos(false)}
+        />
       )}
     </div>
   );
@@ -373,16 +408,22 @@ type Opcion = {
  *  aparecen Quiero / No quiero como botones primarios. */
 function BotoneraMenu({
   miId,
+  miSlug,
   enviar,
+  enviarChat,
   puedo,
   debeResponderEnvido,
-  debeResponderTruco
+  debeResponderTruco,
+  onAbrirMisCantos
 }: {
   miId: string;
+  miSlug?: string;
   enviar: (a: Accion) => void;
+  enviarChat?: EnviarChatFn;
   puedo: (t: Accion["tipo"]) => boolean;
   debeResponderEnvido: boolean;
   debeResponderTruco: boolean;
+  onAbrirMisCantos?: () => void;
 }) {
   const [menuAbierto, setMenuAbierto] = useState<"envido" | "truco" | null>(
     null
@@ -439,6 +480,22 @@ function BotoneraMenu({
   const disparar = (tipo: Accion["tipo"]) => {
     setMenuAbierto(null);
     enviar({ tipo, jugadorId: miId } as Accion);
+    // Si tengo audio personalizado para este canto, lo broadcasteamos
+    // por el chat — los demás clientes lo reproducen al recibirlo.
+    // Hacemos el lookup y send en paralelo (no bloquea la acción).
+    const canto = cantoDeAccion(tipo);
+    if (canto && enviarChat && miSlug) {
+      void (async () => {
+        try {
+          const blob = await leerAudio(miSlug, canto);
+          if (!blob) return;
+          const dataUrl = await blobADataUrl(blob);
+          enviarChat({ audioCantoDataUrl: dataUrl, audioCantoTipo: canto });
+        } catch {
+          /* sin audio o error de IDB — silencioso */
+        }
+      })();
+    }
   };
 
   return (
@@ -502,7 +559,40 @@ function BotoneraMenu({
           <IconoMazo /> Mazo
         </button>
       )}
+
+      {onAbrirMisCantos && (
+        <button
+          type="button"
+          className="btn !px-2"
+          onClick={onAbrirMisCantos}
+          title="Grabar mis cantos"
+          aria-label="Grabar mis cantos"
+        >
+          <IconoMicrofono />
+        </button>
+      )}
     </div>
+  );
+}
+
+function IconoMicrofono() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3" />
+      <path d="M9 21h6" />
+    </svg>
   );
 }
 

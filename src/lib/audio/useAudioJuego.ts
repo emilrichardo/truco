@@ -24,6 +24,52 @@ import {
 const PALOS_CARTAS = ["espada", "basto", "oro", "copa"] as const;
 const NUMEROS_CARTAS = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12] as const;
 
+// Audios personalizados recibidos vía chat: cuando llega uno, lo
+// reproducimos al toque y registramos en el mapa para suprimir la voz
+// default del mismo canto durante una ventana de 3.5s. Sin esto, el
+// canto del jugador suena dos veces (su audio + la voz default).
+const audiosPersonalizadosRecientes = new Map<string, number>();
+const SUPPRESS_VENTANA_MS = 3500;
+
+function reproducirDataUrl(dataUrl: string) {
+  if (typeof Audio === "undefined") return;
+  try {
+    const audio = new Audio(dataUrl);
+    audio.volume = 0.95;
+    audio.play().catch(() => {
+      /* autoplay bloqueado — silencioso */
+    });
+  } catch {
+    /* malformed dataUrl — ignore */
+  }
+}
+
+/** Mapea el canto de la voz default (CategoriaCanto) al canto guardable
+ *  (CantoConAudio) para chequear suppression. */
+function cantoDefaultASuppressionKey(canto: string): string | null {
+  switch (canto) {
+    case "envido":
+    case "envido_envido":
+      return "envido";
+    case "real_envido":
+      return "real_envido";
+    case "falta_envido":
+      return "falta_envido";
+    case "truco":
+      return "truco";
+    case "retruco":
+      return "retruco";
+    case "vale_cuatro":
+      return "vale4";
+    case "quiero":
+      return "quiero";
+    case "no_quiero":
+      return "no_quiero";
+    default:
+      return null;
+  }
+}
+
 function precargarCartas() {
   if (typeof window === "undefined") return;
   for (const palo of PALOS_CARTAS) {
@@ -120,6 +166,20 @@ export function useAudioJuego(
 }
 
 function procesarMensaje(m: MensajeChat) {
+  // 0) Audio personalizado del jugador para acompañar un canto. Lo
+  //    reproducimos al toque y registramos para suprimir la voz default
+  //    cuando llegue el evento del canto en el chat (puede llegar en
+  //    cualquier orden: si el evento llegó primero, ya sonó la voz —
+  //    igual reproducimos el audio personal y queda como overlay).
+  if (m.audioCantoDataUrl && m.audioCantoTipo) {
+    reproducirDataUrl(m.audioCantoDataUrl);
+    audiosPersonalizadosRecientes.set(
+      `${m.jugadorId}:${m.audioCantoTipo}`,
+      Date.now()
+    );
+    return;
+  }
+
   switch (m.evento) {
     case "carta":
       sonidoCarta();
@@ -147,6 +207,18 @@ function procesarMensaje(m: MensajeChat) {
       //    serializados.
       const id = identificarCanto(m.texto);
       if (id && m.jugadorId) {
+        // Si este jugador mandó un audio personalizado para este canto
+        // hace poco, suprimimos la voz default — su voz ya sonó.
+        const cantoKey = cantoDefaultASuppressionKey(id.canto);
+        if (cantoKey) {
+          const suppressKey = `${m.jugadorId}:${cantoKey}`;
+          const ts = audiosPersonalizadosRecientes.get(suppressKey);
+          if (ts && Date.now() - ts < SUPPRESS_VENTANA_MS) {
+            audiosPersonalizadosRecientes.delete(suppressKey);
+            if (id.canto === "ir_al_mazo") sonidoMazo();
+            break;
+          }
+        }
         const reproductor = esReaccion(id.canto)
           ? reproducirReaccion
           : reproducirCanto;

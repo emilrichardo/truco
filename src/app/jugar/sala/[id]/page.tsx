@@ -718,6 +718,8 @@ export default function SalaPage() {
                 estado={estado}
                 miId={miId!}
                 enviar={enviarAccion}
+                enviarChat={enviarChat}
+                miSlug={miSlug || undefined}
               />
             )}
           </div>

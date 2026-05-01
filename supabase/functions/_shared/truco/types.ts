@@ -124,6 +124,12 @@ export interface MensajeChat {
   ts: number;
   /** Si está presente, es un evento del juego (no un mensaje humano). */
   evento?: CategoriaEvento;
+  /** Audio personalizado del jugador para acompañar un canto.
+   *  Data URL base64 (audio/webm normalmente). El receptor lo
+   *  reproduce en lugar de la voz default. Limitado a ~4s. */
+  audioCantoDataUrl?: string;
+  /** Tipo de canto al que acompaña el audio (ej. "envido"). */
+  audioCantoTipo?: string;
 }
 
 export type AccionTipo =

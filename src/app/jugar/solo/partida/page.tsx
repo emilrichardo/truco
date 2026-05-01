@@ -204,7 +204,13 @@ function PartidaSoloInterno() {
               }}
             />
           </div>
-          <PanelAcciones estado={estado} miId={miId} enviar={enviarAccion} />
+          <PanelAcciones
+            estado={estado}
+            miId={miId}
+            enviar={enviarAccion}
+            enviarChat={enviarChat}
+            miSlug={miSlug || undefined}
+          />
         </div>
 
         {sidebarVisible && (

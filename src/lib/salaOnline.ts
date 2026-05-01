@@ -191,6 +191,8 @@ export async function enviarChatOnline(
     reaccion?: string;
     sticker?: string;
     destinatarioId?: string;
+    audioCantoDataUrl?: string;
+    audioCantoTipo?: string;
   }
 ): Promise<SalaResp> {
   return invocar("sala-chat", {
@@ -199,7 +201,9 @@ export async function enviarChatOnline(
     texto: msg.texto,
     reaccion: msg.reaccion,
     sticker: msg.sticker,
-    destinatario_id: msg.destinatarioId
+    destinatario_id: msg.destinatarioId,
+    audio_canto_data_url: msg.audioCantoDataUrl,
+    audio_canto_tipo: msg.audioCantoTipo
   });
 }
 
