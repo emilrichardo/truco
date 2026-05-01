@@ -193,13 +193,50 @@ export function useAudioJuego(
   useEffect(() => {
     if (!estado || !estado.chat.length) return;
     const idx = estado.chat.findIndex((m) => m.id === ultimoChatId.current);
-    const nuevos = idx === -1 ? estado.chat.slice(-3) : estado.chat.slice(idx + 1);
-    for (const m of nuevos) procesarMensaje(m);
+    let nuevos: typeof estado.chat;
+    if (idx >= 0) {
+      nuevos = estado.chat.slice(idx + 1);
+    } else if (ultimoChatId.current === null) {
+      // Primera vez — no replay del histórico, solo seguimos desde
+      // este momento. Sino al entrar/refrescar se podían escuchar
+      // cantos viejos de la mano anterior.
+      nuevos = [];
+    } else {
+      // Perdimos el tracking (ej. el chat se shifteó por >200 msgs).
+      // Saltamos al final sin reproducir nada — sino se podían
+      // re-escuchar mensajes viejos como si fuesen nuevos.
+      nuevos = [];
+    }
+    for (const m of nuevos) procesarMensaje(m, estado.chat);
     ultimoChatId.current = estado.chat[estado.chat.length - 1].id;
   }, [estado, estado?.chat.length]);
 }
 
-function procesarMensaje(m: MensajeChat) {
+/** Busca en la historia del chat si hay un audio personalizado del
+ *  mismo jugador para el mismo canto en los últimos 5s. Útil para
+ *  saber si suprimir la voz default sin depender del flag in-memory
+ *  (que tiene un race según el orden de llegada de los chats). */
+function hayAudioCustomReciente(
+  chat: import("@/lib/truco/types").MensajeChat[],
+  jugadorId: string,
+  cantoKey: string,
+  ahora = Date.now()
+): boolean {
+  for (let i = chat.length - 1; i >= 0; i--) {
+    const c = chat[i];
+    if (ahora - c.ts > 5000) break; // muy viejo
+    if (
+      c.jugadorId === jugadorId &&
+      c.audioCantoTipo === cantoKey &&
+      !!c.audioCantoDataUrl
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function procesarMensaje(m: MensajeChat, chat: MensajeChat[] = []) {
   // 0) Audio personalizado del jugador para acompañar un canto. Lo
   //    reproducimos al toque y registramos para suprimir la voz default
   //    cuando llegue el evento del canto en el chat (puede llegar en
@@ -245,15 +282,19 @@ function procesarMensaje(m: MensajeChat) {
         const cantoKey = cantoDefaultASuppressionKey(id.canto);
 
         // Reproducción de la voz default — la encapsulamos para poder
-        // diferirla 250ms cuando el canto es "personalizable", así si el
-        // chat con el audio del jugador llega justo después del evento
-        // del motor, alcanzamos a verlo y suprimimos la default.
+        // diferirla 250ms cuando el canto es "personalizable", así si
+        // el chat con el audio del jugador llega justo después del
+        // evento del motor, alcanzamos a verlo y suprimimos la default.
         const reproducirDefault = () => {
           if (cantoKey) {
             const ts = audiosPersonalizadosRecientes.get(
               `${jugadorId}:${cantoKey}`
             );
-            if (ts && Date.now() - ts < SUPPRESS_VENTANA_MS) {
+            const hayChat = hayAudioCustomReciente(chat, jugadorId, cantoKey);
+            if (
+              hayChat ||
+              (ts && Date.now() - ts < SUPPRESS_VENTANA_MS)
+            ) {
               audiosPersonalizadosRecientes.delete(`${jugadorId}:${cantoKey}`);
               if (id.canto === "ir_al_mazo") sonidoMazo();
               return;

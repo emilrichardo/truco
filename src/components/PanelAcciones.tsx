@@ -402,6 +402,7 @@ export function PanelAcciones({
         puedo={puedo}
         debeResponderEnvido={debeResponderEnvido}
         debeResponderTruco={debeResponderTruco}
+        estadoVersion={estado.version}
         onAbrirMisCantos={miSlug ? () => setMostrarMisCantos(true) : undefined}
       />
 
@@ -438,6 +439,7 @@ function BotoneraMenu({
   puedo,
   debeResponderEnvido,
   debeResponderTruco,
+  estadoVersion,
   onAbrirMisCantos
 }: {
   miId: string;
@@ -447,6 +449,9 @@ function BotoneraMenu({
   puedo: (t: Accion["tipo"]) => boolean;
   debeResponderEnvido: boolean;
   debeResponderTruco: boolean;
+  /** Versión del estado — sirve para liberar el debounce de cantos
+   *  cuando llega un cambio del server, no por timeout fijo. */
+  estadoVersion: number;
   onAbrirMisCantos?: () => void;
 }) {
   const [menuAbierto, setMenuAbierto] = useState<"envido" | "truco" | null>(
@@ -461,8 +466,12 @@ function BotoneraMenu({
   const debounceTimerRef = useRef<number | null>(null);
   const refContenedor = useRef<HTMLDivElement>(null);
 
-  // Cierra el menú si el contexto cambia (canto resuelto, turno cambia, etc.)
-  // y libera el debounce — el server ya respondió.
+  // Cierra el menú y libera el debounce cuando cambia el estado o el
+  // contexto. estadoVersion captura cualquier update del server (mi
+  // canto confirmado, respuesta del rival, etc.) — sin esto el botón
+  // se quedaba "pendiente" hasta el timeout aunque el estado ya
+  // hubiera cambiado, dejando al usuario apretando 4x (cada uno
+  // mandando audio que se acumulaba) hasta el realtime.
   useEffect(() => {
     setMenuAbierto(null);
     setAccionPendiente(false);
@@ -470,7 +479,7 @@ function BotoneraMenu({
       clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = null;
     }
-  }, [debeResponderEnvido, debeResponderTruco]);
+  }, [debeResponderEnvido, debeResponderTruco, estadoVersion]);
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current !== null)

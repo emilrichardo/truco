@@ -383,7 +383,7 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   };
 }
 
-function quienActuaSiBot(estado: EstadoJuego): Jugador | undefined {
+export function quienActuaSiBot(estado: EstadoJuego): Jugador | undefined {
   const mano = estado.manoActual;
   if (!mano) return undefined;
 

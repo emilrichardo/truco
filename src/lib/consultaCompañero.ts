@@ -82,14 +82,10 @@ export function deberiaConsultar(
 
   const baza = mano.bazas[mano.bazas.length - 1];
   if (baza.jugadas.length === 0) {
-    // Solo consultamos al humano si el bot tiene al menos una carta
-    // VALIOSA (jerarquía ≥ 10 — 3, 2, 1 falso, 7 espada/oro, anchos).
-    // Sino la consulta es vacía: el bot va a tirar una carta baja
-    // tanto si el humano dice "juga" como "veni" — ningún jugador
-    // lo elige de manera consciente y solo molesta el flujo.
-    const cartas = mano.cartasPorJugador[bot.id] || [];
-    const tieneCartaValiosa = cartas.some((c) => jerarquia(c) >= 10);
-    if (!tieneCartaValiosa) return null;
+    // Siempre consultamos al humano cuando el bot abre baza — el
+    // humano decide jugá / vení / pasar. Sin filtro por "carta
+    // valiosa" porque el usuario quiere control total sobre la
+    // estrategia del compañero, aún con cartas chicas.
     return { tipo: "jugar", botJugadorId: bot.id };
   }
   return null;
