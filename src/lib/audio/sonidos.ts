@@ -116,6 +116,39 @@ function encolar(t: Tarea) {
   if (!reproduciendo) avanzar();
 }
 
+/** Encola un dataUrl (audio personalizado del jugador) en la misma
+ *  cola FIFO que los cantos. Sin esto, el audio personal se reproducía
+ *  directo (new Audio) y se superponía con la voz default del siguiente
+ *  canto cuando ambos llegaban en ráfaga. */
+export function encolarDataUrl(dataUrl: string) {
+  encolar(() => {
+    if (muteado) {
+      avanzar();
+      return;
+    }
+    if (typeof Audio === "undefined") {
+      avanzar();
+      return;
+    }
+    let avancado = false;
+    const seguirCola = () => {
+      if (avancado) return;
+      avancado = true;
+      avanzar();
+    };
+    try {
+      const audio = new Audio(dataUrl);
+      audio.volume = 0.95;
+      audio.onended = seguirCola;
+      audio.onerror = seguirCola;
+      const p = audio.play();
+      if (p && typeof p.catch === "function") p.catch(seguirCola);
+    } catch {
+      seguirCola();
+    }
+  });
+}
+
 function reproducirArchivo(src: string) {
   // Precargamos el clip apenas se encola — así para cuando le toque el
   // turno en la cola FIFO, el <audio> ya está cargado y arranca instantáneo.

@@ -9,6 +9,7 @@ import type { EstadoJuego, MensajeChat } from "@/lib/truco/types";
 import { despertarAudio, sonidoCarta, sonidoMazo, sonidoPuntos } from "./sfx";
 import {
   cortarReproduccion,
+  encolarDataUrl,
   esReaccion,
   identificarCanto,
   identificarTanto,
@@ -52,16 +53,11 @@ const botIds = new Set<string>();
 let miIdActual: string | null = null;
 
 function reproducirDataUrl(dataUrl: string) {
-  if (typeof Audio === "undefined") return;
-  try {
-    const audio = new Audio(dataUrl);
-    audio.volume = 0.95;
-    audio.play().catch(() => {
-      /* autoplay bloqueado — silencioso */
-    });
-  } catch {
-    /* malformed dataUrl — ignore */
-  }
+  // Va por la cola FIFO de cantos para que no se superponga con la
+  // voz default de eventos consecutivos. Antes plays directo con
+  // new Audio() y se escuchaba "Quiero" + "Retruco" al mismo tiempo
+  // cuando ambos llegaban en ráfaga.
+  encolarDataUrl(dataUrl);
 }
 
 /** Mapea el canto de la voz default (CategoriaCanto) al canto guardable

@@ -436,12 +436,31 @@ function BotoneraMenu({
   const [menuAbierto, setMenuAbierto] = useState<"envido" | "truco" | null>(
     null
   );
+  // Debounce: tras un click se deshabilitan todos los botones de canto
+  // 600ms para evitar dobles disparos antes de que el server confirme
+  // (el realtime puede tardar varios cientos de ms y el usuario clickea
+  // dos veces pensando que no tomó). Se libera solo al cambiar el
+  // contexto (canto resuelto, otro jugador respondió, etc.).
+  const [accionPendiente, setAccionPendiente] = useState(false);
+  const debounceTimerRef = useRef<number | null>(null);
   const refContenedor = useRef<HTMLDivElement>(null);
 
   // Cierra el menú si el contexto cambia (canto resuelto, turno cambia, etc.)
+  // y libera el debounce — el server ya respondió.
   useEffect(() => {
     setMenuAbierto(null);
+    setAccionPendiente(false);
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
   }, [debeResponderEnvido, debeResponderTruco]);
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current !== null)
+        clearTimeout(debounceTimerRef.current);
+    };
+  }, []);
 
   // Cierra el menú al tocar afuera.
   useEffect(() => {
@@ -486,7 +505,15 @@ function BotoneraMenu({
     cantoTruco = { tipo: "cantar_vale4", label: "Vale 4", icono: <IconoCanto /> };
 
   const disparar = (tipo: Accion["tipo"]) => {
+    if (accionPendiente) return; // bloqueamos doble click
     setMenuAbierto(null);
+    setAccionPendiente(true);
+    if (debounceTimerRef.current !== null)
+      clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = window.setTimeout(() => {
+      setAccionPendiente(false);
+      debounceTimerRef.current = null;
+    }, 700);
     enviar({ tipo, jugadorId: miId } as Accion);
     // Si tengo audio personalizado para este canto, lo broadcasteamos
     // por el chat — los demás clientes lo reproducen al recibirlo.
@@ -521,6 +548,7 @@ function BotoneraMenu({
         puedo("responder_quiero") && (
           <button
             className="btn btn-primary"
+            disabled={accionPendiente}
             onClick={() => disparar("responder_quiero")}
           >
             Quiero
@@ -530,6 +558,7 @@ function BotoneraMenu({
         puedo("responder_no_quiero") && (
           <button
             className="btn btn-danger"
+            disabled={accionPendiente}
             onClick={() => disparar("responder_no_quiero")}
           >
             No quiero
@@ -546,12 +575,14 @@ function BotoneraMenu({
             setMenuAbierto((m) => (m === "envido" ? null : "envido"))
           }
           onElegir={(t) => disparar(t)}
+          disabled={accionPendiente}
         />
       )}
 
       {puedo("cantar_flor") && (
         <button
           className="btn btn-primary"
+          disabled={accionPendiente}
           onClick={() => disparar("cantar_flor")}
           title="Tenés 3 cartas del mismo palo — flor"
         >
@@ -562,6 +593,7 @@ function BotoneraMenu({
       {cantoTruco && (
         <button
           className="btn btn-primary"
+          disabled={accionPendiente}
           onClick={() => disparar(cantoTruco!.tipo)}
         >
           {cantoTruco.icono} {cantoTruco.label}
@@ -620,7 +652,8 @@ function BotonDropdown({
   abierto,
   onToggle,
   onElegir,
-  acentuado
+  acentuado,
+  disabled
 }: {
   icono: React.ReactNode;
   label: string;
@@ -629,11 +662,9 @@ function BotonDropdown({
   onToggle: () => void;
   onElegir: (tipo: Accion["tipo"]) => void;
   acentuado?: boolean;
+  disabled?: boolean;
 }) {
   const tieneVarias = opciones.length > 1;
-  // Cuando queda una sola opción legal, mostramos el label/icono real de
-  // esa opción (ej. "Falta envido") en vez del título genérico ("Envido").
-  // Si no, el usuario ve "Envido" y tapea pero canta falta envido — confuso.
   const labelMostrado =
     tieneVarias || !opciones[0] ? label : opciones[0].label;
   const iconoMostrado =
@@ -647,6 +678,7 @@ function BotonDropdown({
       <button
         className={acentuado ? "btn btn-primary" : "btn"}
         onClick={onTap}
+        disabled={disabled}
         aria-haspopup={tieneVarias ? "menu" : undefined}
         aria-expanded={tieneVarias ? abierto : undefined}
       >
