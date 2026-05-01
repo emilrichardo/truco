@@ -64,9 +64,10 @@ export function BotonInstalarApp() {
   }, []);
 
   if (instalada) return null;
-  // Si no es iOS y no tenemos prompt event, no mostramos nada — el
-  // browser no soporta instalar (desktop Firefox por ejemplo).
-  if (!esIOSState && !promptEvt) return null;
+  // Mostramos siempre el botón (excepto si la app ya está instalada).
+  // En navegadores que no soportan instalación (desktop Firefox, etc.)
+  // hacemos fallback a las instrucciones de iOS — son lo más cercano
+  // a "agregar a inicio" que tiene el usuario disponible.
 
   const onClick = async () => {
     if (promptEvt) {
@@ -76,7 +77,8 @@ export function BotonInstalarApp() {
       setPromptEvt(null);
       return;
     }
-    // iOS: mostramos las instrucciones porque no hay prompt API.
+    // Sin prompt API (iOS Safari + desktop sin support): mostramos
+    // las instrucciones del menú compartir.
     setMostrarTipsIOS(true);
   };
 
@@ -115,25 +117,52 @@ export function BotonInstalarApp() {
           >
             <div className="text-center mb-3">
               <div className="titulo-marca text-lg">
-                Instalar en <span className="acento">iPhone</span>
+                Instalar la <span className="acento">app</span>
               </div>
               <p className="text-xs text-text-dim mt-1 subtitulo-claim">
-                Safari no permite instalar con un click — pero es fácil:
+                {esIOSState
+                  ? "Safari no permite instalar con un click — pero es fácil:"
+                  : "Tu navegador no muestra el prompt de instalación. Probá desde el menú:"}
               </p>
             </div>
             <ol className="text-sm text-crema space-y-2 my-4 list-decimal list-inside">
-              <li>
-                Tocá el botón <strong className="text-dorado">Compartir</strong>{" "}
-                <span aria-hidden>⬆️</span> en la barra de Safari.
-              </li>
-              <li>
-                Bajá hasta{" "}
-                <strong className="text-dorado">
-                  &ldquo;Agregar a pantalla de inicio&rdquo;
-                </strong>
-                .
-              </li>
-              <li>Confirmá con <strong className="text-dorado">Agregar</strong>.</li>
+              {esIOSState ? (
+                <>
+                  <li>
+                    Tocá el botón <strong className="text-dorado">Compartir</strong>{" "}
+                    <span aria-hidden>⬆️</span> en la barra de Safari.
+                  </li>
+                  <li>
+                    Bajá hasta{" "}
+                    <strong className="text-dorado">
+                      &ldquo;Agregar a pantalla de inicio&rdquo;
+                    </strong>
+                    .
+                  </li>
+                  <li>
+                    Confirmá con <strong className="text-dorado">Agregar</strong>.
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    Abrí el menú del navegador (los <strong className="text-dorado">⋮</strong>{" "}
+                    arriba a la derecha).
+                  </li>
+                  <li>
+                    Buscá{" "}
+                    <strong className="text-dorado">
+                      &ldquo;Instalar app&rdquo;
+                    </strong>{" "}
+                    o{" "}
+                    <strong className="text-dorado">
+                      &ldquo;Agregar a pantalla de inicio&rdquo;
+                    </strong>
+                    .
+                  </li>
+                  <li>Confirmá y listo — queda como app nativa.</li>
+                </>
+              )}
             </ol>
             <button
               type="button"

@@ -179,7 +179,14 @@ export function useAudioJuego(
     if (manoNum !== ultimoManoNum.current) {
       ultimoManoNum.current = manoNum;
       if (manoNum > 0) cortarReproduccion();
+      // Saltamos al final del chat — sino al cambiar de mano se podían
+      // re-procesar mensajes viejos (envido de la mano anterior, etc.)
+      // si el ultimoChatId tracking quedaba desincronizado.
+      if (estado?.chat.length) {
+        ultimoChatId.current = estado.chat[estado.chat.length - 1].id;
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manoNum]);
 
   // Procesar nuevos eventos del chat para SFX + voces.

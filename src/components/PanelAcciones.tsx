@@ -108,14 +108,26 @@ export function PanelAcciones({
   // Al ocultarla apenas la mandamos, la mesa "recibe" la carta al instante
   // como en solo. Cuando el motor confirma (idsKey cambia), limpiamos.
   const [cartasJugadas, setCartasJugadas] = useState<Set<string>>(new Set());
+  // Cuando llega la carta canónica (idsKey cambia → misCartas updated)
+  // limpiamos cartasJugadas Y la lanzandoCard — la canónica ya está
+  // sobre la mesa, no hay gap visual.
   useEffect(() => {
     setCartasJugadas(new Set());
+    setLanzandoId(null);
+    setLanzandoDelta({ x: 0, y: 0 });
+    if (lanzamientoTimerRef.current !== null) {
+      clearTimeout(lanzamientoTimerRef.current);
+      lanzamientoTimerRef.current = null;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey]);
-  // Carta en proceso de "lanzamiento": durante ~360ms la animamos
-  // hacia el slot real donde Mesa pinta MI carta jugada (data-mi-jugada-
-  // target). Después se marca como jugada (cartasJugadas) y desmonta
-  // limpio. El delta se calcula en pointerUp comparando el rect inicial
-  // de la carta vs el rect del marcador en la mesa.
+  // Carta en proceso de "lanzamiento": animamos hacia el slot real
+  // donde Mesa pinta MI carta jugada (data-mi-jugada-target). La carta
+  // queda VISIBLE en el slot incluso después de la animación de 260ms,
+  // hasta que la canónica aparece (idsKey cambia). Sin esto, el
+  // dragged-card se desmontaba a los 280ms y la canónica online tardaba
+  // 500-1000ms más en llegar → "desaparece por un segundo". Como
+  // fallback hay un timer de 4s por si nunca llega la canónica.
   const [lanzandoId, setLanzandoId] = useState<string | null>(null);
   const [lanzandoDelta, setLanzandoDelta] = useState({ x: 0, y: 0 });
   const lanzamientoTimerRef = useRef<number | null>(null);
@@ -200,12 +212,15 @@ export function PanelAcciones({
       setLanzandoId(cartaId);
       setArrastrandoId(null);
       enviar({ tipo: "jugar_carta", jugadorId: miId, cartaId });
+      // Fallback: si la canónica nunca llega (server failure, etc.)
+      // sacamos la carta a los 4s para no dejarla "ghost". El path
+      // normal es que idsKey cambie antes y limpie el lanzamiento.
       lanzamientoTimerRef.current = window.setTimeout(() => {
         setCartasJugadas((prev) => new Set(prev).add(cartaId));
         setLanzandoId(null);
         setDelta({ x: 0, y: 0 });
         setLanzandoDelta({ x: 0, y: 0 });
-      }, 280);
+      }, 4000);
     };
 
     // Tap / clic suelto: jugar la carta directamente (sólo en mi turno).
