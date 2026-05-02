@@ -118,13 +118,10 @@ export default function SalaPage() {
   const consultaSuprimidaRef = useRef<{ botId: string; hasta: number } | null>(
     null
   );
-  // Timer de 30s para que el humano de turno actúe. Si vence, el cliente
-  // primario lo convierte en bot vía sala-marcar-bot — el bot dispatcher
-  // toma la jugada inmediatamente después.
-  const turnoTimerRef = useRef<number | null>(null);
-  const turnoVigilanciaRef = useRef<{ jugadorId: string; version: number } | null>(
-    null
-  );
+  // Timer de 30s para que el humano de turno actúe. El effect dedicado
+  // (más abajo) lo arma usando `turnoHumanoActorId` + `turnoEpoch` —
+  // sólo arranca uno por turno, NO se reinicia con cada update de
+  // estado. Si vence, sala-marcar-bot lo flippea y el bot juega.
 
   const { estado, salaMeta, error: errorSala, setEstado } = useSalaOnline(salaId);
   const chatVisibleCount = useMemo(() => {
@@ -391,69 +388,25 @@ export default function SalaPage() {
   const turnoTimerKey = turnoHumanoActorId
     ? `${turnoHumanoActorId}:${turnoEpoch}`
     : null;
+  // El timer arranca cada vez que CAMBIA el actor humano del turno
+  // (gracias a turnoEpoch). Antes este effect dependía de [estado, ...]
+  // así cualquier mensaje de chat reseteaba el timer y nunca expiraba.
+  // Ahora depende solo de turnoHumanoActorId + turnoEpoch (que sólo
+  // cambian al cambiar el turno), y dispara setTimeout una vez.
   useEffect(() => {
-    if (!estado || !miId || !estado.iniciada) return;
-    if (estado.ganadorPartida !== null) return;
-    const mano = estado.manoActual;
-    if (!mano || mano.fase === "terminada") return;
-
-    // ¿Quién actúa ahora si es humano?
-    let actorId: string | undefined;
-    if (mano.envidoCantoActivo) {
-      const eq = mano.envidoCantoActivo.equipoQueDebeResponder;
-      actorId = estado.jugadores.find((j) => j.equipo === eq && !j.esBot)?.id;
-    } else if (mano.trucoCantoActivo) {
-      const eq = mano.trucoCantoActivo.equipoQueDebeResponder;
-      actorId = estado.jugadores.find((j) => j.equipo === eq && !j.esBot)?.id;
-    } else {
-      const turnoJ = estado.jugadores.find((j) => j.id === mano.turnoJugadorId);
-      if (turnoJ && !turnoJ.esBot) actorId = turnoJ.id;
-    }
-
-    // No hay actor humano (o actor es bot) → limpiar y salir.
-    if (!actorId) {
-      if (turnoTimerRef.current) {
-        clearTimeout(turnoTimerRef.current);
-        turnoTimerRef.current = null;
-      }
-      turnoVigilanciaRef.current = null;
-      return;
-    }
-
-    // Si ya hay un timer corriendo para este mismo actor, no lo
-    // reiniciamos — los re-renders por chat/etc no deben extender el
-    // plazo. Sólo reiniciamos cuando cambia el target o la version.
-    const vig = turnoVigilanciaRef.current;
-    if (
-      vig &&
-      vig.jugadorId === actorId &&
-      vig.version === estado.version
-    ) {
-      return;
-    }
-
-    if (turnoTimerRef.current) {
-      clearTimeout(turnoTimerRef.current);
-      turnoTimerRef.current = null;
-    }
-    turnoVigilanciaRef.current = {
-      jugadorId: actorId,
-      version: estado.version
-    };
-    const targetId = actorId;
-    turnoTimerRef.current = window.setTimeout(() => {
+    if (!miId || !salaId) return;
+    if (!turnoHumanoActorId) return;
+    const targetId = turnoHumanoActorId;
+    const t = window.setTimeout(() => {
       marcarBotOnline(salaId, miId, targetId).catch((e) =>
         console.warn("[turno-timer] marcar bot", e)
       );
     }, TURNO_HUMANO_MS);
-
-    return () => {
-      if (turnoTimerRef.current) {
-        clearTimeout(turnoTimerRef.current);
-        turnoTimerRef.current = null;
-      }
-    };
-  }, [estado, miId, salaId]);
+    return () => clearTimeout(t);
+    // turnoEpoch incluido en deps a propósito: cuando el mismo actor
+    // recibe un turno nuevo (e.g., gana baza y abre la siguiente),
+    // queremos reiniciar el plazo desde cero.
+  }, [turnoHumanoActorId, turnoEpoch, miId, salaId]);
 
   useEffect(() => {
     if (errorSala) setError(errorSala);
