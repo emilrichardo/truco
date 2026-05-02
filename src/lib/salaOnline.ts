@@ -140,12 +140,19 @@ export interface SalaPublicaResumen {
   created_at: string;
 }
 
-export async function listarSalasPublicasOnline(): Promise<SalaPublicaResumen[]> {
+export async function listarSalasPublicasOnline(): Promise<{
+  salas: SalaPublicaResumen[];
+  error: string | null;
+}> {
   const r = await invocar<{ ok: boolean; salas?: SalaPublicaResumen[]; error?: string }>(
     "sala-listar-publicas",
     {}
   );
-  return r.ok && r.salas ? r.salas : [];
+  if (!r.ok) {
+    console.warn("[listarSalasPublicas] error:", r.error);
+    return { salas: [], error: r.error || "Error desconocido" };
+  }
+  return { salas: r.salas || [], error: null };
 }
 
 export async function unirseSalaOnline(payload: {
