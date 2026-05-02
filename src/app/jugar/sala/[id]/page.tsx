@@ -637,11 +637,13 @@ export default function SalaPage() {
       // UX optimista: pintamos el bot en el asiento al toque y disparamos
       // la edge function en paralelo. Cuando vuelve por realtime con el
       // id real, reemplaza al optimista (mismo asiento + mismo personaje
-      // → no hay flicker visible).
+      // → no hay flicker visible). Si el server rechaza, deshacemos el
+      // optimista para no dejar bots fantasma.
       const meta = getPersonaje(personaje);
+      const optimistaId = `tmp-${asiento}-${Date.now()}`;
       if (estado && meta) {
         const optimista: Jugador = {
-          id: `tmp-${asiento}-${Date.now()}`,
+          id: optimistaId,
           nombre: meta.nombre,
           personaje,
           equipo: (asiento % 2) as 0 | 1,
@@ -660,7 +662,21 @@ export default function SalaPage() {
         asiento,
         personaje
       );
-      if (!r.ok) setError(r.error || "No se pudo agregar bot.");
+      if (!r.ok) {
+        setError(r.error || "No se pudo agregar bot.");
+        // Rollback del optimista: filtramos por el id temporal así no
+        // borramos un bot real que pudiese estar en el mismo asiento.
+        if (estado) {
+          setEstado((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  jugadores: prev.jugadores.filter((j) => j.id !== optimistaId)
+                }
+              : prev
+          );
+        }
+      }
     },
     [salaId, miId, estado, setEstado]
   );
@@ -1051,7 +1067,7 @@ export default function SalaPage() {
           {/* Chat: drawer en mobile */}
           {chatAbierto && (
             <div
-              className="fixed inset-0 sheet-bg z-[600] md:hidden flex items-end"
+              className="fixed inset-0 sheet-bg z-[750] md:hidden flex items-end"
               onClick={() => setChatAbierto(false)}
             >
               <div

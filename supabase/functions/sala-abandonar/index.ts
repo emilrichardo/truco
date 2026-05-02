@@ -31,30 +31,24 @@ Deno.serve(async (req) => {
   // El creador (asiento 0) no puede abandonar — usa "cerrar sala".
   if (jugador.asiento === 0) return fail("creador_no_puede_abandonar", 403);
 
-  if (!sala.iniciada) {
-    // Antes de iniciar: lo sacamos del array y liberamos el asiento.
-    estado.chat.push({
-      id: crypto.randomUUID().slice(0, 8),
-      jugadorId: jugador.id,
-      texto: `${jugador.nombre} se fue de la mesa`,
-      ts: Date.now(),
-      evento: "sistema"
-    });
-    estado.jugadores = estado.jugadores.filter((j) => j.id !== jugador.id);
-  } else {
-    // En curso: lo convertimos a bot para que el motor pueda seguir
-    // jugando sin esperarlo. Así el resto no queda colgado y el
-    // jugador siempre puede volver (re-unirse).
-    jugador.conectado = false;
-    jugador.esBot = true;
-    estado.chat.push({
-      id: crypto.randomUUID().slice(0, 8),
-      jugadorId: jugador.id,
-      texto: `${jugador.nombre} se desconectó — pasa a bot`,
-      ts: Date.now(),
-      evento: "sistema"
-    });
-  }
+  // Lo dejamos siempre en jugadores marcado como bot/desconectado.
+  // Beneficios:
+  //   - Si la sala todavía no inició y vuelve: sala-reconectar lo flippea
+  //     a humano de nuevo y mantiene el mismo asiento.
+  //   - Si la sala arranca sin él: empieza como bot, también puede
+  //     retomar control con reconectar (mantenemos su id).
+  //   - Si el creador quiere reemplazarlo: usar quitarBot/agregarBot.
+  jugador.conectado = false;
+  jugador.esBot = true;
+  estado.chat.push({
+    id: crypto.randomUUID().slice(0, 8),
+    jugadorId: jugador.id,
+    texto: sala.iniciada
+      ? `${jugador.nombre} se desconectó — pasa a bot`
+      : `${jugador.nombre} se fue de la mesa`,
+    ts: Date.now(),
+    evento: "sistema"
+  });
   if (estado.chat.length > 200) estado.chat.shift();
   estado.version = (estado.version || 0) + 1;
 
