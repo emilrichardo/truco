@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Accion, EstadoJuego } from "@/lib/truco/types";
 import { accionesLegales } from "@/lib/truco/motor";
 import { CartaEspanola } from "./CartaEspanola";
@@ -412,8 +413,23 @@ export function PanelAcciones({
         debeResponderEnvido={debeResponderEnvido}
         debeResponderTruco={debeResponderTruco}
         estadoVersion={estado.version}
-        onAbrirMisCantos={miSlug ? () => setMostrarMisCantos(true) : undefined}
       />
+
+      {/* Botón mic flotante en la esquina sup. derecha del panel — fuera
+       *  de la fila de acciones para no empujar otros botones a una
+       *  segunda línea cuando hay muchas opciones (truco + envido +
+       *  responder + mazo). */}
+      {miSlug && (
+        <button
+          type="button"
+          onClick={() => setMostrarMisCantos(true)}
+          title="Grabar mis cantos"
+          aria-label="Grabar mis cantos"
+          className="absolute top-1 right-1 w-7 h-7 rounded-full bg-surface/80 border border-border hover:border-dorado/60 flex items-center justify-center text-text-dim hover:text-dorado transition"
+        >
+          <IconoMicrofono />
+        </button>
+      )}
 
       {legales.length === 0 && estado.ganadorPartida === null && (
         <div className="text-center text-text-dim text-xs py-1 italic">
@@ -421,12 +437,17 @@ export function PanelAcciones({
         </div>
       )}
 
-      {mostrarMisCantos && miSlug && (
-        <MisCantos
-          miSlug={miSlug}
-          onCerrar={() => setMostrarMisCantos(false)}
-        />
-      )}
+      {/* MisCantos modal: usamos portal a document.body así escapa al
+       *  stacking context z-[600] de este panel — sino el modal queda
+       *  por debajo de los avatares (z-[650]). */}
+      {mostrarMisCantos && miSlug && typeof window !== "undefined" &&
+        createPortal(
+          <MisCantos
+            miSlug={miSlug}
+            onCerrar={() => setMostrarMisCantos(false)}
+          />,
+          document.body
+        )}
     </div>
   );
 }
@@ -448,8 +469,7 @@ function BotoneraMenu({
   puedo,
   debeResponderEnvido,
   debeResponderTruco,
-  estadoVersion,
-  onAbrirMisCantos
+  estadoVersion
 }: {
   miId: string;
   miSlug?: string;
@@ -461,7 +481,6 @@ function BotoneraMenu({
   /** Versión del estado — sirve para liberar el debounce de cantos
    *  cuando llega un cambio del server, no por timeout fijo. */
   estadoVersion: number;
-  onAbrirMisCantos?: () => void;
 }) {
   const [menuAbierto, setMenuAbierto] = useState<"envido" | "truco" | null>(
     null
@@ -637,18 +656,6 @@ function BotoneraMenu({
       {!debeResponderEnvido && !debeResponderTruco && puedo("ir_al_mazo") && (
         <button className="btn" onClick={() => disparar("ir_al_mazo")}>
           <IconoMazo /> Mazo
-        </button>
-      )}
-
-      {onAbrirMisCantos && (
-        <button
-          type="button"
-          className="btn !px-2"
-          onClick={onAbrirMisCantos}
-          title="Grabar mis cantos"
-          aria-label="Grabar mis cantos"
-        >
-          <IconoMicrofono />
         </button>
       )}
     </div>
