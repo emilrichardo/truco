@@ -516,17 +516,29 @@ function chequearFinPartida(estado: EstadoJuego): boolean {
 
 function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
   const mano = estado.manoActual!;
-  // Solo se va al mazo en tu turno. Sino un bot mal-dispachado (o un
-  // jugador haciendo trampa) podría cerrar la mano accidentalmente
-  // mientras el rival está respondiendo a un canto. Esto matchea la
-  // regla en accionesLegales — ir_al_mazo solo se ofrece en turno.
-  if (mano.turnoJugadorId !== jugador.id) {
+  // Permitido en tu turno O cuando tu equipo está respondiendo a un
+  // envido/truco pendiente (es la forma "concedo todo y termino la
+  // mano"). Sino un bot mal-dispachado podría cerrar la mano fuera
+  // de contexto.
+  const debeResponderEnvido =
+    !!mano.envidoCantoActivo &&
+    mano.envidoCantoActivo.equipoQueDebeResponder === jugador.equipo;
+  const debeResponderTruco =
+    !!mano.trucoCantoActivo &&
+    mano.trucoCantoActivo.equipoQueDebeResponder === jugador.equipo;
+  if (
+    mano.turnoJugadorId !== jugador.id &&
+    !debeResponderEnvido &&
+    !debeResponderTruco
+  ) {
     return { ok: false, error: "Solo te podés ir al mazo en tu turno.", estado };
   }
-  // Si hay envido pendiente y se va al mazo, perdés envido (1) + truco (valor actual).
+
   const eq = jugador.equipo;
   const otro = equipoContrario(eq);
   anuncio(estado, jugador.id, fraseAleatoria("ir_al_mazo"), "respuesta");
+
+  // Envido pendiente al mazo: regala 1 al rival como envido no querido.
   if (mano.envidoCantoActivo) {
     darPuntos(estado, otro, 1);
     mano.puntosOtorgados.push({
@@ -534,8 +546,32 @@ function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
       puntos: 1,
       motivo: "Envido no querido (mazo)"
     });
+    mano.envidoCantoActivo = null;
+    mano.envidoResuelto = true;
   }
-  cerrarMano(estado, otro, "Se fue al mazo");
+
+  // Truco pendiente al mazo: regala el valor anterior al equipo que
+  // cantó (igual que un "no quiero"). Sin esto, cerrarMano cobraría
+  // valorMano=1 (el default) que NO refleja la apuesta del canto.
+  let ganador: Equipo = otro;
+  let motivo = "Se fue al mazo";
+  if (mano.trucoCantoActivo) {
+    const canto = mano.trucoCantoActivo;
+    const valor =
+      canto.nivel === "truco" ? 1 : canto.nivel === "retruco" ? 2 : 3;
+    darPuntos(estado, canto.equipoQueCanto, valor);
+    mano.puntosOtorgados.push({
+      equipo: canto.equipoQueCanto,
+      puntos: valor,
+      motivo: `${cantoTexto(canto.nivel)} no querido (mazo) (+${valor})`
+    });
+    mano.valorMano = 0;
+    mano.trucoCantoActivo = null;
+    ganador = canto.equipoQueCanto;
+    motivo = `${cantoTexto(canto.nivel)} no querido (mazo)`;
+  }
+
+  cerrarMano(estado, ganador, motivo);
   return { ok: true, estado };
 }
 
@@ -1204,7 +1240,7 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
   const out: Accion["tipo"][] = [];
   // Responder envido o truco si es su equipo el que debe responder
   if (mano.envidoCantoActivo && j.equipo === mano.envidoCantoActivo.equipoQueDebeResponder) {
-    out.push("responder_quiero", "responder_no_quiero");
+    out.push("responder_quiero", "responder_no_quiero", "ir_al_mazo");
     const cadena = mano.envidoCantoActivo.cadena;
     const ultimo = cadena[cadena.length - 1];
     // Envido sólo se puede repetir hasta 2 veces, y sólo si el último
@@ -1218,7 +1254,7 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
     return out;
   }
   if (mano.trucoCantoActivo && j.equipo === mano.trucoCantoActivo.equipoQueDebeResponder) {
-    out.push("responder_quiero", "responder_no_quiero");
+    out.push("responder_quiero", "responder_no_quiero", "ir_al_mazo");
     const n = mano.trucoCantoActivo.nivel;
     if (n === "truco") out.push("cantar_retruco");
     else if (n === "retruco") out.push("cantar_vale4");
