@@ -1,4 +1,5 @@
 "use client";
+import type { CSSProperties } from "react";
 import clsx from "clsx";
 import { urlPersonaje } from "@/data/jugadores";
 import type { CategoriaEvento, Jugador } from "@/lib/truco/types";
@@ -24,7 +25,9 @@ export function JugadorPanel({
   ocultarNombre,
   alineacionBurbujaH,
   onAvatarClick,
-  avatarTitle
+  avatarTitle,
+  turnoTimerKey,
+  turnoTimerMs
 }: {
   jugador: Jugador;
   esTurno: boolean;
@@ -62,6 +65,11 @@ export function JugadorPanel({
   /** Click directo sobre la foto del jugador. */
   onAvatarClick?: () => void;
   avatarTitle?: string;
+  /** Si está presente, dibuja un anillo de cuenta regresiva alrededor
+   *  del avatar (de 0 a 360°) en `turnoTimerMs` ms. La key fuerza el
+   *  remount del SVG así la animación reinicia al cambiar de turno. */
+  turnoTimerKey?: string | null;
+  turnoTimerMs?: number;
 }) {
   // Avatares rectangulares (aspect 3/4) para usar mejor el espacio en mobile.
   const tam = compacto
@@ -186,6 +194,38 @@ export function JugadorPanel({
           >
             {hablandoReaccion}
           </span>
+        )}
+        {turnoTimerKey && (
+          <svg
+            key={turnoTimerKey}
+            aria-hidden
+            // Cubre exactamente el avatar (-inset-0.5 para que el trazo
+            // no se corte con el border del avatar). pathLength=100
+            // normaliza el perímetro así dasharray=100 + animación de
+            // dashoffset 100→0 dibuja el rectángulo entero.
+            className="absolute -inset-0.5 w-[calc(100%+4px)] h-[calc(100%+4px)] pointer-events-none turno-ring-svg overflow-visible"
+            viewBox="0 0 100 130"
+            preserveAspectRatio="none"
+            style={
+              {
+                "--turno-duracion": `${(turnoTimerMs ?? 30000) / 1000}s`
+              } as CSSProperties
+            }
+          >
+            <rect
+              x="2"
+              y="2"
+              width="96"
+              height="126"
+              rx="4"
+              ry="4"
+              fill="none"
+              stroke="rgba(217,164,65,0.9)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              pathLength={100}
+            />
+          </svg>
         )}
       </div>
       {!ocultarNombre && nombrePill}

@@ -16,11 +16,19 @@ import type { EstadoJuego, MensajeChat } from "@/lib/truco/types";
 export function MiAvatarBR({
   estado,
   miId,
-  enviarChat
+  enviarChat,
+  turnoActorId,
+  turnoTimerKey,
+  turnoTimerMs
 }: {
   estado: EstadoJuego;
   miId: string;
   enviarChat?: (m: Partial<MensajeChat>) => void;
+  /** ID del jugador humano que está siendo cronometrado (si soy yo,
+   *  pinto el ring de cuenta regresiva en mi avatar). */
+  turnoActorId?: string | null;
+  turnoTimerKey?: string | null;
+  turnoTimerMs?: number;
 }) {
   const {
     hablandoId,
@@ -35,6 +43,7 @@ export function MiAvatarBR({
   const esTurno = estado.manoActual?.turnoJugadorId === me.id;
   const esMano = estado.manoActual?.manoJugadorId === me.id;
   const yoHablo = hablandoId === me.id;
+  const mostrarTimer = turnoActorId === me.id;
   // El avatar y el botón de emojis viven cada uno en su propio
   // contenedor absolute, NO anidados — así el menú flotante de emojis
   // puede crecer fuera del bounding box del avatar sin clipping ni
@@ -56,6 +65,8 @@ export function MiAvatarBR({
           ladoBurbuja="arriba"
           ladoNombre="derecha"
           ocultarNombre
+          turnoTimerKey={mostrarTimer ? turnoTimerKey : null}
+          turnoTimerMs={turnoTimerMs}
         />
       </div>
       {/* Botón de emojis: posicionado al borde inferior derecho del

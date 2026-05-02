@@ -14,6 +14,7 @@ import {
   limpiarSalaActiva,
   marcarBotOnline,
   marcarSalaActiva,
+  reconectarSalaOnline,
   revanchaOnline,
   unirseSalaOnline,
   useSalaOnline
@@ -353,6 +354,43 @@ export default function SalaPage() {
   // idempotente, así que si dos clientes lo disparan a la vez no pasa
   // nada. Una vez que el target es bot, el bot dispatcher lo juega.
   const TURNO_HUMANO_MS = 30000;
+
+  // ID del actor humano en turno (para dibujar el ring de cuenta
+  // regresiva en su avatar). Se calcula del estado actual y cambia
+  // cuando cambia el turno.
+  const turnoHumanoActorId = useMemo<string | null>(() => {
+    if (!estado?.iniciada || estado.ganadorPartida !== null) return null;
+    const mano = estado.manoActual;
+    if (!mano || mano.fase === "terminada") return null;
+    if (mano.envidoCantoActivo) {
+      const eq = mano.envidoCantoActivo.equipoQueDebeResponder;
+      return (
+        estado.jugadores.find((j) => j.equipo === eq && !j.esBot)?.id ?? null
+      );
+    }
+    if (mano.trucoCantoActivo) {
+      const eq = mano.trucoCantoActivo.equipoQueDebeResponder;
+      return (
+        estado.jugadores.find((j) => j.equipo === eq && !j.esBot)?.id ?? null
+      );
+    }
+    const turnoJ = estado.jugadores.find((j) => j.id === mano.turnoJugadorId);
+    return turnoJ && !turnoJ.esBot ? turnoJ.id : null;
+  }, [estado]);
+  // Epoch que incrementa cada vez que el actor humano cambia. La key
+  // del ring usa este epoch para reiniciar la animación SÓLO al cambio
+  // de turno (no en cada mensaje de chat ni cada update de estado).
+  const prevActorRef = useRef<string | null>(null);
+  const [turnoEpoch, setTurnoEpoch] = useState(0);
+  useEffect(() => {
+    if (turnoHumanoActorId !== prevActorRef.current) {
+      prevActorRef.current = turnoHumanoActorId;
+      setTurnoEpoch((e) => e + 1);
+    }
+  }, [turnoHumanoActorId]);
+  const turnoTimerKey = turnoHumanoActorId
+    ? `${turnoHumanoActorId}:${turnoEpoch}`
+    : null;
   useEffect(() => {
     if (!estado || !miId || !estado.iniciada) return;
     if (estado.ganadorPartida !== null) return;
@@ -441,6 +479,22 @@ export default function SalaPage() {
   useEffect(() => {
     if (miId) marcarSalaActiva(salaId);
   }, [miId, salaId]);
+
+  // Reconectar: si vuelvo a la sala con una sesión guardada y mi
+  // jugador está marcado como bot (porque me desconecté o agotó mi
+  // turno), pido al server que me devuelva el control.
+  const reconexionIntentadaRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!estado || !miId) return;
+    if (reconexionIntentadaRef.current === miId) return;
+    const yo = estado.jugadores.find((j) => j.id === miId);
+    if (!yo) return;
+    if (!yo.esBot && yo.conectado) return;
+    reconexionIntentadaRef.current = miId;
+    reconectarSalaOnline(salaId, miId).catch((e) =>
+      console.warn("[reconectar] error", e)
+    );
+  }, [estado, miId, salaId]);
   useEffect(() => {
     if (estado?.ganadorPartida !== null && estado?.ganadorPartida !== undefined) {
       limpiarSalaActiva(salaId);
@@ -913,11 +967,25 @@ export default function SalaPage() {
           {/* Columna principal */}
           <div className="flex-1 flex flex-col overflow-hidden relative">
             <div className="flex-1 relative min-h-0">
-              <Mesa estado={estado} miId={miId!} enviarChat={enviarChat} />
+              <Mesa
+                estado={estado}
+                miId={miId!}
+                enviarChat={enviarChat}
+                turnoActorId={turnoHumanoActorId}
+                turnoTimerKey={turnoTimerKey}
+                turnoTimerMs={TURNO_HUMANO_MS}
+              />
               {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
                * para que quede arriba de mi mano de cartas. Lleva la
                * BarraEmociones adentro como badge en su esquina. */}
-              <MiAvatarBR estado={estado} miId={miId!} enviarChat={enviarChat} />
+              <MiAvatarBR
+                estado={estado}
+                miId={miId!}
+                enviarChat={enviarChat}
+                turnoActorId={turnoHumanoActorId}
+                turnoTimerKey={turnoTimerKey}
+                turnoTimerMs={TURNO_HUMANO_MS}
+              />
               {/* Toast efímero del envido cuando se resuelve. */}
               <ResultadoEnvido estado={estado} miId={miId!} />
               {/* Banner grande del cierre de mano (puntos ganados/perdidos). */}

@@ -281,6 +281,19 @@ export async function marcarBotOnline(
   });
 }
 
+/** Devuelve el control al jugador (flip esBot=false, conectado=true)
+ *  cuando vuelve a la sala después de una desconexión o de haber sido
+ *  marcado bot por inactividad. */
+export async function reconectarSalaOnline(
+  salaId: string,
+  jugadorId: string
+): Promise<SalaResp> {
+  return invocar("sala-reconectar", {
+    sala_id: salaId,
+    jugador_id: jugadorId
+  });
+}
+
 export async function enviarAccionOnline(
   salaId: string,
   jugadorId: string,

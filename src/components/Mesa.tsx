@@ -38,7 +38,10 @@ type JugadaEnMesa = {
 export function Mesa({
   estado,
   miId,
-  enviarChat
+  enviarChat,
+  turnoActorId,
+  turnoTimerKey,
+  turnoTimerMs
 }: {
   estado: EstadoJuego;
   miId: string;
@@ -48,6 +51,9 @@ export function Mesa({
     sticker?: string;
     destinatarioId?: string;
   }) => void;
+  turnoActorId?: string | null;
+  turnoTimerKey?: string | null;
+  turnoTimerMs?: number;
 }) {
   // Toggle estable para "espiar" las cartas del compañero (solo en 2v2).
   const [verCompañero, setVerCompañero] = useState(false);
@@ -247,6 +253,8 @@ export function Mesa({
             hablandoEvento={esQuienHabla ? hablandoEvento : null}
             hablandoSticker={esQuienHabla ? hablandoSticker : null}
             hablandoReaccion={esQuienHabla ? hablandoReaccion : null}
+            turnoTimerKey={turnoActorId === j.id ? turnoTimerKey ?? null : null}
+            turnoTimerMs={turnoTimerMs}
           />
         );
       })}
@@ -299,7 +307,9 @@ function PuestoJugador({
   hablandoTexto,
   hablandoEvento,
   hablandoSticker,
-  hablandoReaccion
+  hablandoReaccion,
+  turnoTimerKey,
+  turnoTimerMs
 }: {
   pos: Posicion;
   jugador: Jugador;
@@ -319,6 +329,8 @@ function PuestoJugador({
   hablandoEvento?: import("@/lib/truco/types").CategoriaEvento | null;
   hablandoSticker?: string | null;
   hablandoReaccion?: string | null;
+  turnoTimerKey?: string | null;
+  turnoTimerMs?: number;
 }) {
   const cartasOcultas = !esCompañero || !mostrarCompañero;
   const enLadoIzquierdo =
@@ -387,6 +399,8 @@ function PuestoJugador({
             ? `Mandarle una seña a ${jugador.nombre}`
             : undefined
         }
+        turnoTimerKey={turnoTimerKey}
+        turnoTimerMs={turnoTimerMs}
       />
       {!esYo && cartasEnMano.length > 0 && (
         <ManoOculta
