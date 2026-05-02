@@ -178,7 +178,10 @@ export function JugadorPanel({
           <span
             key={hablandoKey || ""}
             aria-hidden
-            className="absolute -top-3 left-1/2 -translate-x-1/2 text-3xl pointer-events-none reaccion-pop"
+            // z-[700] queda por encima de las cartas del PanelAcciones
+            // (z-[600]) y de las cartas tiradas en mesa (z-100..314).
+            // Sin esto el emoji aparecía DETRÁS de las cartas.
+            className="absolute -top-3 left-1/2 -translate-x-1/2 text-3xl pointer-events-none reaccion-pop z-[700]"
             style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.6))" }}
           >
             {hablandoReaccion}

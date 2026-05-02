@@ -41,7 +41,7 @@ export function MiAvatarBR({
   // colapso de ancho.
   return (
     <>
-      <div className="absolute bottom-4 left-4 z-[500] pointer-events-none">
+      <div className="absolute bottom-4 left-4 z-[650] pointer-events-none">
         <JugadorPanel
           jugador={me}
           esTurno={!!esTurno}
@@ -63,7 +63,7 @@ export function MiAvatarBR({
        *  left-4). Lo dejamos justo afuera del avatar a la derecha, con
        *  z-[510] por encima de él. */}
       {enviarChat && (
-        <div className="absolute bottom-3 left-[6.5rem] sm:left-[7.5rem] z-[510]">
+        <div className="absolute bottom-3 left-[6.5rem] sm:left-[7.5rem] z-[660]">
           <BarraEmociones enviarChat={enviarChat} />
         </div>
       )}

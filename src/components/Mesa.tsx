@@ -352,12 +352,14 @@ function PuestoJugador({
   const direccionFlex = enLadoInferior ? "flex-col-reverse" : "flex-col";
 
   return (
-    // z-[500] para que el puesto (avatar + burbuja) quede por encima de
-    // las cartas tiradas. Las cartas usan zIndex inline 100..314 con stacking
-    // context propio, así que un z-20 dejaba el avatar atrás del mazo.
+    // z-[650] para que el puesto (avatar + burbuja + reacciones) quede
+    // por encima de las cartas tiradas (z-100..314) y también de las
+    // cartas del PanelAcciones (z-[600]). Antes a z-500 las reacciones
+    // de emoji pasaban por debajo de las cartas porque el span de la
+    // reacción está dentro del stacking context del puesto.
     <div
       className={clsx(
-        "absolute z-[500] flex gap-1",
+        "absolute z-[650] flex gap-1",
         direccionFlex,
         alineacion,
         clasePosicionPuesto(pos)
