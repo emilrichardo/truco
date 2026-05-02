@@ -483,18 +483,34 @@ export default function SalaPage() {
   // Reconectar: si vuelvo a la sala con una sesión guardada y mi
   // jugador está marcado como bot (porque me desconecté o agotó mi
   // turno), pido al server que me devuelva el control.
-  const reconexionIntentadaRef = useRef<string | null>(null);
   useEffect(() => {
     if (!estado || !miId) return;
-    if (reconexionIntentadaRef.current === miId) return;
     const yo = estado.jugadores.find((j) => j.id === miId);
     if (!yo) return;
     if (!yo.esBot && yo.conectado) return;
-    reconexionIntentadaRef.current = miId;
     reconectarSalaOnline(salaId, miId).catch((e) =>
       console.warn("[reconectar] error", e)
     );
   }, [estado, miId, salaId]);
+
+  // Presence ping: mientras tengo la pestaña abierta, cada 15s avisamos
+  // al server que sigo acá. La function es idempotente — si ya estoy
+  // marcado como humano conectado no hace nada. Esto cubre el caso
+  // donde la realtime se atrasa en avisar a otros clientes que un
+  // jugador volvió, dejando su avatar gris y bloqueando consultas.
+  // También dispara al volver el foco a la pestaña.
+  useEffect(() => {
+    if (!miId || !estado?.iniciada || estado.ganadorPartida !== null) return;
+    const ping = () => {
+      reconectarSalaOnline(salaId, miId).catch(() => {});
+    };
+    const interval = window.setInterval(ping, 15000);
+    window.addEventListener("focus", ping);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", ping);
+    };
+  }, [miId, salaId, estado?.iniciada, estado?.ganadorPartida]);
   useEffect(() => {
     if (estado?.ganadorPartida !== null && estado?.ganadorPartida !== undefined) {
       limpiarSalaActiva(salaId);

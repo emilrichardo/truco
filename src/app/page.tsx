@@ -184,37 +184,36 @@ export default function HomePage() {
 
       {/* Salas públicas: listado de partidas abiertas marcadas como
        *  "públicas" por sus creadores. Cualquiera puede unirse sin
-       *  compartirse el link. */}
-      <section className="mb-6">
-        <div className="label-slim mb-2 flex items-center gap-2">
-          <span>Salas abiertas</span>
-          {!cargandoSalas && (
-            <span className="text-text-dim/60 text-[10px] normal-case tracking-normal">
-              ({salasPublicas.length})
-            </span>
-          )}
-        </div>
-        {cargandoSalas ? (
-          <div className="card p-3 text-center text-text-dim text-xs italic">
-            Buscando salas abiertas…
+       *  compartirse el link. Sólo mostramos la sección si hay algo
+       *  útil que renderizar (loading, error o salas) — si está vacía
+       *  y sin error, no la mostramos para no ocupar espacio en vano. */}
+      {(cargandoSalas || errorSalas || salasPublicas.length > 0) && (
+        <section className="mb-6">
+          <div className="label-slim mb-2 flex items-center gap-2">
+            <span>Salas abiertas</span>
+            {!cargandoSalas && salasPublicas.length > 0 && (
+              <span className="text-text-dim/60 text-[10px] normal-case tracking-normal">
+                ({salasPublicas.length})
+              </span>
+            )}
           </div>
-        ) : errorSalas ? (
-          <div className="card p-3 border-l-4 border-l-rojo-rival text-text-dim text-xs">
-            <div className="text-rojo-rival font-bold text-[11px] mb-1">
-              No se pudieron cargar las salas
+          {cargandoSalas ? (
+            <div className="card p-3 text-center text-text-dim text-xs italic">
+              Buscando salas abiertas…
             </div>
-            <div className="break-words">{errorSalas}</div>
-            <div className="mt-1 text-text-dim/70 text-[10px]">
-              (chequeá deploy de las edge functions de Supabase)
+          ) : errorSalas ? (
+            <div className="card p-3 border-l-4 border-l-rojo-rival text-text-dim text-xs">
+              <div className="text-rojo-rival font-bold text-[11px] mb-1">
+                No se pudieron cargar las salas
+              </div>
+              <div className="break-words">{errorSalas}</div>
+              <div className="mt-1 text-text-dim/70 text-[10px]">
+                (chequeá deploy de las edge functions de Supabase)
+              </div>
             </div>
-          </div>
-        ) : salasPublicas.length === 0 ? (
-          <div className="card p-3 text-center text-text-dim text-xs italic">
-            Todavía no hay salas abiertas. Creá una y marcala como pública.
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {salasPublicas.map((s) => {
+          ) : (
+            <div className="space-y-2">
+              {salasPublicas.map((s) => {
               const llena = s.jugadores >= s.cupos;
               return (
                 <Link
@@ -254,9 +253,10 @@ export default function HomePage() {
                 </Link>
               );
             })}
-          </div>
-        )}
-      </section>
+            </div>
+          )}
+        </section>
+      )}
 
       <footer className="text-center mt-20 sm:mt-24 pt-6 border-t border-border/40 space-y-2">
         <div className="flex items-center justify-center gap-4 flex-wrap">
