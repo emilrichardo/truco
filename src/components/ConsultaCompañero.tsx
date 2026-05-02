@@ -61,6 +61,18 @@ export function ConsultaCompañero({
           aria-hidden
           className="absolute -top-2 right-6 w-3.5 h-3.5 rotate-45 bg-carbon border-t-2 border-l-2 border-dorado/60"
         />
+        {/* Cerrar: equivale a "Pasar" — desactiva la consulta y deja
+         *  que el bot decida solo. Sin esto el panel se quedaba pegado
+         *  hasta elegir alguna opción. */}
+        <button
+          type="button"
+          onClick={() => onResolver("pasar")}
+          aria-label="Cerrar"
+          title="Cerrar (deja que el bot decida)"
+          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-carbon border-2 border-dorado/60 text-crema text-xs flex items-center justify-center shadow-md hover:bg-azul-criollo/30 transition"
+        >
+          ✕
+        </button>
         <div className="text-center mb-2">
           <div className="label-slim acento-azul">
             {bot.nombre} te pregunta

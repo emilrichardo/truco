@@ -36,15 +36,16 @@ export function BarraEmociones({ enviarChat }: Props) {
     setAbierto(false);
   };
 
-  // Posición: pegado al borde inferior-derecho del avatar local (que
-  // vive en bottom-4 left-4 con ancho w-20 sm:w-24). El botón queda al
-  // alcance del pulgar pero sin tapar la mano de cartas. El menú se
-  // despliega hacia arriba y a la derecha (no choca con el borde
-  // izquierdo de la pantalla).
+  // Posición: justo a la derecha del avatar local (que vive en bottom-4
+  // left-4 con ancho w-20 sm:w-24, ~84/100px). Dejamos un gap de ~12px
+  // para que no se pisen visualmente. El menú se despliega hacia arriba
+  // y a la derecha (no choca con el borde izquierdo de la pantalla).
+  // z-[510] queda por encima del avatar (z-[500]) por las dudas de que
+  // alguna vez se solapen.
   return (
     <div
       ref={ref}
-      className="absolute bottom-3 left-[5rem] sm:left-[6.5rem] z-[490]"
+      className="absolute bottom-4 left-[7rem] sm:left-[8rem] z-[510]"
     >
       {abierto && (
         <div className="absolute left-0 bottom-12 grid grid-cols-4 gap-1 bg-carbon/95 backdrop-blur-sm border border-azul-criollo/50 rounded-xl p-1.5 shadow-2xl">
