@@ -619,7 +619,10 @@ body {
  * acá ponemos `position: relative` lo sobrescribe (mi rule viene después en
  * el CSS), el elemento queda en flujo normal sin tamaño y la mesa no se ve. */
 .tapete {
-  background-color: var(--madera);
+  /* Color de fondo SÓLIDO mientras carga la textura — sin esto se veía
+   * el marrón de --madera durante un instante. Coincide mejor con el
+   * resto de la UI dark. */
+  background-color: #080D0F;
   background-image: url("/texturas/textura-mesa.png");
   background-size: cover;
   background-position: center;
