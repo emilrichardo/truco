@@ -34,7 +34,12 @@ export type DecisionConsulta =
   | "juga"
   | "veni"
   | "tapar"
+  /** El bot pasa: tira todas sus cartas tapadas, queda fuera del
+   *  resto de la mano y el compañero (humano) sigue solo. */
   | "pasar"
+  /** Cierra la consulta sin decidir explícitamente — el bot resuelve
+   *  con su IA normal. (Usado por el botón ✕ del panel.) */
+  | "decidir_solo"
   /** El humano eligió una carta específica de la mano del bot. El
    *  cartaId viaja como segundo argumento en accionDesdeConsulta /
    *  onResolver. */
@@ -160,7 +165,9 @@ export function deberiaConsultar(
  *  - "envido"/"real_envido"/"falta_envido": cantar esa apuesta.
  *  - "juga": carta más alta del bot.
  *  - "veni": carta más baja.
- *  - "pasar": deja que la IA del bot decida.
+ *  - "pasar": el bot tira todas sus cartas tapadas y queda fuera de la
+ *    mano (compañero sigue solo).
+ *  - "decidir_solo": deja que la IA del bot decida (cierre del panel).
  *  - "confirmar_truco" / "rechazar_truco": llegan junto a una consulta de
  *    tipo "truco" — confirmar canta el nivel propuesto, rechazar fuerza
  *    al bot a jugar carta (la más alta — "matar" la baza).
@@ -183,6 +190,9 @@ export function accionDesdeConsulta(
     };
   }
   if (decision === "pasar") {
+    return { tipo: "pasar_mano", jugadorId: botId };
+  }
+  if (decision === "decidir_solo") {
     return decidirAccionBot(estado, botId);
   }
   if (decision === "confirmar_truco") {

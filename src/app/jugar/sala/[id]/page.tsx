@@ -42,7 +42,6 @@ import { ConsultaCompañero } from "@/components/ConsultaCompañero";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
 import { AlertaPuntos } from "@/components/AlertaPuntos";
-import { BarraEmociones } from "@/components/BarraEmociones";
 
 /** Aplica una jugada de carta de forma optimista al estado local —
  *  agrega la carta a la baza actual SIN sacarla todavía de la mano
@@ -789,8 +788,9 @@ export default function SalaPage() {
             <div className="flex-1 relative min-h-0">
               <Mesa estado={estado} miId={miId!} enviarChat={enviarChat} />
               {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
-               * para que quede arriba de mi mano de cartas. */}
-              <MiAvatarBR estado={estado} miId={miId!} />
+               * para que quede arriba de mi mano de cartas. Lleva la
+               * BarraEmociones adentro como badge en su esquina. */}
+              <MiAvatarBR estado={estado} miId={miId!} enviarChat={enviarChat} />
               {/* Toast efímero del envido cuando se resuelve. */}
               <ResultadoEnvido estado={estado} miId={miId!} />
               {/* Banner grande del cierre de mano (puntos ganados/perdidos). */}
@@ -812,8 +812,6 @@ export default function SalaPage() {
                 onAbrir={abrirChat}
                 oculto={chatAbierto}
               />
-              {/* Reacciones rápidas (😊) — visibles para todos. */}
-              <BarraEmociones enviarChat={enviarChat} />
             </div>
             {meEnCurso && (
               <PanelAcciones

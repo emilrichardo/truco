@@ -97,6 +97,10 @@ export interface Mano {
   valorMano: number;
   /** Si alguien se fue al mazo (perdió la mano). */
   irAlMazoEquipo: Equipo | null;
+  /** Jugadores que pasaron en esta mano (tiraron todas sus cartas
+   *  tapadas y dejaron al compañero solo). El motor saltea su turno
+   *  en bazas siguientes y no requiere su jugada para cerrar baza. */
+  jugadoresPasados: string[];
   fase: FaseMano;
   ganadorMano: Equipo | null;
   puntosOtorgados: { equipo: Equipo; puntos: number; motivo: string }[];
@@ -145,6 +149,11 @@ export type AccionTipo =
   | "cantar_vale4"
   | "ir_al_mazo"
   | "mazo"
+  /** El jugador "pasa" — tira todas sus cartas restantes tapadas y
+   *  queda fuera de esta mano. Su compañero (si existe) sigue
+   *  jugando solo. La mano no termina por esto: termina cuando un
+   *  equipo gana 2 bazas o el otro equipo se va al mazo. */
+  | "pasar_mano"
   // Despacha el reparto de la mano siguiente cuando la actual quedó en
   // fase "terminada". El cliente lo manda tras el delay del resumen.
   | "iniciar_prox_mano";

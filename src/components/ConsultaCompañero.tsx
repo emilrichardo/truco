@@ -31,6 +31,7 @@ export function ConsultaCompañero({
       | "veni"
       | "tapar"
       | "pasar"
+      | "decidir_solo"
       | "carta_especifica"
       | "confirmar_truco"
       | "rechazar_truco",
@@ -61,12 +62,12 @@ export function ConsultaCompañero({
           aria-hidden
           className="absolute -top-2 right-6 w-3.5 h-3.5 rotate-45 bg-carbon border-t-2 border-l-2 border-dorado/60"
         />
-        {/* Cerrar: equivale a "Pasar" — desactiva la consulta y deja
-         *  que el bot decida solo. Sin esto el panel se quedaba pegado
-         *  hasta elegir alguna opción. */}
+        {/* Cerrar: deja que el bot decida solo (no pasa, no se va al
+         *  mazo — sólo cierra el panel y la IA del bot toma su jugada
+         *  con su lógica normal). */}
         <button
           type="button"
-          onClick={() => onResolver("pasar")}
+          onClick={() => onResolver("decidir_solo")}
           aria-label="Cerrar"
           title="Cerrar (deja que el bot decida)"
           className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-carbon border-2 border-dorado/60 text-crema text-xs flex items-center justify-center shadow-md hover:bg-azul-criollo/30 transition"
@@ -215,9 +216,9 @@ export function ConsultaCompañero({
                 type="button"
                 onClick={() => onResolver("pasar")}
                 className="btn btn-ghost !text-[10px] !px-1 !py-1.5 !min-h-0"
-                title="Dejá que el bot decida solo"
+                title="Tira todas sus cartas tapadas y queda fuera de esta mano (vos seguís solo)"
               >
-                ⏭ Pasar
+                🙈 Pasar
               </button>
             </div>
             <CartasDelBot

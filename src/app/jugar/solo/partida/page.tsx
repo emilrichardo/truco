@@ -192,7 +192,7 @@ function PartidaSoloInterno() {
                 onResolver={resolverConsulta}
               />
             )}
-            <MiAvatarBR estado={estado} miId={miId} />
+            <MiAvatarBR estado={estado} miId={miId} enviarChat={enviarChat} />
             <ChatFlotante
               estado={estado}
               miId={miId}

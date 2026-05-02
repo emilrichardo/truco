@@ -36,25 +36,19 @@ export function BarraEmociones({ enviarChat }: Props) {
     setAbierto(false);
   };
 
-  // Posición: justo a la derecha del avatar local (que vive en bottom-4
-  // left-4 con ancho w-20 sm:w-24, ~84/100px). Dejamos un gap de ~12px
-  // para que no se pisen visualmente. El menú se despliega hacia arriba
-  // y a la derecha (no choca con el borde izquierdo de la pantalla).
-  // z-[510] queda por encima del avatar (z-[500]) por las dudas de que
-  // alguna vez se solapen.
+  // El componente padre (MiAvatarBR) se encarga del posicionamiento
+  // absoluto. Acá sólo manejamos el botón y el menú flotante (que se
+  // despliega desde el botón hacia arriba-derecha).
   return (
-    <div
-      ref={ref}
-      className="absolute bottom-4 left-[7rem] sm:left-[8rem] z-[510]"
-    >
+    <div ref={ref} className="relative z-[510]">
       {abierto && (
-        <div className="absolute left-0 bottom-12 grid grid-cols-4 gap-1 bg-carbon/95 backdrop-blur-sm border border-azul-criollo/50 rounded-xl p-1.5 shadow-2xl">
+        <div className="absolute left-0 bottom-11 grid grid-cols-4 gap-1.5 bg-carbon/95 backdrop-blur-sm border border-azul-criollo/50 rounded-xl p-2 shadow-2xl whitespace-nowrap">
           {ICONOS_EMOCIONES.map((icono) => (
             <button
               key={icono}
               type="button"
               onClick={() => elegir(icono)}
-              className="text-2xl active:scale-90 transition px-2 py-1 hover:bg-azul-criollo/20 rounded"
+              className="w-9 h-9 flex items-center justify-center text-xl active:scale-90 transition hover:bg-azul-criollo/20 rounded leading-none"
               title={`Reaccionar ${icono}`}
             >
               {icono}

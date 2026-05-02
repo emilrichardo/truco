@@ -159,6 +159,7 @@ function repartirNuevaMano(estado: EstadoJuego, manoJugadorId: string) {
     equipoConTruco: null,
     valorMano: 1,
     irAlMazoEquipo: null,
+    jugadoresPasados: [],
     fase: "jugando",
     ganadorMano: null,
     puntosOtorgados: []
@@ -220,6 +221,8 @@ export function aplicarAccion(estado: EstadoJuego, accion: Accion): ResultadoAcc
     case "ir_al_mazo":
     case "mazo":
       return irAlMazo(estado, jugador);
+    case "pasar_mano":
+      return pasarMano(estado, jugador);
     default:
       return { ok: false, error: "Acción desconocida.", estado };
   }
@@ -282,25 +285,17 @@ function jugarCarta(
     }
   }
 
-  // Si todos los jugadores tiraron en esta baza, resolverla.
-  if (baza.jugadas.length === estado.jugadores.length) {
+  // Si todos los jugadores activos tiraron en esta baza, resolverla.
+  if (bazaCerrable(estado, baza, mano)) {
     resolverBaza(estado, baza);
-    if (mano.fase !== "terminada") {
-      // Próxima baza o final de mano
-      if (mano.bazas.length < 3 && !mano.ganadorMano) {
-        mano.bazas.push({ jugadas: [], ganadorEquipo: null, pardada: false });
-        // Regla del truco: "el que mata es mano". Abre la próxima baza
-        // el jugador que ganó la anterior; si fue parda, abre el mismo
-        // que la abrió.
-        mano.turnoJugadorId = siguienteJugadorDespuesDeBaza(estado, baza);
-      }
+    // Después de resolver, ganadorMano queda seteado si la mano se cerró.
+    if (mano.bazas.length < 3 && !mano.ganadorMano) {
+      mano.bazas.push({ jugadas: [], ganadorEquipo: null, pardada: false });
+      mano.turnoJugadorId = siguienteJugadorDespuesDeBaza(estado, baza);
     }
   } else {
-    // Pasa el turno al siguiente.
-    mano.turnoJugadorId = jugadorPorAsiento(
-      estado,
-      siguienteAsiento(estado, jugador.asiento)
-    ).id;
+    // Pasa el turno al siguiente activo (saltea pasados).
+    mano.turnoJugadorId = siguienteJugadorActivo(estado, jugador.asiento).id;
   }
 
   estado.version++;
@@ -314,22 +309,58 @@ function valorEnBaza(j: { carta: Carta; tapada?: boolean }): number {
   return j.tapada ? -1 : jerarquia(j.carta);
 }
 
+/** Una baza está lista para resolver cuando todos los jugadores
+ *  activos jugaron una carta en ella. Los pasados que ya jugaron
+ *  cuentan; los pasados que ya no tienen turno se consideran fuera. */
+function bazaCerrable(
+  estado: EstadoJuego,
+  baza: Baza,
+  mano: Mano
+): boolean {
+  const pasados = mano.jugadoresPasados || [];
+  return estado.jugadores.every((j) => {
+    const jugoEnBaza = baza.jugadas.some((jj) => jj.jugadorId === j.id);
+    return jugoEnBaza || pasados.includes(j.id);
+  });
+}
+
+/** Próximo jugador en orden de turno saltando los pasados. */
+function siguienteJugadorActivo(
+  estado: EstadoJuego,
+  fromAsiento: number
+): Jugador {
+  const N = estado.jugadores.length;
+  const pasados = estado.manoActual?.jugadoresPasados || [];
+  for (let i = 1; i <= N; i++) {
+    const a = (fromAsiento + i) % N;
+    const j = jugadorPorAsiento(estado, a);
+    if (!pasados.includes(j.id)) return j;
+  }
+  return jugadorPorAsiento(estado, fromAsiento);
+}
+
 function siguienteJugadorDespuesDeBaza(estado: EstadoJuego, baza: Baza): string {
   // "El que mata es mano": si la baza tuvo ganador, abre la próxima el
   // jugador del equipo ganador que tiró la carta más alta. Si fue parda,
   // abre el mismo que abrió esta baza (si la parda anterior también fue
   // parda, esto se resuelve por recursión: el opener se mantiene).
+  const pasados = estado.manoActual?.jugadoresPasados || [];
   if (baza.ganadorEquipo !== null && !baza.pardada) {
     let mejor: { jugadorId: string; valor: number } | null = null;
     for (const j of baza.jugadas) {
       const jug = jugadorPorId(estado, j.jugadorId)!;
       if (jug.equipo !== baza.ganadorEquipo) continue;
+      if (pasados.includes(j.jugadorId)) continue;
       const v = valorEnBaza(j);
       if (!mejor || v > mejor.valor) {
         mejor = { jugadorId: j.jugadorId, valor: v };
       }
     }
     if (mejor) return mejor.jugadorId;
+  }
+  // Fallback: el primer jugador de la baza que siga activo.
+  for (const j of baza.jugadas) {
+    if (!pasados.includes(j.jugadorId)) return j.jugadorId;
   }
   return baza.jugadas[0].jugadorId;
 }
@@ -499,6 +530,67 @@ function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
     });
   }
   cerrarMano(estado, otro, "Se fue al mazo");
+  return { ok: true, estado };
+}
+
+// ============== Pasar mano (tirar cartas tapadas) ==============
+
+/** El jugador pasa: tira UNA carta tapada en la baza actual (si todavía
+ *  no jugó en ella) y descarta el resto. Queda fuera del resto de las
+ *  bazas — su compañero (si tiene) sigue jugando solo. La mano no
+ *  termina por esto: termina como siempre, cuando un equipo gana 2
+ *  bazas o el otro se va al mazo. Si todos los del equipo pasan, el
+ *  equipo no contribuye más jugadas y pierde por jerarquía. */
+function pasarMano(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
+  const mano = estado.manoActual;
+  if (!mano || mano.fase === "terminada") {
+    return { ok: false, error: "No hay mano en curso.", estado };
+  }
+  if (mano.envidoCantoActivo) {
+    return { ok: false, error: "Hay un envido pendiente.", estado };
+  }
+  if (mano.trucoCantoActivo) {
+    return { ok: false, error: "Hay un canto de truco pendiente.", estado };
+  }
+  if (!mano.jugadoresPasados) mano.jugadoresPasados = [];
+  if (mano.jugadoresPasados.includes(jugador.id)) {
+    return { ok: false, error: "Ya pasaste en esta mano.", estado };
+  }
+  const cartas = mano.cartasPorJugador[jugador.id] || [];
+  if (cartas.length === 0) {
+    return { ok: false, error: "No te quedan cartas para pasar.", estado };
+  }
+
+  mano.jugadoresPasados.push(jugador.id);
+
+  // Si todavía no jugó en la baza actual, pusheamos UNA tapada para
+  // dejar registro y permitir cerrar la baza. Las demás cartas se
+  // descartan.
+  const baza = mano.bazas[mano.bazas.length - 1];
+  const yaJugoEnBaza = baza.jugadas.some((j) => j.jugadorId === jugador.id);
+  if (!yaJugoEnBaza) {
+    const carta = cartas[0];
+    baza.jugadas.push({ jugadorId: jugador.id, carta, tapada: true });
+    anuncio(estado, jugador.id, "Pasa, tira tapadas", "carta");
+  } else {
+    anuncio(estado, jugador.id, "Pasa lo que le queda", "sistema");
+  }
+
+  // Descartar todas las cartas restantes — el jugador queda fuera.
+  mano.cartasPorJugador[jugador.id] = [];
+
+  // ¿Baza completa entre activos restantes + ya pasados?
+  if (bazaCerrable(estado, baza, mano)) {
+    resolverBaza(estado, baza);
+    if (mano.bazas.length < 3 && !mano.ganadorMano) {
+      mano.bazas.push({ jugadas: [], ganadorEquipo: null, pardada: false });
+      mano.turnoJugadorId = siguienteJugadorDespuesDeBaza(estado, baza);
+    }
+  } else if (mano.turnoJugadorId === jugador.id) {
+    mano.turnoJugadorId = siguienteJugadorActivo(estado, jugador.asiento).id;
+  }
+
+  estado.version++;
   return { ok: true, estado };
 }
 
