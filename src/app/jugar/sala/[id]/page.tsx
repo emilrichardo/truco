@@ -109,6 +109,13 @@ export default function SalaPage() {
   const ultimaAccionBotRef = useRef<{ jugadorId: string; version: number } | null>(
     null
   );
+  // Suprime nuevas consultas del mismo bot durante una ventana corta
+  // después de que el humano resolvió una. Evita que justo cuando
+  // selecciono una carta para el bot se cuele otra consulta para el
+  // mismo bot antes de que el server termine de procesar la jugada.
+  const consultaSuprimidaRef = useRef<{ botId: string; hasta: number } | null>(
+    null
+  );
 
   const { estado, salaMeta, error: errorSala, setEstado } = useSalaOnline(salaId);
   const chatVisibleCount = useMemo(() => {
@@ -248,6 +255,18 @@ export default function SalaPage() {
         };
       }
     }
+    // Si el humano acaba de resolver una consulta para este bot, no le
+    // saltamos otra encima — dejamos pasar el dispatch normal.
+    const sup = consultaSuprimidaRef.current;
+    if (
+      consultaFinal &&
+      sup &&
+      sup.botId === actor.id &&
+      Date.now() < sup.hasta
+    ) {
+      consultaFinal = null;
+    }
+
     if (consultaFinal) {
       setConsulta((prev) => {
         if (
@@ -418,6 +437,23 @@ export default function SalaPage() {
         consulta,
         cartaId
       );
+      // Si fue una decisión de jugar carta concreta (incluyendo
+      // "carta_especifica" o las equivalentes a tirar carta), suprimimos
+      // nuevas consultas para este bot durante 3s — así el server tiene
+      // tiempo de procesar y la ronda no queda colgada esperando otra
+      // pregunta.
+      const decisionDeJugada =
+        decision === "juga" ||
+        decision === "veni" ||
+        decision === "tapar" ||
+        decision === "pasar" ||
+        decision === "carta_especifica";
+      if (decisionDeJugada) {
+        consultaSuprimidaRef.current = {
+          botId: consulta.botJugadorId,
+          hasta: Date.now() + 3000
+        };
+      }
       setConsulta(null);
       enviarAccionOnline(salaId, miId, accion);
     },

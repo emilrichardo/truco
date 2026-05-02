@@ -124,6 +124,13 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   });
   const botTimerRef = useRef<number | null>(null);
   const [consulta, setConsulta] = useState<ConsultaCompañero | null>(null);
+  // Suprime nuevas consultas del mismo bot durante una ventana corta
+  // después de que el humano resolvió una. Sin esto, justo cuando se
+  // selecciona una carta para el bot puede colarse otra consulta antes
+  // de que la jugada se procese y la ronda continúe.
+  const consultaSuprimidaRef = useRef<{ botId: string; hasta: number } | null>(
+    null
+  );
 
   // Inicialización: si hay snapshot guardado con la misma config, lo
   // restauramos. Si no, armamos estado nuevo.
@@ -271,6 +278,18 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
         };
       }
     }
+    // Si el humano acaba de resolver una consulta para este bot,
+    // dejamos pasar el dispatch normal en vez de saltar otra consulta.
+    const sup = consultaSuprimidaRef.current;
+    if (
+      consultaFinal &&
+      sup &&
+      sup.botId === actor.id &&
+      Date.now() < sup.hasta
+    ) {
+      consultaFinal = null;
+    }
+
     if (consultaFinal) {
       setConsulta((prev) => {
         if (
@@ -375,6 +394,18 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
         consulta,
         cartaId
       );
+      const decisionDeJugada =
+        decision === "juga" ||
+        decision === "veni" ||
+        decision === "tapar" ||
+        decision === "pasar" ||
+        decision === "carta_especifica";
+      if (decisionDeJugada) {
+        consultaSuprimidaRef.current = {
+          botId: consulta.botJugadorId,
+          hasta: Date.now() + 3000
+        };
+      }
       const r = aplicarAccion(estado, accion);
       setConsulta(null);
       if (r.ok) dispatch({ tipo: "set", estado: { ...estado } });
