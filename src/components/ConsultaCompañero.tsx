@@ -13,6 +13,7 @@
 // (que viven debajo de su avatar) y queda claro quién está hablando.
 import type { ConsultaCompañero as ConsultaT } from "@/lib/salaLocal";
 import type { EstadoJuego } from "@/lib/truco/types";
+import { CartaEspanola } from "./CartaEspanola";
 
 export function ConsultaCompañero({
   consulta,
@@ -28,9 +29,12 @@ export function ConsultaCompañero({
       | "falta_envido"
       | "juga"
       | "veni"
+      | "tapar"
       | "pasar"
+      | "carta_especifica"
       | "confirmar_truco"
-      | "rechazar_truco"
+      | "rechazar_truco",
+    cartaId?: string
   ) => void;
 }) {
   const bot = estado.jugadores.find((j) => j.id === consulta.botJugadorId);
@@ -38,6 +42,7 @@ export function ConsultaCompañero({
 
   const esEnvido = consulta.tipo === "envido";
   const esTruco = consulta.tipo === "truco";
+  const esTapar = consulta.tipo === "tapar";
 
   const labelCanto: Record<string, string> = {
     cantar_truco: "truco",
@@ -82,6 +87,15 @@ export function ConsultaCompañero({
                   {labelCanto[consulta.cantoTipo] || "truco"}
                 </span>
                 ?
+              </div>
+            </>
+          ) : esTapar ? (
+            <>
+              <div className="font-display text-base text-crema mt-0.5">
+                Me queda una carta y pierdo
+              </div>
+              <div className="text-text-dim text-[11px] subtitulo-claim">
+                ¿La tiro tapada?
               </div>
             </>
           ) : (
@@ -142,36 +156,100 @@ export function ConsultaCompañero({
               🤐 No, jugá
             </button>
           </div>
-        ) : (
-          /* Jugá / Vení / Pasar: tirá la más alta, la más baja, o dejá que
-           *  el bot decida. */
-          <div className="grid grid-cols-3 gap-1">
+        ) : esTapar ? (
+          /* Tapar: una sola carta y vamos a perder. Tirar tapada (cara
+           *  abajo) o tirarla normal igual. */
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              type="button"
+              onClick={() => onResolver("tapar")}
+              className="btn btn-primary !text-[10px] !px-1 !py-1.5 !min-h-0"
+              title="Tirá la carta cara abajo — sin revelarla"
+            >
+              🙈 Tirá tapada
+            </button>
             <button
               type="button"
               onClick={() => onResolver("juga")}
-              className="btn btn-primary !text-[10px] !px-1 !py-1.5 !min-h-0"
-              title="Tirá la carta más alta — matar la baza"
-            >
-              💪 Jugá
-            </button>
-            <button
-              type="button"
-              onClick={() => onResolver("veni")}
               className="btn !text-[10px] !px-1 !py-1.5 !min-h-0"
-              title="Tirá la carta más baja — venir con poco"
+              title="Tirá la carta normal"
             >
-              🤏 Vení
-            </button>
-            <button
-              type="button"
-              onClick={() => onResolver("pasar")}
-              className="btn btn-ghost !text-[10px] !px-1 !py-1.5 !min-h-0"
-              title="Dejá que el bot decida solo"
-            >
-              ⏭ Pasar
+              👁 Mostrala
             </button>
           </div>
+        ) : (
+          /* Jugá / Vení / Pasar: tirá la más alta, la más baja, o dejá que
+           *  el bot decida. Abajo también las cartas del bot — el humano
+           *  puede tocar una específica para que el bot tire esa. */
+          <>
+            <div className="grid grid-cols-3 gap-1">
+              <button
+                type="button"
+                onClick={() => onResolver("juga")}
+                className="btn btn-primary !text-[10px] !px-1 !py-1.5 !min-h-0"
+                title="Tirá la carta más alta — matar la baza"
+              >
+                💪 Jugá
+              </button>
+              <button
+                type="button"
+                onClick={() => onResolver("veni")}
+                className="btn !text-[10px] !px-1 !py-1.5 !min-h-0"
+                title="Tirá la carta más baja — venir con poco"
+              >
+                🤏 Vení
+              </button>
+              <button
+                type="button"
+                onClick={() => onResolver("pasar")}
+                className="btn btn-ghost !text-[10px] !px-1 !py-1.5 !min-h-0"
+                title="Dejá que el bot decida solo"
+              >
+                ⏭ Pasar
+              </button>
+            </div>
+            <CartasDelBot
+              estado={estado}
+              botId={consulta.botJugadorId}
+              onElegir={(cartaId) =>
+                onResolver("carta_especifica", cartaId)
+              }
+            />
+          </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function CartasDelBot({
+  estado,
+  botId,
+  onElegir
+}: {
+  estado: EstadoJuego;
+  botId: string;
+  onElegir: (cartaId: string) => void;
+}) {
+  const cartas = estado.manoActual?.cartasPorJugador[botId] || [];
+  if (cartas.length === 0) return null;
+  return (
+    <div className="mt-2 pt-2 border-t border-border/50">
+      <div className="text-[9px] uppercase tracking-widest text-text-dim/70 text-center mb-1">
+        O elegí su carta
+      </div>
+      <div className="flex justify-center gap-1.5">
+        {cartas.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => onElegir(c.id)}
+            className="active:scale-95 hover:-translate-y-1 transition"
+            title={`Tirar esta carta`}
+          >
+            <CartaEspanola carta={c} tamanio="xs" />
+          </button>
+        ))}
       </div>
     </div>
   );

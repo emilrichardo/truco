@@ -11,6 +11,10 @@ const ERROR_CONFIG =
 
 const STORAGE_DEVICE = "truco_primos_device_id";
 const STORAGE_SESION = "truco_primos_sesion";
+/** ID de la última sala en la que el usuario está jugando. La home la
+ *  lee para ofrecer un "Volver a la partida en curso". Se limpia al
+ *  cerrar/abandonar sala o cuando la partida termina. */
+const STORAGE_SALA_ACTIVA = "truco_primos_sala_activa";
 
 export interface SalaResp {
   ok: boolean;
@@ -47,6 +51,27 @@ export function leerSesion(salaId: string): SesionLocal | null {
   if (typeof window === "undefined") return null;
   const raw = localStorage.getItem(STORAGE_SESION + ":" + salaId);
   return raw ? JSON.parse(raw) : null;
+}
+
+export function marcarSalaActiva(salaId: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_SALA_ACTIVA, salaId);
+}
+
+export function leerSalaActiva(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(STORAGE_SALA_ACTIVA);
+}
+
+export function limpiarSalaActiva(salaId?: string) {
+  if (typeof window === "undefined") return;
+  // Si pasan un salaId, sólo limpiamos cuando coincide — para no pisar
+  // una sala más reciente desde una pestaña vieja.
+  if (salaId) {
+    const actual = localStorage.getItem(STORAGE_SALA_ACTIVA);
+    if (actual !== salaId) return;
+  }
+  localStorage.removeItem(STORAGE_SALA_ACTIVA);
 }
 
 async function invocar<T = SalaResp>(

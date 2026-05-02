@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import type { EstadoJuego, Jugador, Carta } from "@/lib/truco/types";
 import { jerarquia } from "@/lib/truco/cartas";
@@ -26,6 +26,7 @@ type JugadaEnMesa = {
   carta: Carta;
   bazaIdx: number;
   jugIdx: number;
+  tapada?: boolean;
 };
 
 /**
@@ -411,9 +412,33 @@ function PanelMensajeCompañero({
   onCerrar: () => void;
 }) {
   const [texto, setTexto] = useState("");
+  const cajaRef = useRef<HTMLDivElement>(null);
+
+  // Cerrar al tocar fuera de la caja del panel. Defer 1 tick para no
+  // capturar el mismo click que abrió el panel (sobre el avatar del
+  // compañero).
+  useEffect(() => {
+    let activo = false;
+    const armar = window.setTimeout(() => {
+      activo = true;
+    }, 0);
+    const onPointerDown = (e: PointerEvent) => {
+      if (!activo) return;
+      if (cajaRef.current && !cajaRef.current.contains(e.target as Node)) {
+        onCerrar();
+      }
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.clearTimeout(armar);
+      window.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [onCerrar]);
+
   return (
     <div className="absolute inset-0 z-[700] pointer-events-none">
       <div
+        ref={cajaRef}
         className={clsx(
           "absolute pointer-events-auto w-[min(20rem,calc(100vw-1.5rem))] rounded-md border border-dorado/60 bg-carbon/95 shadow-2xl backdrop-blur-sm p-2",
           clasePosicionPanelCompañero(pos)
@@ -571,6 +596,7 @@ function CartasJugadas({
               carta={j.carta}
               tamanio="lg"
               resaltada={esUltimaBaza}
+              oculta={!!j.tapada}
             />
           </div>
         );

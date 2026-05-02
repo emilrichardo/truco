@@ -11,6 +11,8 @@ import {
   guardarSesion,
   iniciarPartidaOnline,
   leerSesion,
+  limpiarSalaActiva,
+  marcarSalaActiva,
   revanchaOnline,
   unirseSalaOnline,
   useSalaOnline
@@ -330,8 +332,25 @@ export default function SalaPage() {
 
   useEffect(() => {
     const s = leerSesion(salaId);
-    if (s) setMiId(s.jugadorId);
+    if (s) {
+      setMiId(s.jugadorId);
+      // Sesión existente para esta sala → marcamos como activa para
+      // que el home ofrezca volver. (Si la partida ya terminó, el
+      // efecto de abajo la limpia.)
+      marcarSalaActiva(salaId);
+    }
   }, [salaId]);
+
+  // Marcar como activa cuando me uno por primera vez (sin sesión
+  // previa) y limpiar cuando la partida termina.
+  useEffect(() => {
+    if (miId) marcarSalaActiva(salaId);
+  }, [miId, salaId]);
+  useEffect(() => {
+    if (estado?.ganadorPartida !== null && estado?.ganadorPartida !== undefined) {
+      limpiarSalaActiva(salaId);
+    }
+  }, [estado?.ganadorPartida, salaId]);
 
   // Contador de chat no visto cuando el drawer está cerrado.
   useEffect(() => {
@@ -391,13 +410,14 @@ export default function SalaPage() {
     [salaId, miId, estado, setEstado]
   );
   const resolverConsulta = useCallback(
-    (decision: DecisionConsulta) => {
+    (decision: DecisionConsulta, cartaId?: string) => {
       if (!estado || !consulta || !miId) return;
       const accion = accionDesdeConsulta(
         estado,
         consulta.botJugadorId,
         decision,
-        consulta
+        consulta,
+        cartaId
       );
       setConsulta(null);
       enviarAccionOnline(salaId, miId, accion);
@@ -490,12 +510,14 @@ export default function SalaPage() {
     if (cerrando) return;
     setCerrando(true);
     await cerrarSalaOnline(salaId, miId ?? undefined);
+    limpiarSalaActiva(salaId);
     router.replace("/");
   }, [salaId, miId, cerrando, router]);
   const abandonarSala = useCallback(async () => {
     if (cerrando || !miId) return;
     setCerrando(true);
     await abandonarSalaOnline(salaId, miId);
+    limpiarSalaActiva(salaId);
     router.replace("/");
   }, [salaId, miId, cerrando, router]);
   const abrirChat = useCallback(() => {

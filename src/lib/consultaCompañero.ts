@@ -11,11 +11,16 @@ import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
  *  - tipo "jugar": baza 2 o 3 cuando el bot abre la baza. No se canta
  *    nada — el humano elige si tira la carta más alta (jugá) o la más
  *    baja (vení), o si pasa y deja que el bot decida solo.
+ *  - tipo "tapar": baza 3, al bot le queda una sola carta y va a perder
+ *    contra el rival que ya jugó. Le pregunta al humano si tira la
+ *    carta normal o "tapada" (cara abajo, sin revelar) para ocultar
+ *    información de cara a la mano siguiente.
  *  - tipo "truco": el bot tiene mano fuerte y quiere cantar truco/
  *    retruco/vale4. Pide permiso al humano. Si rechaza, juega carta. */
 export type ConsultaCompañero =
   | { tipo: "envido"; botJugadorId: string; envidoBot: number }
   | { tipo: "jugar"; botJugadorId: string }
+  | { tipo: "tapar"; botJugadorId: string }
   | {
       tipo: "truco";
       botJugadorId: string;
@@ -28,7 +33,12 @@ export type DecisionConsulta =
   | "falta_envido"
   | "juga"
   | "veni"
+  | "tapar"
   | "pasar"
+  /** El humano eligió una carta específica de la mano del bot. El
+   *  cartaId viaja como segundo argumento en accionDesdeConsulta /
+   *  onResolver. */
+  | "carta_especifica"
   | "confirmar_truco"
   | "rechazar_truco";
 
@@ -89,34 +99,57 @@ export function deberiaConsultar(
     }
   }
 
-  // Consulta de "jugar": preguntamos al humano antes de que el bot
-  // tire carta. Pero con un filtro: si el rival YA jugó en esta baza
-  // y el bot no tiene NI UNA carta que pueda ganar/empatar, la
-  // consulta es estéril — la única opción razonable es "vení" (tirar
-  // la chica como sacrificio). En ese caso skipeamos la consulta y
-  // el bot tira automáticamente la chica.
+  // Consulta de "jugar" / "tapar": preguntamos al humano antes de que
+  // el bot tire carta.
+  //  - Si al bot le queda una sola carta (baza 3): no tiene sentido
+  //    preguntar "vení o jugá" — sólo hay una opción. Pero si el bot
+  //    va a perder contra el rival que ya jugó, ofrecemos "tapar" para
+  //    no revelar la carta de cara a la mano siguiente.
+  //  - Si tiene varias cartas: preguntamos "vení o jugá" salvo que el
+  //    rival ya haya jugado y el bot no pueda ganar/empatar — ahí
+  //    skipeamos la consulta (única opción es tirar la chica).
   const baza = mano.bazas[mano.bazas.length - 1];
   const yaJugoEnBaza = baza.jugadas.some((j) => j.jugadorId === bot.id);
   if (!yaJugoEnBaza) {
-    // Si rival ya jugó en esta baza, evaluamos si el bot puede ganar
-    // o empatar. Sino no preguntamos.
     let mejorRivalEnBaza = -1;
+    let mejorCompañeroEnBaza = -1;
     for (const j of baza.jugadas) {
       const jug = estado.jugadores.find((p) => p.id === j.jugadorId);
-      if (!jug || jug.equipo === bot.equipo) continue;
+      if (!jug) continue;
       const v = jerarquia(j.carta);
-      if (v > mejorRivalEnBaza) mejorRivalEnBaza = v;
-    }
-    if (mejorRivalEnBaza >= 0) {
-      const cartas = mano.cartasPorJugador[bot.id] || [];
-      const puedoGanarOEmpatar = cartas.some(
-        (c) => jerarquia(c) >= mejorRivalEnBaza
-      );
-      if (!puedoGanarOEmpatar) {
-        // Pregunta inútil — el bot va a tirar la chica de todas
-        // formas. No molestamos al humano.
-        return null;
+      if (jug.equipo === bot.equipo) {
+        if (v > mejorCompañeroEnBaza) mejorCompañeroEnBaza = v;
+      } else {
+        if (v > mejorRivalEnBaza) mejorRivalEnBaza = v;
       }
+    }
+    const cartas = mano.cartasPorJugador[bot.id] || [];
+    const puedoGanarOEmpatar =
+      mejorRivalEnBaza < 0 ||
+      cartas.some((c) => jerarquia(c) >= mejorRivalEnBaza);
+    // Si mi compañero (humano) ya jugó y está ganando esta baza, no
+    // tiene sentido preguntar: lo lógico es que el bot tire chica para
+    // no desperdiciar carta. Sólo preguntamos cuando hay que pelear
+    // por la baza.
+    const equipoYaGana =
+      mejorCompañeroEnBaza >= 0 && mejorCompañeroEnBaza > mejorRivalEnBaza;
+
+    if (cartas.length <= 1) {
+      // Una sola carta. Sólo molestamos al humano si tiene sentido
+      // ofrecer la tapada (rival ya jugó y vamos a perder).
+      if (!puedoGanarOEmpatar && mejorRivalEnBaza >= 0 && !equipoYaGana) {
+        return { tipo: "tapar", botJugadorId: bot.id };
+      }
+      return null;
+    }
+    if (equipoYaGana) {
+      // Compañero ya tiene la baza — bot tira la chica solo, sin
+      // consulta.
+      return null;
+    }
+    if (!puedoGanarOEmpatar) {
+      // Pregunta inútil — el bot va a tirar la chica de todas formas.
+      return null;
     }
     return { tipo: "jugar", botJugadorId: bot.id };
   }
@@ -136,8 +169,19 @@ export function accionDesdeConsulta(
   estado: EstadoJuego,
   botId: string,
   decision: DecisionConsulta,
-  consulta?: ConsultaCompañero
+  consulta?: ConsultaCompañero,
+  cartaId?: string
 ): Accion {
+  if (decision === "carta_especifica") {
+    const cartas = estado.manoActual?.cartasPorJugador[botId] || [];
+    const elegida = cartaId ? cartas.find((c) => c.id === cartaId) : undefined;
+    if (!elegida) return decidirAccionBot(estado, botId);
+    return {
+      tipo: "jugar_carta",
+      jugadorId: botId,
+      cartaId: elegida.id
+    };
+  }
   if (decision === "pasar") {
     return decidirAccionBot(estado, botId);
   }
@@ -174,6 +218,17 @@ export function accionDesdeConsulta(
       tipo: "jugar_carta",
       jugadorId: botId,
       cartaId: elegida.id
+    };
+  }
+  if (decision === "tapar") {
+    // Tapar: el bot tira su única carta restante cara abajo.
+    const cartas = estado.manoActual?.cartasPorJugador[botId] || [];
+    if (cartas.length === 0) return decidirAccionBot(estado, botId);
+    return {
+      tipo: "jugar_carta",
+      jugadorId: botId,
+      cartaId: cartas[0].id,
+      cartaTapada: true
     };
   }
   return {

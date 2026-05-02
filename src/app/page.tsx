@@ -7,11 +7,23 @@ import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
 import { BotonInstalarApp } from "@/components/BotonInstalarApp";
 import { MisCantos } from "@/components/MisCantos";
+import { leerSalaActiva, limpiarSalaActiva } from "@/lib/salaOnline";
 
 export default function HomePage() {
   const [miSlug, setMiSlug, listo] = usePersonajeLocal();
   const [editando, setEditando] = useState(false);
   const [mostrarMisCantos, setMostrarMisCantos] = useState(false);
+  const [salaActiva, setSalaActiva] = useState<string | null>(null);
+
+  // Leer la sala activa al montar y al volver a esta pestaña (focus).
+  // Así si el usuario cierra una partida en otra pestaña, el card de
+  // "Volver a la partida" desaparece sin recargar.
+  useEffect(() => {
+    const refrescar = () => setSalaActiva(leerSalaActiva());
+    refrescar();
+    window.addEventListener("focus", refrescar);
+    return () => window.removeEventListener("focus", refrescar);
+  }, []);
 
   if (!listo) return <main className="min-h-[100dvh]" />;
   if (!miSlug) return <ElegirPrimero onElegir={(s) => setMiSlug(s)} />;
@@ -88,6 +100,42 @@ export default function HomePage() {
               setEditando(false);
             }}
           />
+        </section>
+      )}
+
+      {/* Sala en curso: aparece sólo si el usuario tiene una partida
+       *  online activa (marcada al unirse, limpiada al cerrar/abandonar
+       *  o al terminar la partida). */}
+      {salaActiva && (
+        <section className="card p-3 mb-5 border-2 border-dorado/60 bg-azul-criollo/10">
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">🃏</div>
+            <div className="flex-1 min-w-0">
+              <div className="label-slim acento-azul">Tenés una partida en curso</div>
+              <div className="font-display text-base text-crema leading-tight truncate">
+                Sala #{salaActiva.slice(0, 6).toUpperCase()}
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-[1fr_auto] gap-2 mt-3">
+            <Link
+              href={`/jugar/sala/${salaActiva}`}
+              className="btn btn-primary !text-sm !py-2"
+            >
+              Volver a la partida
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                limpiarSalaActiva();
+                setSalaActiva(null);
+              }}
+              className="btn btn-ghost !text-xs !px-3 !py-2"
+              title="Olvidar esta sala (no la cierra, sólo deja de mostrarla acá)"
+            >
+              Ocultar
+            </button>
+          </div>
         </section>
       )}
 

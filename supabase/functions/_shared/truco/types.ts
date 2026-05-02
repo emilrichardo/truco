@@ -26,7 +26,7 @@ export interface Jugador {
 
 /** Una baza es una vuelta de cartas en una mano. */
 export interface Baza {
-  jugadas: { jugadorId: string; carta: Carta }[];
+  jugadas: { jugadorId: string; carta: Carta; tapada?: boolean }[];
   ganadorEquipo: Equipo | null; // null si parda o aún no terminada
   pardada: boolean;
 }
@@ -153,6 +153,10 @@ export interface Accion {
   tipo: AccionTipo;
   jugadorId: string;
   cartaId?: string;
+  /** Si true en jugar_carta: la carta se juega "tapada" (cara abajo).
+   *  Vale como la carta más débil de la baza — equivale a ceder esa
+   *  baza pero sin revelar qué carta era. */
+  cartaTapada?: boolean;
 }
 
 export interface EstadoJuego {

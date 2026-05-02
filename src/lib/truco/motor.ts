@@ -2,9 +2,9 @@
 import { nanoid } from "nanoid";
 import {
   calcularEnvido,
-  comparar,
   crearMazo,
   esMachoEfectivo,
+  jerarquia,
   mezclar,
   nombreCarta,
   tieneFlor,
@@ -201,7 +201,7 @@ export function aplicarAccion(estado: EstadoJuego, accion: Accion): ResultadoAcc
 
   switch (accion.tipo) {
     case "jugar_carta":
-      return jugarCarta(estado, jugador, accion.cartaId!);
+      return jugarCarta(estado, jugador, accion.cartaId!, !!accion.cartaTapada);
     case "cantar_envido":
     case "cantar_real_envido":
     case "cantar_falta_envido":
@@ -226,7 +226,12 @@ export function aplicarAccion(estado: EstadoJuego, accion: Accion): ResultadoAcc
 
 // ============== Jugar carta ==============
 
-function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): ResultadoAccion {
+function jugarCarta(
+  estado: EstadoJuego,
+  jugador: Jugador,
+  cartaId: string,
+  tapada: boolean
+): ResultadoAccion {
   const mano = estado.manoActual!;
   if (mano.envidoCantoActivo)
     return { ok: false, error: "Hay un envido pendiente, primero responde.", estado };
@@ -241,20 +246,29 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
   const [carta] = cartas.splice(idx, 1);
 
   const baza = mano.bazas[mano.bazas.length - 1];
-  baza.jugadas.push({ jugadorId: jugador.id, carta });
-  anuncio(estado, jugador.id, `Tira ${nombreCarta(carta)}`, "carta");
+  baza.jugadas.push(
+    tapada
+      ? { jugadorId: jugador.id, carta, tapada: true }
+      : { jugadorId: jugador.id, carta }
+  );
+  anuncio(
+    estado,
+    jugador.id,
+    tapada ? "Tira tapada" : `Tira ${nombreCarta(carta)}`,
+    "carta"
+  );
 
   // Atajo: si la carta tirada es "macho efectivo" — no queda en juego
   // ninguna carta más alta — y su equipo ya ganó una baza anterior,
   // esta baza está definida. Cerramos la mano de una en vez de seguir
   // pidiendo cartas a los demás. Aplica al ancho de espada siempre, al
   // ancho de basto si ya cayó el de espada, al 7 de espada si cayeron
-  // los anchos, etc.
+  // los anchos, etc. Una carta tapada nunca es macho — vale lo mínimo.
   const bazaIdx = mano.bazas.length - 1;
   const cartasYaJugadas = mano.bazas.flatMap((b) =>
     b.jugadas.map((j) => j.carta)
   );
-  if (bazaIdx >= 1 && esMachoEfectivo(carta, cartasYaJugadas)) {
+  if (!tapada && bazaIdx >= 1 && esMachoEfectivo(carta, cartasYaJugadas)) {
     const bazasGanadasAntes = mano.bazas
       .slice(0, bazaIdx)
       .filter((b) => b.ganadorEquipo === jugador.equipo).length;
@@ -292,18 +306,26 @@ function jugarCarta(estado: EstadoJuego, jugador: Jugador, cartaId: string): Res
   return { ok: true, estado };
 }
 
+/** Valor de una jugada en la baza. Una carta tapada vale -1 (siempre
+ *  pierde frente a cualquier carta cara arriba; entre dos tapadas
+ *  empata). El resto vale su jerarquía normal. */
+function valorEnBaza(j: { carta: Carta; tapada?: boolean }): number {
+  return j.tapada ? -1 : jerarquia(j.carta);
+}
+
 function siguienteJugadorDespuesDeBaza(estado: EstadoJuego, baza: Baza): string {
   // "El que mata es mano": si la baza tuvo ganador, abre la próxima el
   // jugador del equipo ganador que tiró la carta más alta. Si fue parda,
   // abre el mismo que abrió esta baza (si la parda anterior también fue
   // parda, esto se resuelve por recursión: el opener se mantiene).
   if (baza.ganadorEquipo !== null && !baza.pardada) {
-    let mejor: { jugadorId: string; carta: Carta } | null = null;
+    let mejor: { jugadorId: string; valor: number } | null = null;
     for (const j of baza.jugadas) {
       const jug = jugadorPorId(estado, j.jugadorId)!;
       if (jug.equipo !== baza.ganadorEquipo) continue;
-      if (!mejor || comparar(j.carta, mejor.carta) > 0) {
-        mejor = { jugadorId: j.jugadorId, carta: j.carta };
+      const v = valorEnBaza(j);
+      if (!mejor || v > mejor.valor) {
+        mejor = { jugadorId: j.jugadorId, valor: v };
       }
     }
     if (mejor) return mejor.jugadorId;
@@ -312,19 +334,18 @@ function siguienteJugadorDespuesDeBaza(estado: EstadoJuego, baza: Baza): string 
 }
 
 function resolverBaza(estado: EstadoJuego, baza: Baza) {
-  const mano = estado.manoActual!;
-  // Comparamos la mejor carta de cada equipo.
-  const mejorPorEquipo = new Map<Equipo, Carta>();
+  // Comparamos la mejor jugada de cada equipo (las tapadas valen -1).
+  const mejorPorEquipo = new Map<Equipo, number>();
   for (const j of baza.jugadas) {
     const jug = jugadorPorId(estado, j.jugadorId)!;
+    const v = valorEnBaza(j);
     const actual = mejorPorEquipo.get(jug.equipo);
-    if (!actual || comparar(j.carta, actual) > 0) mejorPorEquipo.set(jug.equipo, j.carta);
+    if (actual === undefined || v > actual) mejorPorEquipo.set(jug.equipo, v);
   }
-  const c0 = mejorPorEquipo.get(0)!;
-  const c1 = mejorPorEquipo.get(1)!;
-  const cmp = comparar(c0, c1);
-  if (cmp > 0) baza.ganadorEquipo = 0;
-  else if (cmp < 0) baza.ganadorEquipo = 1;
+  const v0 = mejorPorEquipo.get(0) ?? -1;
+  const v1 = mejorPorEquipo.get(1) ?? -1;
+  if (v0 > v1) baza.ganadorEquipo = 0;
+  else if (v1 > v0) baza.ganadorEquipo = 1;
   else {
     baza.pardada = true;
     baza.ganadorEquipo = null;

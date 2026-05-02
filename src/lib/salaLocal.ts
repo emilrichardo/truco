@@ -363,9 +363,18 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
   // La lógica de qué Accion construir vive en accionDesdeConsulta
   // (módulo compartido con la sala online).
   const resolverConsulta = useCallback(
-    (decision: import("@/lib/consultaCompañero").DecisionConsulta) => {
+    (
+      decision: import("@/lib/consultaCompañero").DecisionConsulta,
+      cartaId?: string
+    ) => {
       if (!estado || !consulta) return;
-      const accion = accionDesdeConsulta(estado, consulta.botJugadorId, decision);
+      const accion = accionDesdeConsulta(
+        estado,
+        consulta.botJugadorId,
+        decision,
+        consulta,
+        cartaId
+      );
       const r = aplicarAccion(estado, accion);
       setConsulta(null);
       if (r.ok) dispatch({ tipo: "set", estado: { ...estado } });
