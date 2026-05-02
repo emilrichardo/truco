@@ -206,6 +206,20 @@ export async function abandonarSalaOnline(
   });
 }
 
+/** Convierte a otro jugador (humano) en bot por inactividad. Lo dispara
+ *  cualquier humano cuando otro humano agotó su ventana de turno. */
+export async function marcarBotOnline(
+  salaId: string,
+  jugadorId: string,
+  targetJugadorId: string
+): Promise<SalaResp> {
+  return invocar("sala-marcar-bot", {
+    sala_id: salaId,
+    jugador_id: jugadorId,
+    target_jugador_id: targetJugadorId
+  });
+}
+
 export async function enviarAccionOnline(
   salaId: string,
   jugadorId: string,

@@ -12,6 +12,7 @@ import {
   iniciarPartidaOnline,
   leerSesion,
   limpiarSalaActiva,
+  marcarBotOnline,
   marcarSalaActiva,
   revanchaOnline,
   unirseSalaOnline,
@@ -114,6 +115,13 @@ export default function SalaPage() {
   // selecciono una carta para el bot se cuele otra consulta para el
   // mismo bot antes de que el server termine de procesar la jugada.
   const consultaSuprimidaRef = useRef<{ botId: string; hasta: number } | null>(
+    null
+  );
+  // Timer de 30s para que el humano de turno actúe. Si vence, el cliente
+  // primario lo convierte en bot vía sala-marcar-bot — el bot dispatcher
+  // toma la jugada inmediatamente después.
+  const turnoTimerRef = useRef<number | null>(null);
+  const turnoVigilanciaRef = useRef<{ jugadorId: string; version: number } | null>(
     null
   );
 
@@ -336,6 +344,75 @@ export default function SalaPage() {
       if (botTimerRef.current) {
         clearTimeout(botTimerRef.current);
         botTimerRef.current = null;
+      }
+    };
+  }, [estado, miId, salaId]);
+
+  // Timer de 30s por turno humano. Si el actor humano no actúa, cualquier
+  // cliente puede convertirlo en bot vía sala-marcar-bot — el server es
+  // idempotente, así que si dos clientes lo disparan a la vez no pasa
+  // nada. Una vez que el target es bot, el bot dispatcher lo juega.
+  const TURNO_HUMANO_MS = 30000;
+  useEffect(() => {
+    if (!estado || !miId || !estado.iniciada) return;
+    if (estado.ganadorPartida !== null) return;
+    const mano = estado.manoActual;
+    if (!mano || mano.fase === "terminada") return;
+
+    // ¿Quién actúa ahora si es humano?
+    let actorId: string | undefined;
+    if (mano.envidoCantoActivo) {
+      const eq = mano.envidoCantoActivo.equipoQueDebeResponder;
+      actorId = estado.jugadores.find((j) => j.equipo === eq && !j.esBot)?.id;
+    } else if (mano.trucoCantoActivo) {
+      const eq = mano.trucoCantoActivo.equipoQueDebeResponder;
+      actorId = estado.jugadores.find((j) => j.equipo === eq && !j.esBot)?.id;
+    } else {
+      const turnoJ = estado.jugadores.find((j) => j.id === mano.turnoJugadorId);
+      if (turnoJ && !turnoJ.esBot) actorId = turnoJ.id;
+    }
+
+    // No hay actor humano (o actor es bot) → limpiar y salir.
+    if (!actorId) {
+      if (turnoTimerRef.current) {
+        clearTimeout(turnoTimerRef.current);
+        turnoTimerRef.current = null;
+      }
+      turnoVigilanciaRef.current = null;
+      return;
+    }
+
+    // Si ya hay un timer corriendo para este mismo actor, no lo
+    // reiniciamos — los re-renders por chat/etc no deben extender el
+    // plazo. Sólo reiniciamos cuando cambia el target o la version.
+    const vig = turnoVigilanciaRef.current;
+    if (
+      vig &&
+      vig.jugadorId === actorId &&
+      vig.version === estado.version
+    ) {
+      return;
+    }
+
+    if (turnoTimerRef.current) {
+      clearTimeout(turnoTimerRef.current);
+      turnoTimerRef.current = null;
+    }
+    turnoVigilanciaRef.current = {
+      jugadorId: actorId,
+      version: estado.version
+    };
+    const targetId = actorId;
+    turnoTimerRef.current = window.setTimeout(() => {
+      marcarBotOnline(salaId, miId, targetId).catch((e) =>
+        console.warn("[turno-timer] marcar bot", e)
+      );
+    }, TURNO_HUMANO_MS);
+
+    return () => {
+      if (turnoTimerRef.current) {
+        clearTimeout(turnoTimerRef.current);
+        turnoTimerRef.current = null;
       }
     };
   }, [estado, miId, salaId]);
