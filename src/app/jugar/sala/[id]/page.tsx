@@ -509,16 +509,30 @@ export default function SalaPage() {
     if (cerrando) return;
     setCerrando(true);
     await cerrarSalaOnline(salaId, miId ?? undefined);
+    // Cerrar = la sala deja de existir para todos → limpiamos.
     limpiarSalaActiva(salaId);
     router.replace("/");
   }, [salaId, miId, cerrando, router]);
   const abandonarSala = useCallback(async () => {
     if (cerrando || !miId) return;
     setCerrando(true);
+    // Aviso público antes de salir — así el resto ve quién se fue
+    // como un mensaje persistente en el chat (no solo el toast efímero
+    // del cambio de lista de jugadores).
+    if (estado) {
+      const yo = estado.jugadores.find((j) => j.id === miId);
+      if (yo) {
+        await enviarChatOnline(salaId, miId, {
+          texto: `👋 ${yo.nombre} se fue de la sala`
+        }).catch(() => {});
+      }
+    }
     await abandonarSalaOnline(salaId, miId);
-    limpiarSalaActiva(salaId);
+    // NO limpiamos la sala activa: el home la muestra para que el
+    // usuario pueda volver si cambia de opinión. Se limpia al cerrar
+    // la sala o al terminar la partida.
     router.replace("/");
-  }, [salaId, miId, cerrando, router]);
+  }, [salaId, miId, cerrando, router, estado]);
   const abrirChat = useCallback(() => {
     // En mobile abre el sheet, en desktop muestra el sidebar.
     setChatAbierto(true);
