@@ -35,12 +35,13 @@ export function MiAvatarBR({
   const esTurno = estado.manoActual?.turnoJugadorId === me.id;
   const esMano = estado.manoActual?.manoJugadorId === me.id;
   const yoHablo = hablandoId === me.id;
+  // El avatar y el botón de emojis viven cada uno en su propio
+  // contenedor absolute, NO anidados — así el menú flotante de emojis
+  // puede crecer fuera del bounding box del avatar sin clipping ni
+  // colapso de ancho.
   return (
-    <div className="absolute bottom-4 left-4 z-[500] pointer-events-none">
-      {/* Wrapper relativo al avatar: el botón de emojis se ancla a la
-       *  esquina inferior derecha de este contenedor (que abraza al
-       *  avatar). pointer-events-none acá; el botón lo reactiva. */}
-      <div className="relative inline-block">
+    <>
+      <div className="absolute bottom-4 left-4 z-[500] pointer-events-none">
         <JugadorPanel
           jugador={me}
           esTurno={!!esTurno}
@@ -56,12 +57,16 @@ export function MiAvatarBR({
           ladoNombre="derecha"
           ocultarNombre
         />
-        {enviarChat && (
-          <div className="absolute -bottom-1 -right-3 pointer-events-auto">
-            <BarraEmociones enviarChat={enviarChat} />
-          </div>
-        )}
       </div>
-    </div>
+      {/* Botón de emojis: posicionado al borde inferior derecho del
+       *  avatar (que mide w-20 sm:w-24 = 80/96px y vive en bottom-4
+       *  left-4). Lo dejamos justo afuera del avatar a la derecha, con
+       *  z-[510] por encima de él. */}
+      {enviarChat && (
+        <div className="absolute bottom-3 left-[6.5rem] sm:left-[7.5rem] z-[510]">
+          <BarraEmociones enviarChat={enviarChat} />
+        </div>
+      )}
+    </>
   );
 }

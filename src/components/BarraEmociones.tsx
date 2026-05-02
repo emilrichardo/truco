@@ -36,13 +36,15 @@ export function BarraEmociones({ enviarChat }: Props) {
     setAbierto(false);
   };
 
-  // El componente padre (MiAvatarBR) se encarga del posicionamiento
-  // absoluto. Acá sólo manejamos el botón y el menú flotante (que se
-  // despliega desde el botón hacia arriba-derecha).
+  // El componente padre se encarga del posicionamiento absoluto. Acá
+  // sólo manejamos el botón y el menú flotante (que se despliega desde
+  // el botón hacia arriba-derecha). El menú tiene ancho fijo así el
+  // grid de 4 columnas no colapsa por contenido (los emojis miden
+  // distinto y el auto-layout los apila).
   return (
-    <div ref={ref} className="relative z-[510]">
+    <div ref={ref} className="relative">
       {abierto && (
-        <div className="absolute left-0 bottom-11 grid grid-cols-4 gap-1.5 bg-carbon/95 backdrop-blur-sm border border-azul-criollo/50 rounded-xl p-2 shadow-2xl whitespace-nowrap">
+        <div className="absolute left-0 bottom-11 w-48 flex flex-wrap gap-1.5 bg-carbon/95 backdrop-blur-sm border border-azul-criollo/50 rounded-xl p-2 shadow-2xl">
           {ICONOS_EMOCIONES.map((icono) => (
             <button
               key={icono}

@@ -7,10 +7,11 @@
 //    sobre qué carta tirar — la más alta (Jugá, matar) o la más baja
 //    (Vení, ahorrar). No hay opciones de canto acá.
 //
-// Posición: como burbuja de habla saliendo del avatar del compañero
-// (esquina superior derecha en 2v2). Triangulito apuntando hacia él
-// arriba. Así no tapa las cartas del usuario abajo ni las del compañero
-// (que viven debajo de su avatar) y queda claro quién está hablando.
+// El panel arranca abierto. Si el usuario lo cierra (botón ✕), queda
+// sólo un icono "?" flotante en la misma posición. Tocar el "?" lo
+// vuelve a abrir. Esto evita que el panel ocupe pantalla todo el
+// tiempo pero el usuario no pierde acceso a la consulta.
+import { useEffect, useState } from "react";
 import type { ConsultaCompañero as ConsultaT } from "@/lib/salaLocal";
 import type { EstadoJuego } from "@/lib/truco/types";
 import { CartaEspanola } from "./CartaEspanola";
@@ -38,6 +39,14 @@ export function ConsultaCompañero({
     cartaId?: string
   ) => void;
 }) {
+  const [abierto, setAbierto] = useState(true);
+  // Cada vez que cambia la consulta (nuevo bot/tipo), abrimos por
+  // default — sino una consulta nueva podría quedar oculta detrás
+  // del estado colapsado de la anterior.
+  useEffect(() => {
+    setAbierto(true);
+  }, [consulta.botJugadorId, consulta.tipo]);
+
   const bot = estado.jugadores.find((j) => j.id === consulta.botJugadorId);
   if (!bot) return null;
 
@@ -51,75 +60,72 @@ export function ConsultaCompañero({
     cantar_vale4: "vale 4"
   };
 
-  return (
-    // Anclado a la esquina superior derecha — donde vive el avatar del
-    // compañero en el layout 2v2. Mobile: top-32 deja respirar el avatar
-    // y la mini-mano. Desktop empuja un poco más abajo.
-    <div className="absolute z-[800] right-2 top-32 sm:top-36 sm:right-6 max-w-[280px] pointer-events-none">
-      <div className="relative card pointer-events-auto p-3 border-2 border-dorado/60 shadow-2xl bg-carbon/95 backdrop-blur-sm">
-        {/* Triangulito apuntando hacia arriba al avatar del compañero. */}
-        <div
-          aria-hidden
-          className="absolute -top-2 right-6 w-3.5 h-3.5 rotate-45 bg-carbon border-t-2 border-l-2 border-dorado/60"
-        />
-        {/* Cerrar: deja que el bot decida solo (no pasa, no se va al
-         *  mazo — sólo cierra el panel y la IA del bot toma su jugada
-         *  con su lógica normal). */}
+  // Estado colapsado: sólo un icono "?" para reabrir. Mismo anclaje
+  // que el panel para que aparezca en el lugar esperado.
+  if (!abierto) {
+    return (
+      <div className="absolute z-[800] right-2 top-32 sm:top-36 sm:right-6 pointer-events-none">
         <button
           type="button"
-          onClick={() => onResolver("decidir_solo")}
-          aria-label="Cerrar"
-          title="Cerrar (deja que el bot decida)"
+          onClick={() => setAbierto(true)}
+          aria-label={`Ver pregunta de ${bot.nombre}`}
+          title={`Ver pregunta de ${bot.nombre}`}
+          className="pointer-events-auto w-10 h-10 rounded-full bg-dorado text-carbon text-lg font-bold flex items-center justify-center shadow-2xl border-2 border-carbon hover:scale-110 active:scale-95 transition animate-bounce"
+        >
+          ?
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    // Anclado a la esquina superior derecha — donde vive el avatar del
+    // compañero en el layout 2v2.
+    <div className="absolute z-[800] right-2 top-32 sm:top-36 sm:right-6 max-w-[260px] pointer-events-none">
+      <div className="relative card pointer-events-auto p-2 border-2 border-dorado/60 shadow-2xl bg-carbon/95 backdrop-blur-sm">
+        {/* Triangulito apuntando hacia arriba al avatar del compañero.
+         *  Usa el mismo bg/opacidad que el panel para no notarse el
+         *  cambio de tono entre el triángulo y la burbuja. */}
+        <div
+          aria-hidden
+          className="absolute -top-2 right-6 w-3.5 h-3.5 rotate-45 bg-carbon/95 backdrop-blur-sm border-t-2 border-l-2 border-dorado/60"
+        />
+        {/* Cerrar: colapsa el panel a un icono "?" (NO despacha
+         *  decisión — la consulta sigue activa y se puede reabrir). */}
+        <button
+          type="button"
+          onClick={() => setAbierto(false)}
+          aria-label="Minimizar"
+          title="Minimizar (la pregunta queda como icono ?)"
           className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-carbon border-2 border-dorado/60 text-crema text-xs flex items-center justify-center shadow-md hover:bg-azul-criollo/30 transition"
         >
           ✕
         </button>
-        <div className="text-center mb-2">
-          <div className="label-slim acento-azul">
-            {bot.nombre} te pregunta
+        <div className="text-center mb-1.5 pr-3">
+          <div className="text-[9px] uppercase tracking-widest text-azul-claro font-bold">
+            {bot.nombre}
           </div>
           {esEnvido ? (
-            <>
-              <div className="font-display text-base text-crema mt-0.5">
-                Tengo{" "}
-                <span className="text-dorado">{consulta.envidoBot}</span> de
-                envido
-              </div>
-              <div className="text-text-dim text-[11px] subtitulo-claim">
-                ¿Qué hago?
-              </div>
-            </>
+            <div className="text-[11px] text-crema leading-tight">
+              Tengo <span className="text-dorado font-bold">{consulta.envidoBot}</span>{" "}
+              de envido. ¿Qué hago?
+            </div>
           ) : esTruco ? (
-            <>
-              <div className="font-display text-base text-crema mt-0.5">
-                Tengo mano fuerte
-              </div>
-              <div className="text-text-dim text-[11px] subtitulo-claim">
-                ¿Canto{" "}
-                <span className="text-dorado">
-                  {labelCanto[consulta.cantoTipo] || "truco"}
-                </span>
-                ?
-              </div>
-            </>
+            <div className="text-[11px] text-crema leading-tight">
+              Mano fuerte. ¿Canto{" "}
+              <span className="text-dorado font-bold">
+                {labelCanto[consulta.cantoTipo] || "truco"}
+              </span>
+              ?
+            </div>
           ) : esTapar ? (
-            <>
-              <div className="font-display text-base text-crema mt-0.5">
-                Me queda una carta y pierdo
-              </div>
-              <div className="text-text-dim text-[11px] subtitulo-claim">
-                ¿La tiro tapada?
-              </div>
-            </>
+            <div className="text-[11px] text-crema leading-tight">
+              Me queda 1 carta y pierdo. ¿La tiro tapada?
+            </div>
           ) : (
-            <>
-              <div className="font-display text-base text-crema mt-0.5">
-                Voy a tirar carta
-              </div>
-              <div className="text-text-dim text-[11px] subtitulo-claim">
-                ¿Mato o vengo con poco?
-              </div>
-            </>
+            <div className="text-[11px] text-crema leading-tight">
+              ¿Mato o vengo con poco?
+            </div>
           )}
         </div>
 
