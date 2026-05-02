@@ -144,15 +144,69 @@ export async function listarSalasPublicasOnline(): Promise<{
   salas: SalaPublicaResumen[];
   error: string | null;
 }> {
-  const r = await invocar<{ ok: boolean; salas?: SalaPublicaResumen[]; error?: string }>(
-    "sala-listar-publicas",
-    {}
-  );
-  if (!r.ok) {
-    console.warn("[listarSalasPublicas] error:", r.error);
-    return { salas: [], error: r.error || "Error desconocido" };
+  // Consulta directa a la tabla — la RLS (`salas_select_all`) permite a
+  // anon leer salas, así que no hace falta una edge function. Ventaja:
+  // funciona apenas se aplica la migración `salas_publicas`, sin deploy
+  // adicional. Si la columna `publica` no existe todavía, postgres
+  // devuelve un error claro en `error.message`.
+  const sb = tryGetSupabase();
+  if (!sb) return { salas: [], error: ERROR_CONFIG };
+
+  const { data, error } = await sb
+    .from("salas")
+    .select("id, modo, estado, created_at, created_by")
+    .eq("publica", true)
+    .eq("iniciada", false)
+    .eq("terminada", false)
+    .order("created_at", { ascending: false })
+    .limit(30);
+
+  if (error) {
+    console.warn("[listarSalasPublicas] error:", error);
+    return { salas: [], error: error.message };
   }
-  return { salas: r.salas || [], error: null };
+
+  const filas = (data ?? []) as Array<{
+    id: string;
+    modo: "1v1" | "2v2";
+    estado: EstadoJuego;
+    created_at: string;
+    created_by: string | null;
+  }>;
+
+  const perfilIds = Array.from(
+    new Set(filas.map((f) => f.created_by).filter((v): v is string => !!v))
+  );
+  const nombresPorPerfil = new Map<string, string>();
+  if (perfilIds.length > 0) {
+    const { data: perfiles } = await sb
+      .from("perfiles")
+      .select("id, nombre")
+      .in("id", perfilIds);
+    for (const p of perfiles ?? []) {
+      nombresPorPerfil.set(p.id as string, p.nombre as string);
+    }
+  }
+
+  const salas: SalaPublicaResumen[] = filas.map((f) => {
+    const cupos = f.modo === "2v2" ? 4 : 2;
+    const jugHumanos = (f.estado.jugadores ?? []).filter(
+      (j) => !j.esBot
+    ).length;
+    return {
+      id: f.id,
+      modo: f.modo,
+      con_flor: !!f.estado.conFlor,
+      creador: f.created_by
+        ? nombresPorPerfil.get(f.created_by) ?? null
+        : null,
+      jugadores: jugHumanos,
+      cupos,
+      created_at: f.created_at
+    };
+  });
+
+  return { salas, error: null };
 }
 
 export async function unirseSalaOnline(payload: {
