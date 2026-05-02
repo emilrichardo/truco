@@ -93,18 +93,24 @@ Deno.serve(async (req) => {
 
     if (!errPart && partida) {
       // Registrar cada jugador con su resultado (perfil_id si hay).
-      // Para resolver perfil_id usamos el match nombre+personaje contra perfiles.
+      // Para resolver perfil_id matcheamos nombre+personaje y, si hay
+      // varios perfiles con el mismo par (cada device_id nuevo crea
+      // uno), tomamos el más antiguo. Antes usábamos .maybeSingle() que
+      // devolvía null en caso de duplicados — el jugador quedaba sin
+      // perfil_id y desaparecía del ranking.
       const filas = await Promise.all(
         r.estado.jugadores.map(async (j) => {
-          const { data: perfil } = await sb
+          const { data: perfiles } = await sb
             .from("perfiles")
             .select("id")
             .eq("nombre", j.nombre)
             .eq("personaje", j.personaje)
-            .maybeSingle();
+            .order("created_at", { ascending: true })
+            .limit(1);
+          const perfilId = perfiles && perfiles[0] ? perfiles[0].id : null;
           return {
             partida_id: partida.id,
-            perfil_id: perfil?.id ?? null,
+            perfil_id: perfilId,
             nombre: j.nombre,
             personaje: j.personaje,
             equipo: j.equipo,
