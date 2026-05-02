@@ -433,10 +433,18 @@ export default function SalaPage() {
     if (miId) marcarSalaActiva(salaId);
   }, [miId, salaId]);
 
+  // Flag para suprimir reconexión cuando el usuario está saliendo
+  // (abandonarSala/cerrarSala). Sin esto, el realtime trae esBot=true
+  // ANTES de que termine la navegación y el effect de reconectar
+  // re-flippea al usuario, dejándolo trabado en la sala aunque haya
+  // pedido salir. Una vez true, no se vuelve a false (se desmonta).
+  const saliendoRef = useRef(false);
+
   // Reconectar: si vuelvo a la sala con una sesión guardada y mi
   // jugador está marcado como bot (porque me desconecté o agotó mi
   // turno), pido al server que me devuelva el control.
   useEffect(() => {
+    if (saliendoRef.current) return;
     if (!estado || !miId) return;
     const yo = estado.jugadores.find((j) => j.id === miId);
     if (!yo) return;
@@ -455,6 +463,7 @@ export default function SalaPage() {
   useEffect(() => {
     if (!miId || !estado?.iniciada || estado.ganadorPartida !== null) return;
     const ping = () => {
+      if (saliendoRef.current) return;
       reconectarSalaOnline(salaId, miId).catch(() => {});
     };
     const interval = window.setInterval(ping, 15000);
@@ -660,17 +669,21 @@ export default function SalaPage() {
   const cerrarSala = useCallback(async () => {
     if (cerrando) return;
     setCerrando(true);
-    await cerrarSalaOnline(salaId, miId ?? undefined);
-    // Cerrar = la sala deja de existir para todos → limpiamos.
-    limpiarSalaActiva(salaId);
+    saliendoRef.current = true;
+    const r = await cerrarSalaOnline(salaId, miId ?? undefined);
+    // Sólo limpiamos la sala activa si el server confirmó el cierre —
+    // si rechazó (ej: solo_el_creador para invitados), preservamos
+    // localStorage para que el home pueda ofrecer "Volver" igual.
+    if (r.ok) limpiarSalaActiva(salaId);
     router.replace("/");
   }, [salaId, miId, cerrando, router]);
   const abandonarSala = useCallback(async () => {
     if (cerrando || !miId) return;
     setCerrando(true);
-    // Aviso público antes de salir — así el resto ve quién se fue
-    // como un mensaje persistente en el chat (no solo el toast efímero
-    // del cambio de lista de jugadores).
+    // Marcamos "saliendo" ANTES del primer await — así el effect de
+    // reconectar (disparado por el realtime que trae esBot=true) no
+    // me re-flippea a humano antes de que termine de salir.
+    saliendoRef.current = true;
     if (estado) {
       const yo = estado.jugadores.find((j) => j.id === miId);
       if (yo) {
@@ -1117,7 +1130,13 @@ export default function SalaPage() {
         />
       )}
 
-      {/* Confirmación cerrar sala */}
+      {/* Confirmación de salida. Para el creador: cerrar la sala
+       *  entera. Para invitados: abandonar (la sala sigue para los
+       *  demás, vos podés volver desde el home). Antes el botón
+       *  llamaba siempre a cerrarSala — el server rechazaba a los
+       *  invitados ("solo_el_creador") pero el cliente igual limpiaba
+       *  el localStorage, así que el invitado perdía la opción de
+       *  volver desde el home. */}
       {confirmSalir && (
         <div
           className="fixed inset-0 sheet-bg flex items-center justify-center z-[1000] p-4"
@@ -1128,12 +1147,18 @@ export default function SalaPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="titulo-marca text-xl mb-2">
-              ¿Cerrar la <span className="acento">sala</span>?
+              {soyCreador ? (
+                <>¿Cerrar la <span className="acento">sala</span>?</>
+              ) : (
+                <>¿Salir de la <span className="acento">sala</span>?</>
+              )}
             </div>
             <p className="text-text-dim text-sm mb-4">
-              {estado.iniciada
-                ? "La partida se va a dar por terminada para todos."
-                : "La sala se elimina y los primos invitados no van a poder entrar."}
+              {soyCreador
+                ? estado.iniciada
+                  ? "La partida se va a dar por terminada para todos."
+                  : "La sala se elimina y los primos invitados no van a poder entrar."
+                : "La sala sigue para los demás. Podés volver a entrar desde el inicio si cambiás de opinión."}
             </p>
             <div className="flex gap-2">
               <button
@@ -1143,11 +1168,17 @@ export default function SalaPage() {
                 Volver
               </button>
               <button
-                onClick={cerrarSala}
+                onClick={soyCreador ? cerrarSala : abandonarSala}
                 disabled={cerrando}
                 className="btn btn-danger flex-1"
               >
-                {cerrando ? "Cerrando…" : "Cerrar"}
+                {cerrando
+                  ? soyCreador
+                    ? "Cerrando…"
+                    : "Saliendo…"
+                  : soyCreador
+                    ? "Cerrar"
+                    : "Salir"}
               </button>
             </div>
           </div>
