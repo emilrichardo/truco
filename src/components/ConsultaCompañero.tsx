@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import type { ConsultaCompañero as ConsultaT } from "@/lib/salaLocal";
 import type { EstadoJuego } from "@/lib/truco/types";
 import { CartaEspanola } from "./CartaEspanola";
+import { urlPersonaje } from "@/data/jugadores";
 
 export function ConsultaCompañero({
   consulta,
@@ -60,8 +61,8 @@ export function ConsultaCompañero({
     cantar_vale4: "vale 4"
   };
 
-  // Estado colapsado: sólo un icono "?" para reabrir. Mismo anclaje
-  // que el panel para que aparezca en el lugar esperado.
+  // Estado colapsado: avatar del compañero con badge "?" abajo a la
+  // derecha. Así se ve QUIÉN pregunta, no sólo que hay una pregunta.
   if (!abierto) {
     return (
       <div className="absolute z-[800] right-2 top-32 sm:top-36 sm:right-6 pointer-events-none">
@@ -70,9 +71,19 @@ export function ConsultaCompañero({
           onClick={() => setAbierto(true)}
           aria-label={`Ver pregunta de ${bot.nombre}`}
           title={`Ver pregunta de ${bot.nombre}`}
-          className="pointer-events-auto w-10 h-10 rounded-full bg-dorado text-carbon text-lg font-bold flex items-center justify-center shadow-2xl border-2 border-carbon hover:scale-110 active:scale-95 transition animate-bounce"
+          className="relative pointer-events-auto w-12 h-12 rounded-full overflow-hidden shadow-2xl border-2 border-dorado hover:scale-110 active:scale-95 transition animate-bounce"
         >
-          ?
+          <img
+            src={urlPersonaje(bot.personaje)}
+            alt=""
+            className="w-full h-full object-cover object-top"
+          />
+          <span
+            aria-hidden
+            className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-dorado text-carbon text-[11px] font-bold flex items-center justify-center border-2 border-carbon shadow-md"
+          >
+            ?
+          </span>
         </button>
       </div>
     );
