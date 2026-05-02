@@ -532,7 +532,17 @@ export default function SalaPage() {
         if (opt) setEstado(opt);
       }
       const r = await enviarAccionOnline(salaId, miId, a);
-      if (!r.ok) setError(r.error || "Acción rechazada.");
+      if (!r.ok) {
+        // "No es tu turno" suele venir de un race entre el cliente y el
+        // server (el cliente creía que era su turno cuando ya cambió).
+        // No lo mostramos como modal — la realtime trae el estado real
+        // y la carta optimista vuelve sola a la mano.
+        const esRaceDeTurno =
+          (r.error || "").toLowerCase().includes("no es tu turno");
+        if (!esRaceDeTurno) {
+          setError(r.error || "Acción rechazada.");
+        }
+      }
     },
     [salaId, miId, estado, setEstado]
   );
@@ -568,6 +578,18 @@ export default function SalaPage() {
     },
     [estado, consulta, salaId, miId]
   );
+
+  // Auto-resolución de consulta tras 30s: si el bot está esperando
+  // una decisión del humano y nadie responde, dejamos que la IA del
+  // bot decida sola en lugar de quedarse trabado. Mismo plazo que
+  // el timer de turno humano para mantener la regla "30s o juega".
+  useEffect(() => {
+    if (!consulta) return;
+    const t = window.setTimeout(() => {
+      resolverConsulta("decidir_solo");
+    }, TURNO_HUMANO_MS);
+    return () => clearTimeout(t);
+  }, [consulta, resolverConsulta]);
   const enviarChat = useCallback(
     async (m: {
       texto?: string;
