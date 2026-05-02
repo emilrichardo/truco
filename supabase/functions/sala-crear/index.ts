@@ -14,6 +14,7 @@ interface Payload {
   puntos_objetivo: 18 | 30;
   con_flor?: boolean;
   device_id?: string;          // identificador estable del cliente
+  publica?: boolean;           // listada en el home para que cualquiera entre
 }
 
 Deno.serve(async (req) => {
@@ -89,7 +90,8 @@ Deno.serve(async (req) => {
       modo: estadoInicial.modo,
       puntos_objetivo: estadoInicial.puntosObjetivo,
       estado: estadoInicial,
-      created_by: perfilId
+      created_by: perfilId,
+      publica: !!body.publica
     })
     .select()
     .single();

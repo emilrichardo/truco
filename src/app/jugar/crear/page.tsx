@@ -15,6 +15,7 @@ export default function CrearSalaPage() {
   const [cambiar, setCambiar] = useState(false);
   const [conFlor, setConFlor] = useState(false);
   const [tamanio, setTamanio] = useState<2 | 4>(4);
+  const [publica, setPublica] = useState(false);
   // Puntos siempre a 18 (9 malas + 9 buenas) por ahora.
   const puntos = 18 as const;
   const [creando, setCreando] = useState(false);
@@ -40,7 +41,8 @@ export default function CrearSalaPage() {
       personaje: miSlug,
       tamanio,
       puntosObjetivo: puntos,
-      conFlor
+      conFlor,
+      publica
     });
     if (!r.ok || !r.sala_id || !r.jugador_id) {
       setError(r.error || "No se pudo crear la sala.");
@@ -126,6 +128,22 @@ export default function CrearSalaPage() {
             Con flor (+3 pts)
           </Choice>
         </Opcion>
+
+        <label className="flex items-center gap-2 mb-4 cursor-pointer select-none p-2 -mx-2 rounded hover:bg-azul-criollo/10 transition">
+          <input
+            type="checkbox"
+            checked={publica}
+            onChange={(e) => setPublica(e.target.checked)}
+            className="w-4 h-4 accent-dorado"
+          />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-crema font-bold">Sala pública</div>
+            <div className="text-[11px] text-text-dim leading-snug">
+              Aparece en el home — cualquier primo puede entrar sin que le
+              compartas el enlace.
+            </div>
+          </div>
+        </label>
 
         <div className="mb-4 text-center text-text-dim/70 text-[11px]">
           Partida <span className="text-crema">a 18</span> · 9 malas y 9 buenas

@@ -69,10 +69,16 @@ export function JugadorPanel({
     : "w-20 sm:w-24";
   const borderEquipo = jugador.equipo === 0 ? "border-dorado" : "border-azul-criollo";
   const borderColor = esRival ? "border-rojo-rival" : borderEquipo;
+  // Sólo pulsamos el avatar para cantos/respuestas con texto o sticker.
+  // Para reacciones rápidas (emoji puro) ya hay un emoji flotando arriba
+  // del avatar — sumar la pulsación crea sensación de "imagen duplicada"
+  // (la foto crece y vuelve, mientras el emoji aparece encima).
+  const esSoloReaccion =
+    hablando && !!hablandoReaccion && !hablandoTexto && !hablandoSticker;
   const claseHablando =
     hablando && hablandoEvento === "respuesta"
       ? "hablando-respuesta"
-      : hablando
+      : hablando && !esSoloReaccion
         ? "hablando"
         : null;
   // Layout horizontal: avatar + pill del nombre del lado interior. La
@@ -116,12 +122,17 @@ export function JugadorPanel({
     onAvatarClick &&
       "cursor-pointer hover:scale-105 focus:outline-none focus:ring-2 focus:ring-dorado focus:ring-offset-2 focus:ring-offset-carbon"
   );
+  // Re-mount sólo cuando se debe replayear la animación de canto/
+  // respuesta. Para reacciones rápidas no remontamos — sino la <img>
+  // se desmonta y vuelve a montar, lo que en algunos browsers se ve
+  // como una "imagen duplicada" o flash al renderizar el emoji.
+  const avatarKey = claseHablando ? hablandoKey || "estatico" : "estatico";
   return (
     <div className={clsx("flex items-center gap-1.5", flexDir)}>
       <div className="relative">
         {onAvatarClick ? (
           <button
-            key={hablandoKey || "estatico"}
+            key={avatarKey}
             type="button"
             onClick={onAvatarClick}
             className={avatarClasses}
@@ -134,7 +145,7 @@ export function JugadorPanel({
             />
           </button>
         ) : (
-          <div key={hablandoKey || "estatico"} className={avatarClasses}>
+          <div key={avatarKey} className={avatarClasses}>
             <img
               src={urlPersonaje(jugador.personaje)}
               alt={jugador.nombre}

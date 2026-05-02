@@ -7,13 +7,19 @@ import { SelectorPersonaje } from "@/components/SelectorPersonaje";
 import { HeaderMarca, DivisorCriollo } from "@/components/HeaderMarca";
 import { BotonInstalarApp } from "@/components/BotonInstalarApp";
 import { MisCantos } from "@/components/MisCantos";
-import { leerSalaActiva, limpiarSalaActiva } from "@/lib/salaOnline";
+import {
+  leerSalaActiva,
+  limpiarSalaActiva,
+  listarSalasPublicasOnline,
+  type SalaPublicaResumen
+} from "@/lib/salaOnline";
 
 export default function HomePage() {
   const [miSlug, setMiSlug, listo] = usePersonajeLocal();
   const [editando, setEditando] = useState(false);
   const [mostrarMisCantos, setMostrarMisCantos] = useState(false);
   const [salaActiva, setSalaActiva] = useState<string | null>(null);
+  const [salasPublicas, setSalasPublicas] = useState<SalaPublicaResumen[]>([]);
 
   // Leer la sala activa al montar y al volver a esta pestaña (focus).
   // Así si el usuario cierra una partida en otra pestaña, el card de
@@ -23,6 +29,24 @@ export default function HomePage() {
     refrescar();
     window.addEventListener("focus", refrescar);
     return () => window.removeEventListener("focus", refrescar);
+  }, []);
+
+  // Listar salas públicas. Refrescamos al montar, al volver el foco y
+  // cada 15s para ver salas nuevas sin tener que recargar.
+  useEffect(() => {
+    let cancelado = false;
+    const cargar = async () => {
+      const salas = await listarSalasPublicasOnline();
+      if (!cancelado) setSalasPublicas(salas);
+    };
+    cargar();
+    window.addEventListener("focus", cargar);
+    const interval = window.setInterval(cargar, 15000);
+    return () => {
+      cancelado = true;
+      window.removeEventListener("focus", cargar);
+      clearInterval(interval);
+    };
   }, []);
 
   if (!listo) return <main className="min-h-[100dvh]" />;
@@ -152,6 +176,62 @@ export default function HomePage() {
           Invitá a tus primos a jugar online o sumá bots para arrancar ya
         </p>
       </section>
+
+      {/* Salas públicas: listado de partidas abiertas marcadas como
+       *  "públicas" por sus creadores. Cualquiera puede unirse sin
+       *  compartirse el link. */}
+      {salasPublicas.length > 0 && (
+        <section className="mb-6">
+          <div className="label-slim mb-2 flex items-center gap-2">
+            <span>Salas abiertas</span>
+            <span className="text-text-dim/60 text-[10px] normal-case tracking-normal">
+              ({salasPublicas.length})
+            </span>
+          </div>
+          <div className="space-y-2">
+            {salasPublicas.map((s) => {
+              const llena = s.jugadores >= s.cupos;
+              return (
+                <Link
+                  key={s.id}
+                  href={`/jugar/sala/${s.id}`}
+                  className="card p-3 flex items-center gap-3 hover:border-dorado/60 transition border-l-4 border-l-azul-criollo"
+                  aria-disabled={llena}
+                >
+                  <div className="text-2xl flex-shrink-0">
+                    {s.modo === "2v2" ? "👥" : "🤜"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-display text-sm text-crema truncate">
+                      {s.creador ? `Sala de ${s.creador}` : `Sala #${s.id.slice(0, 6).toUpperCase()}`}
+                    </div>
+                    <div className="text-text-dim text-[11px] flex items-center gap-2 flex-wrap">
+                      <span>{s.modo === "2v2" ? "Parejas" : "Mano a mano"}</span>
+                      <span className="text-text-dim/40">·</span>
+                      <span>{s.jugadores}/{s.cupos} jugadores</span>
+                      {s.con_flor && (
+                        <>
+                          <span className="text-text-dim/40">·</span>
+                          <span className="text-dorado">🌸 con flor</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <div
+                    className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-widest flex-shrink-0 ${
+                      llena
+                        ? "bg-text-dim/20 text-text-dim"
+                        : "bg-dorado/15 text-dorado"
+                    }`}
+                  >
+                    {llena ? "Llena" : "Entrar"}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <footer className="text-center mt-20 sm:mt-24 pt-6 border-t border-border/40 space-y-2">
         <div className="flex items-center justify-center gap-4 flex-wrap">
