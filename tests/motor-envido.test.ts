@@ -5,7 +5,7 @@
 //  - Doble cantar_envido no debería ser válido (mismo equipo).
 import { describe, expect, it } from "vitest";
 import { accionesLegales, aplicarAccion } from "@/lib/truco/motor";
-import { aplicar, estado1v1 } from "./helpers";
+import { aplicar, estado1v1, estado2v2 } from "./helpers";
 
 describe("envido — flujo básico", () => {
   it("usuario canta envido → setea envidoCantoActivo y le pasa el turno al bot", () => {
@@ -85,12 +85,13 @@ describe("envido — flujo básico", () => {
 });
 
 describe("envido — bloqueos", () => {
-  it("rechaza cantar_envido si el mismo equipo ya tiene canto pendiente", () => {
+  it("ignora cantar_envido si el mismo equipo ya tiene canto pendiente", () => {
     let e = estado1v1();
     e = aplicar(e, { tipo: "cantar_envido", jugadorId: "U" });
     // El bot debe responder. No el usuario re-cantando.
     const r = aplicarAccion(e, { tipo: "cantar_envido", jugadorId: "U" });
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
+    expect(r.estado.manoActual?.envidoCantoActivo?.cadena).toEqual(["envido"]);
   });
 
   it("rechaza envido si la primera baza ya tiene cartas jugadas y el cantor jugó", () => {
@@ -112,5 +113,14 @@ describe("envido — bloqueos", () => {
     // Baza 1 cerrada → no se puede cantar envido más.
     const legales = accionesLegales(e, "U");
     expect(legales).not.toContain("cantar_envido");
+  });
+
+  it("si mi compañero ya cantó envido, mi intento stale queda como no-op", () => {
+    let e = estado2v2(["human", "bot", "human", "bot"]);
+    e = aplicar(e, { tipo: "cantar_envido", jugadorId: "P2" });
+    const r = aplicarAccion(e, { tipo: "cantar_envido", jugadorId: "P0" });
+    expect(r.ok).toBe(true);
+    expect(r.estado.manoActual?.envidoCantoActivo?.equipoQueCanto).toBe(0);
+    expect(r.estado.manoActual?.envidoCantoActivo?.cadena).toEqual(["envido"]);
   });
 });

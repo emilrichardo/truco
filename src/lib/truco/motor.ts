@@ -77,7 +77,9 @@ function anuncio(
   texto: string,
   evento: import("./types").CategoriaEvento = "sistema"
 ) {
-  const ts = Date.now();
+  const ultimoChat = estado.chat[estado.chat.length - 1]?.ts ?? 0;
+  const ultimoAnuncio = estado.anuncios[estado.anuncios.length - 1]?.ts ?? 0;
+  const ts = Math.max(Date.now(), ultimoChat + 1, ultimoAnuncio + 1);
   estado.anuncios.push({ id: nanoid(6), jugadorId, texto, ts });
   if (estado.anuncios.length > 12) estado.anuncios.shift();
   // Espejamos en el chat como historial permanente del juego.
@@ -760,7 +762,7 @@ function cantarEnvido(
     mano.envidoCantoActivo &&
     mano.envidoCantoActivo.equipoQueCanto === jugador.equipo
   ) {
-    return { ok: false, error: "Ya cantaste envido; esperá la respuesta.", estado };
+    return { ok: true, estado };
   }
 
   const nivelNuevo = tipo === "cantar_envido" ? "envido" : tipo === "cantar_real_envido" ? "real_envido" : "falta_envido";
@@ -896,7 +898,7 @@ function cantarTruco(
     cantoPendiente &&
     cantoPendiente.equipoQueCanto === jugador.equipo
   ) {
-    return { ok: false, error: "Ya cantaste; esperá la respuesta.", estado };
+    return { ok: true, estado };
   }
 
   if (subir === "truco" && mano.trucoEstado !== "ninguno") {

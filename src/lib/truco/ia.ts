@@ -127,6 +127,33 @@ function expectativaBazas(cartas: Carta[]): number {
   return Math.min(3, exp);
 }
 
+function contarDesconocidasFuertes(vista: VistaCartas, umbral = 10): number {
+  return vista.desconocidas.filter((c) => jerarquia(c) >= umbral).length;
+}
+
+function maximaDesconocida(vista: VistaCartas): number {
+  return vista.desconocidas.reduce((max, c) => Math.max(max, jerarquia(c)), 0);
+}
+
+function cartasRestantesRivales(estado: EstadoJuego, yo: Jugador): number {
+  const mano = estado.manoActual!;
+  return estado.jugadores
+    .filter((j) => j.equipo !== yo.equipo)
+    .reduce((acc, j) => acc + (mano.cartasPorJugador[j.id]?.length || 0), 0);
+}
+
+function ventajaPorCartasVistas(ctx: ContextoCanto): number {
+  // Si ya salieron muchas altas, una mano media sube de valor. Si el mazo
+  // desconocido todavía está cargado de cartas fuertes, nos ponemos más finos.
+  const fuertes = contarDesconocidasFuertes(ctx.vista);
+  const max = maximaDesconocida(ctx.vista);
+  let ajuste = 0;
+  if (fuertes <= 3) ajuste += 5;
+  else if (fuertes >= 8) ajuste -= 4;
+  if (max <= 10) ajuste += 4;
+  return ajuste;
+}
+
 // ============================================================
 // Decisiones de envido
 // ============================================================
@@ -231,6 +258,7 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
 
   // Threshold para aceptar — bajado: el bot pelea más manos.
   let umbral = 32 - p.riesgo * 8 - ventajaBazas * 10;
+  umbral -= ventajaPorCartasVistas(ctx);
   if (distancia < -4) umbral -= 5;       // pierdo, juego
   if (nivel === "vale4") umbral += 6;    // vale 4 = más exigente
   if (valorEnJuego >= 3) umbral += 2;
@@ -329,7 +357,8 @@ function intentarCantarEnvido(ctx: ContextoCanto): Accion | null {
   }
 
   // Bluff más agresivo: cantar envido con poco para sacar al rival.
-  if (Math.random() < p.bluff * 0.18) {
+  const bluffCreible = miEnvido >= 20 || distancia < -6;
+  if (bluffCreible && Math.random() < p.bluff * 0.22) {
     return { tipo: "cantar_envido", jugadorId };
   }
   return null;
@@ -397,6 +426,7 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   // Threshold base. Al subir a retruco / vale 4 estamos arriesgando más
   // puntos así que somos más exigentes con la fuerza requerida.
   let umbral = 50 - p.agresion * 14 - bazasGanadas * 12;
+  umbral -= ventajaPorCartasVistas(ctx);
   if (cantoLegal === "cantar_retruco") umbral += 10;
   if (cantoLegal === "cantar_vale4") umbral += 16;
   if (distancia < -7) umbral -= 8; // vengo perdiendo, juego más fuerte
@@ -416,13 +446,18 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
 
   if (fuerza >= umbral) return { tipo: cantoLegal, jugadorId };
 
-  // Bluff: cantar para asustar. Sólo en truco inicial (no en retruco /
-  // vale 4 — ahí los puntos en juego ya son altos y bluff es muy caro).
+  // Bluff: cantar para asustar. Es más creíble si ya ganamos una baza,
+  // si quedan pocas altas ocultas, o si venimos abajo y necesitamos
+  // mover el avispero.
   const puedoBluff =
     cantoLegal === "cantar_truco" &&
-    (bazasGanadas >= 1 || mano.bazas[0].jugadas.length === 0);
+    (bazasGanadas >= 1 ||
+      mano.bazas[0].jugadas.length === 0 ||
+      distancia < -6);
   if (puedoBluff && fuerza < 50) {
-    if (Math.random() < p.bluff * 0.22) {
+    const pocasAltasOcultas = contarDesconocidasFuertes(vista) <= 4;
+    const prob = p.bluff * (pocasAltasOcultas ? 0.34 : 0.22);
+    if (Math.random() < prob) {
       return { tipo: cantoLegal, jugadorId };
     }
   }
@@ -447,6 +482,9 @@ function elegirCarta(ctx: ContextoCanto): Accion {
   const ordenadas = vista.enMano
     .slice()
     .sort((a, b) => jerarquia(a) - jerarquia(b));
+  const rivalesPorJugar = Math.max(0, cartasRestantesRivales(estado, yo));
+  const muchasAltasOcultas = contarDesconocidasFuertes(vista) >= 7;
+  const quedanMachosOcultos = maximaDesconocida(vista) >= 13;
 
   // Mejor carta del rival y del compañero ya tiradas en esta baza.
   let mejorRivalEnBaza = -1;
@@ -499,6 +537,10 @@ function elegirCarta(ctx: ContextoCanto): Accion {
         const top = ordenadas[ordenadas.length - 1];
         return { tipo: "jugar_carta", jugadorId, cartaId: top.id };
       }
+      // Si todavía quedan varias cartas rivales y el mazo oculto está
+      // cargado de altas, no quemamos el ancho para matar un medio: gana
+      // con la mínima que alcance. Si la mínima ganadora es frágil pero
+      // quedan machos ocultos, aceptamos igual: guardar top suele valer más.
       return { tipo: "jugar_carta", jugadorId, cartaId: ganadora.id };
     }
     // No puedo ganar la baza. Si tampoco puedo empatarla y perder
@@ -540,6 +582,13 @@ function elegirCarta(ctx: ContextoCanto): Accion {
     // Primera baza: el mano puede liderar fuerte para imponer respeto, o
     // guardar la mejor para una baza decisiva. Personalidad decide.
     if (esMano) {
+      if (muchasAltasOcultas && ordenadas.length >= 3 && p.cautela > 0.45) {
+        return {
+          tipo: "jugar_carta",
+          jugadorId,
+          cartaId: ordenadas[0].id
+        };
+      }
       if (p.agresion > 0.6) {
         // Bot agresivo lidera con la segunda mejor (guarda la top).
         const idx = Math.min(1, ordenadas.length - 1);
@@ -557,7 +606,13 @@ function elegirCarta(ctx: ContextoCanto): Accion {
         cartaId: ordenadas[idxMedio].id
       };
     }
-    // Pie en primera: sigo el ritmo, baja-media.
+    // Pie en primera: si quedan muchas altas rivales, no regalamos carta
+    // media; si el panorama está despejado, podemos mostrar una media para
+    // vender fuerza sin gastar la mejor.
+    if (!quedanMachosOcultos && rivalesPorJugar <= 4 && p.bluff > 0.65) {
+      const idxMedio = Math.floor(ordenadas.length / 2);
+      return { tipo: "jugar_carta", jugadorId, cartaId: ordenadas[idxMedio].id };
+    }
     return { tipo: "jugar_carta", jugadorId, cartaId: ordenadas[0].id };
   }
 

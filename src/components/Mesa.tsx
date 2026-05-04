@@ -572,6 +572,31 @@ function CartasJugadas({
   jugadas: JugadaEnMesa[];
   numeroDeBaza: number;
 }) {
+  const [offsets, setOffsets] = useState<Record<string, { x: number; y: number }>>({});
+  const dragRef = useRef<{
+    key: string;
+    startX: number;
+    startY: number;
+    baseX: number;
+    baseY: number;
+  } | null>(null);
+
+  const cartaKey = (j: JugadaEnMesa) =>
+    `${j.bazaIdx}-${j.jugIdx}-${j.carta.id}`;
+
+  useEffect(() => {
+    const keys = new Set(jugadas.map(cartaKey));
+    setOffsets((prev) => {
+      let cambio = false;
+      const next: Record<string, { x: number; y: number }> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (keys.has(k)) next[k] = v;
+        else cambio = true;
+      }
+      return cambio ? next : prev;
+    });
+  }, [jugadas]);
+
   // Las cartas sucesivas se desplazan hacia la esquina del dueño.
   const enLadoIzquierdo =
     pos === "abajo-izquierda" || pos === "arriba-izquierda";
@@ -587,9 +612,11 @@ function CartasJugadas({
     // plano 2D del tapete, con rotación individual para dar naturalidad.
     <div className={clsx("absolute", clasePosicionArm(pos))}>
       {jugadas.map((j, i) => {
+        const key = cartaKey(j);
+        const offsetExtra = offsets[key] || { x: 0, y: 0 };
         // Cartas sucesivas se desplazan un poco hacia la esquina del jugador.
-        const dx = dirX * i * 12;
-        const dy = dirY * i * 8;
+        const dx = dirX * i * 12 + offsetExtra.x;
+        const dy = dirY * i * 8 + offsetExtra.y;
         // Rotación base + variación leve por baza para que no queden idénticas.
         const rot = rotBase + (i - (jugadas.length - 1) / 2) * 4;
         // z-index por capas:
@@ -601,11 +628,53 @@ function CartasJugadas({
         const esUltimaBaza = j.bazaIdx === numeroDeBaza - 1;
         return (
           <div
-            key={`${j.bazaIdx}-${j.jugIdx}-${j.carta.id}`}
-            className="absolute top-0 left-0 transition-transform"
+            key={key}
+            className="absolute top-0 left-0 transition-transform cursor-grab active:cursor-grabbing touch-none"
             style={{
-              zIndex,
+              zIndex: zIndex + (offsetExtra.x || offsetExtra.y ? 20 : 0),
               transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) rotate(${rot}deg)`
+            }}
+            title="Arrastrá para apartar la carta y ver qué había debajo"
+            onPointerDown={(e) => {
+              dragRef.current = {
+                key,
+                startX: e.clientX,
+                startY: e.clientY,
+                baseX: offsetExtra.x,
+                baseY: offsetExtra.y
+              };
+              (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+            }}
+            onPointerMove={(e) => {
+              const d = dragRef.current;
+              if (!d || d.key !== key) return;
+              const x = d.baseX + e.clientX - d.startX;
+              const y = d.baseY + e.clientY - d.startY;
+              setOffsets((prev) => ({ ...prev, [key]: { x, y } }));
+            }}
+            onPointerUp={(e) => {
+              dragRef.current = null;
+              try {
+                (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
+            }}
+            onPointerCancel={(e) => {
+              dragRef.current = null;
+              try {
+                (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
+            }}
+            onDoubleClick={() => {
+              setOffsets((prev) => {
+                if (!prev[key]) return prev;
+                const next = { ...prev };
+                delete next[key];
+                return next;
+              });
             }}
           >
             <CartaEspanola

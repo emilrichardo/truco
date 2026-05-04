@@ -1,6 +1,6 @@
 // Tests de escenarios reales reportados por el usuario en partidas:
 //  1. Pie canta real_envido → bot debe responder.
-//  2. Después de cantar real_envido, usuario NO puede re-cantar envido.
+//  2. Después de cantar real_envido, re-cantar desde el mismo equipo es no-op.
 //  3. Bot mano no canta envido (deja al pie).
 //  4. Bot no se va al mazo cuando tiene compañero humano.
 //  5. ir_al_mazo solo en turno.
@@ -44,11 +44,14 @@ describe("escenario: pie canta real_envido", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("usuario NO puede re-cantar envido después de su real_envido", () => {
+  it("usuario no rompe la mano si re-canta envido después de su real_envido", () => {
     let e = estado1v1();
     e = aplicar(e, { tipo: "cantar_real_envido", jugadorId: "U" });
     const r = aplicarAccion(e, { tipo: "cantar_envido", jugadorId: "U" });
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
+    expect(r.estado.manoActual?.envidoCantoActivo?.cadena).toEqual([
+      "real_envido"
+    ]);
   });
 
   it("legales del usuario NO incluyen cantar_envido tras su real_envido", () => {
@@ -124,18 +127,20 @@ describe("escenario: ir_al_mazo solo en turno (regresión)", () => {
 });
 
 describe("escenario: spam de cantos (regresión)", () => {
-  it("usuario NO puede spam cantar_truco — segundo intento rechazado", () => {
+  it("usuario NO puede spam cantar_truco — segundo intento es no-op", () => {
     let e = estado1v1();
     e = aplicar(e, { tipo: "cantar_truco", jugadorId: "U" });
     const r = aplicarAccion(e, { tipo: "cantar_truco", jugadorId: "U" });
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
+    expect(r.estado.manoActual?.trucoCantoActivo?.nivel).toBe("truco");
   });
 
-  it("usuario NO puede spam cantar_envido — segundo intento rechazado", () => {
+  it("usuario NO puede spam cantar_envido — segundo intento es no-op", () => {
     let e = estado1v1();
     e = aplicar(e, { tipo: "cantar_envido", jugadorId: "U" });
     const r = aplicarAccion(e, { tipo: "cantar_envido", jugadorId: "U" });
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
+    expect(r.estado.manoActual?.envidoCantoActivo?.cadena).toEqual(["envido"]);
   });
 });
 

@@ -4,7 +4,7 @@
 //  - Truco out-of-turn permitido.
 import { describe, expect, it } from "vitest";
 import { accionesLegales, aplicarAccion } from "@/lib/truco/motor";
-import { aplicar, estado1v1 } from "./helpers";
+import { aplicar, estado1v1, estado2v2 } from "./helpers";
 
 describe("truco — flujo básico", () => {
   it("cantar_truco setea trucoCantoActivo y le pasa el turno al rival", () => {
@@ -48,11 +48,12 @@ describe("truco — flujo básico", () => {
 });
 
 describe("truco — bloqueos (regresiones)", () => {
-  it("rechaza segundo cantar_truco del mismo equipo (anti-spam)", () => {
+  it("ignora segundo cantar_truco del mismo equipo (anti-spam sin error)", () => {
     let e = estado1v1();
     e = aplicar(e, { tipo: "cantar_truco", jugadorId: "U" });
     const r = aplicarAccion(e, { tipo: "cantar_truco", jugadorId: "U" });
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
+    expect(r.estado.manoActual?.trucoCantoActivo?.nivel).toBe("truco");
   });
 
   it("legales NO incluye cantar_truco cuando MI equipo ya tiene canto pendiente", () => {
@@ -60,6 +61,15 @@ describe("truco — bloqueos (regresiones)", () => {
     e = aplicar(e, { tipo: "cantar_truco", jugadorId: "U" });
     const legales = accionesLegales(e, "U");
     expect(legales).not.toContain("cantar_truco");
+  });
+
+  it("si mi compañero ya cantó truco, mi intento stale queda como no-op", () => {
+    let e = estado2v2(["human", "bot", "human", "bot"]);
+    e = aplicar(e, { tipo: "cantar_truco", jugadorId: "P2" });
+    const r = aplicarAccion(e, { tipo: "cantar_truco", jugadorId: "P0" });
+    expect(r.ok).toBe(true);
+    expect(r.estado.manoActual?.trucoCantoActivo?.equipoQueCanto).toBe(0);
+    expect(r.estado.manoActual?.trucoCantoActivo?.nivel).toBe("truco");
   });
 
   it("rechaza cantar_retruco del propio equipo si tiene el truco aceptado", () => {

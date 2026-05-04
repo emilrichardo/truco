@@ -4,6 +4,7 @@
 // así los tests no flackean por seeds aleatorias.
 import { describe, expect, it } from "vitest";
 import { decidirAccionBot } from "@/lib/truco/ia";
+import type { Carta } from "@/lib/truco/types";
 import { aplicar, estado1v1 } from "./helpers";
 
 /** Reemplaza las cartas en mano del jugador para forzar un escenario
@@ -11,7 +12,7 @@ import { aplicar, estado1v1 } from "./helpers";
 function setCartas(
   estado: ReturnType<typeof estado1v1>,
   jugadorId: string,
-  cartas: { numero: number; palo: "espada" | "basto" | "oro" | "copa" }[]
+  cartas: { numero: Carta["numero"]; palo: Carta["palo"] }[]
 ) {
   estado.manoActual!.cartasPorJugador[jugadorId] = cartas.map((c, i) => ({
     id: `test-${jugadorId}-${i}`,
