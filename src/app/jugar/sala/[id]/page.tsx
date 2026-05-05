@@ -923,6 +923,7 @@ export default function SalaPage() {
                 valor={miEquipoEs0 ? estado.puntos[0] : estado.puntos[1]}
                 esMio
                 objetivo={estado.puntosObjetivo}
+                modo="numero"
               />
             </div>
             <span className="text-dorado/60 text-base">—</span>
@@ -931,6 +932,7 @@ export default function SalaPage() {
                 valor={miEquipoEs0 ? estado.puntos[1] : estado.puntos[0]}
                 esMio={false}
                 objetivo={estado.puntosObjetivo}
+                modo="numero"
               />
               <span className="text-crema truncate max-w-[90px]">
                 {tituloEllos}

@@ -11,14 +11,33 @@ import { usePuntoAnimado } from "@/lib/usePuntoAnimado";
 export function ContadorPuntos({
   valor,
   esMio,
-  objetivo = 18
+  objetivo = 18,
+  modo = "fosforos"
 }: {
   valor: number;
   esMio: boolean;
   objetivo?: 18 | 30;
+  modo?: "fosforos" | "numero";
 }) {
   const mostrado = usePuntoAnimado(valor, esMio);
   const enBuenas = valor > Math.floor(objetivo / 2);
+
+  if (modo === "numero") {
+    return (
+      <span
+        className="inline-flex items-center gap-1 tabular-nums"
+        aria-label={`${mostrado} puntos`}
+        title={`${mostrado} puntos`}
+      >
+        {enBuenas && esMio && <Buenas />}
+        <span className={esMio ? "text-dorado" : "text-crema"}>
+          {mostrado}
+        </span>
+        {enBuenas && !esMio && <Buenas />}
+      </span>
+    );
+  }
+
   return (
     <span className="inline-flex items-center gap-1" aria-label={`${mostrado} puntos`}>
       {enBuenas && esMio && <Buenas />}

@@ -54,6 +54,10 @@ function personalidadDe(jugadorId: string): Personalidad {
   };
 }
 
+function firmaCarta(c: Carta): string {
+  return `${c.numero}-${c.palo}`;
+}
+
 // ============================================================
 // Helpers de cartas / memoria
 // ============================================================
@@ -82,8 +86,10 @@ function vistaDeCartas(estado: EstadoJuego, jugadorId: string): VistaCartas {
   }
   const originales = [...enMano, ...tiradasMias];
   const vistas = [...todasTiradas, ...enMano];
-  const idsVistos = new Set(vistas.map((c) => c.id));
-  const desconocidas = crearMazo().filter((c) => !idsVistos.has(c.id));
+  const firmasVistas = new Set(vistas.map(firmaCarta));
+  const desconocidas = crearMazo().filter(
+    (c) => !firmasVistas.has(firmaCarta(c))
+  );
   return { enMano, originales, vistas, desconocidas };
 }
 
@@ -167,6 +173,112 @@ interface ContextoCanto {
   personalidad: Personalidad;
 }
 
+function azarContextual(ctx: ContextoCanto, sal: string): number {
+  const mano = ctx.estado.manoActual!;
+  const baza = mano.bazas[mano.bazas.length - 1];
+  const cartas = ctx.vista.enMano.map(firmaCarta).sort().join(",");
+  const mesa = baza.jugadas
+    .map((j) => `${j.jugadorId}:${firmaCarta(j.carta)}`)
+    .join("|");
+  const seed = [
+    sal,
+    ctx.jugadorId,
+    mano.numero,
+    ctx.estado.version,
+    mano.bazas.length,
+    cartas,
+    mesa
+  ].join(":");
+  return (hashStr(seed) % 10000) / 10000;
+}
+
+function compañerosDe(estado: EstadoJuego, yo: Jugador): Jugador[] {
+  return estado.jugadores.filter(
+    (j) => j.equipo === yo.equipo && j.id !== yo.id
+  );
+}
+
+function cartasAliadasEnMano(ctx: ContextoCanto): Carta[] {
+  const mano = ctx.estado.manoActual!;
+  return compañerosDe(ctx.estado, ctx.yo).flatMap(
+    (j) => mano.cartasPorJugador[j.id] || []
+  );
+}
+
+function maxJerarquia(cartas: Carta[]): number {
+  return cartas.reduce((max, c) => Math.max(max, jerarquia(c)), 0);
+}
+
+function fuerzaEquipo(ctx: ContextoCanto): number {
+  const propias = fuerzaTruco(ctx.vista.enMano);
+  const aliadas = cartasAliadasEnMano(ctx);
+  if (!aliadas.length) return propias;
+
+  const mejorAliada = maxJerarquia(aliadas);
+  const topPropia = maxJerarquia(ctx.vista.enMano);
+  const parejaFuerte =
+    topPropia >= 11 && mejorAliada >= 10
+      ? 12
+      : topPropia >= 9 && mejorAliada >= 12
+          ? 8
+          : 0;
+  return Math.min(
+    100,
+    Math.round(propias + fuerzaTruco(aliadas) * 0.35 + parejaFuerte)
+  );
+}
+
+function cartasVistasPorEquipo(ctx: ContextoCanto, equipo: 0 | 1): Carta[] {
+  const mano = ctx.estado.manoActual!;
+  const out: Carta[] = [];
+  for (const baza of mano.bazas) {
+    for (const jugada of baza.jugadas) {
+      const jugador = ctx.estado.jugadores.find(
+        (j) => j.id === jugada.jugadorId
+      );
+      if (jugador?.equipo === equipo) out.push(jugada.carta);
+    }
+  }
+  return out;
+}
+
+function lecturaRival(ctx: ContextoCanto): {
+  maxVisto: number;
+  fuertesVistas: number;
+  fuertesOcultas: number;
+  maxOculta: number;
+} {
+  const vistasRival = cartasVistasPorEquipo(ctx, (1 - ctx.yo.equipo) as 0 | 1);
+  return {
+    maxVisto: maxJerarquia(vistasRival),
+    fuertesVistas: vistasRival.filter((c) => jerarquia(c) >= 10).length,
+    fuertesOcultas: contarDesconocidasFuertes(ctx.vista, 10),
+    maxOculta: maximaDesconocida(ctx.vista)
+  };
+}
+
+function presionDeMarcador(ctx: ContextoCanto): number {
+  const mis = ctx.estado.puntos[ctx.yo.equipo];
+  const rivales = ctx.estado.puntos[1 - ctx.yo.equipo];
+  const faltanMios = ctx.estado.puntosObjetivo - mis;
+  const faltanRivales = ctx.estado.puntosObjetivo - rivales;
+  let presion = 0;
+  if (mis < rivales) presion += Math.min(10, (rivales - mis) * 0.7);
+  if (faltanRivales <= 3) presion += 6;
+  if (faltanMios <= 4) presion += 3;
+  if (mis > rivales + 8) presion -= 3;
+  return presion;
+}
+
+function mejorEnvidoEquipo(ctx: ContextoCanto): number {
+  const mano = ctx.estado.manoActual!;
+  const mios = calcularEnvido(ctx.vista.originales);
+  const aliados = compañerosDe(ctx.estado, ctx.yo).map((j) =>
+    calcularEnvido(mano.cartasPorJugador[j.id] || [])
+  );
+  return Math.max(mios, ...aliados);
+}
+
 function decidirEnvido(ctx: ContextoCanto): Accion | null {
   const { estado, jugadorId, legales, vista, personalidad: p } = ctx;
   const mano = estado.manoActual!;
@@ -174,6 +286,7 @@ function decidirEnvido(ctx: ContextoCanto): Accion | null {
   if (!mano.envidoCantoActivo) return null;
 
   const miEnvido = calcularEnvido(vista.originales);
+  const envidoEquipo = mejorEnvidoEquipo(ctx);
   const cadena = mano.envidoCantoActivo.cadena;
   const ultimoCanto = cadena[cadena.length - 1];
   const valorAcumulado = cadena.reduce(
@@ -197,28 +310,28 @@ function decidirEnvido(ctx: ContextoCanto): Accion | null {
   if (cadena.length >= 2) threshold += 1; // subida = un poco más exigente
   if (valorAcumulado >= 5) threshold += 2; // mucha plata en juego
 
-  const aceptar = miEnvido >= threshold;
+  const aceptar = envidoEquipo >= threshold;
 
   // ¿Subir? Necesita envido alto + acción legal. Bajamos thresholds.
   const puedeSubirReal =
     legales.includes("cantar_real_envido") && ultimoCanto !== "real_envido";
   const puedeSubirFalta = legales.includes("cantar_falta_envido");
 
-  if (puedeSubirReal && miEnvido >= 28 + (1 - p.agresion) * 2) {
+  if (puedeSubirReal && envidoEquipo >= 28 + (1 - p.agresion) * 2) {
     return { tipo: "cantar_real_envido", jugadorId };
   }
-  if (puedeSubirFalta && miEnvido >= 31 + (1 - p.agresion) * 2) {
+  if (puedeSubirFalta && envidoEquipo >= 31 + (1 - p.agresion) * 2) {
     return { tipo: "cantar_falta_envido", jugadorId };
   }
   // Falta envido oportunista: si voy perdiendo y tengo mano decente.
-  if (puedeSubirFalta && miEnvido >= 28 && voyPerdiendo && distancia > 8) {
+  if (puedeSubirFalta && envidoEquipo >= 28 && voyPerdiendo && distancia > 8) {
     return { tipo: "cantar_falta_envido", jugadorId };
   }
 
   // Bluff: subir con mano débil para presionar. Más frecuente que antes.
-  if (puedeSubirReal && miEnvido < 24) {
+  if (puedeSubirReal && envidoEquipo < 24) {
     const probBluff = p.bluff * 0.25 - cadena.length * 0.05;
-    if (Math.random() < probBluff) {
+    if (azarContextual(ctx, "bluff-real-envido") < probBluff) {
       return { tipo: "cantar_real_envido", jugadorId };
     }
   }
@@ -238,7 +351,10 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
   if (!mano.trucoCantoActivo) return null;
 
   const fuerza = fuerzaTruco(vista.enMano);
+  const fuerzaConEquipo = fuerzaEquipo(ctx);
   const expBazas = expectativaBazas(vista.enMano);
+  const respaldoAliado = maxJerarquia(cartasAliadasEnMano(ctx));
+  const rival = lecturaRival(ctx);
   const nivel = mano.trucoCantoActivo.nivel;
 
   // Bazas ya ganadas / perdidas — afecta la decisión.
@@ -259,27 +375,43 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
   // Threshold para aceptar — bajado: el bot pelea más manos.
   let umbral = 32 - p.riesgo * 8 - ventajaBazas * 10;
   umbral -= ventajaPorCartasVistas(ctx);
+  umbral -= respaldoAliado >= 12 ? 8 : respaldoAliado >= 10 ? 4 : 0;
+  umbral -= presionDeMarcador(ctx) * 0.45;
+  if (rival.fuertesVistas >= 2) umbral -= 3;
+  if (rival.maxOculta >= 13 && fuerza < 45 && respaldoAliado < 10) umbral += 5;
   if (distancia < -4) umbral -= 5;       // pierdo, juego
   if (nivel === "vale4") umbral += 6;    // vale 4 = más exigente
   if (valorEnJuego >= 3) umbral += 2;
 
   const aceptar =
-    fuerza >= umbral || (expBazas >= 1.7 && ventajaBazas >= 0);
+    fuerzaConEquipo >= umbral || (expBazas >= 1.7 && ventajaBazas >= 0);
 
   // ¿Subir? — bajado a 58 (era 65). El bot resube más seguido.
   const puedeSubir =
     (nivel === "truco" && legales.includes("cantar_retruco")) ||
     (nivel === "retruco" && legales.includes("cantar_vale4"));
 
-  if (puedeSubir && fuerza >= 58 + (1 - p.agresion) * 6 && ventajaBazas >= 0) {
+  const umbralSubida =
+    58 + (1 - p.agresion) * 6 - (respaldoAliado >= 12 ? 8 : 0);
+  if (
+    puedeSubir &&
+    fuerzaConEquipo >= umbralSubida &&
+    ventajaBazas >= -1 &&
+    rival.maxVisto < 14
+  ) {
     if (nivel === "truco") return { tipo: "cantar_retruco", jugadorId };
     if (nivel === "retruco") return { tipo: "cantar_vale4", jugadorId };
   }
 
-  // Bluff: resubir con fuerza media pero ventaja en bazas. Más frecuente.
-  if (puedeSubir && ventajaBazas >= 1) {
-    const probBluff = p.bluff * 0.3;
-    if (Math.random() < probBluff) {
+  // Bluff: resubir con fuerza media cuando el rival ya gastó cartas altas,
+  // tenemos respaldo del compañero, o el marcador exige mover la mano.
+  if (puedeSubir && ventajaBazas >= 0 && fuerzaConEquipo >= 36) {
+    const probBluff =
+      p.bluff * 0.18 +
+      (rival.fuertesVistas >= 1 ? 0.08 : 0) +
+      (respaldoAliado >= 10 ? 0.07 : 0) +
+      Math.max(0, presionDeMarcador(ctx)) * 0.01;
+    if (azarContextual(ctx, "bluff-resubir-truco") < probBluff) {
       if (nivel === "truco") return { tipo: "cantar_retruco", jugadorId };
       if (nivel === "retruco") return { tipo: "cantar_vale4", jugadorId };
     }
@@ -289,8 +421,8 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
   if (
     !aceptar &&
     distancia < -6 &&
-    fuerza >= 28 &&
-    Math.random() < p.riesgo * 0.7
+    fuerzaConEquipo >= 28 &&
+    azarContextual(ctx, "quiero-de-atras") < p.riesgo * 0.7
   ) {
     return { tipo: "responder_quiero", jugadorId };
   }
@@ -358,7 +490,7 @@ function intentarCantarEnvido(ctx: ContextoCanto): Accion | null {
 
   // Bluff más agresivo: cantar envido con poco para sacar al rival.
   const bluffCreible = miEnvido >= 20 || distancia < -6;
-  if (bluffCreible && Math.random() < p.bluff * 0.22) {
+  if (bluffCreible && azarContextual(ctx, "bluff-envido") < p.bluff * 0.22) {
     return { tipo: "cantar_envido", jugadorId };
   }
   return null;
@@ -391,7 +523,7 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
     (j) => j.equipo === yo.equipo && j.id !== jugadorId && !j.esBot
   );
   if (tengoCompañeroHumano) {
-    const fuerzaActual = fuerzaTruco(vista.enMano);
+    const fuerzaActual = fuerzaEquipo(ctx);
     const cartasYaJugadas = mano.bazas.flatMap((b) =>
       b.jugadas.map((j) => j.carta)
     );
@@ -400,7 +532,10 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
     );
     // Sólo proponemos canto si la mano lo amerita — el humano siempre
     // puede rechazar pero no queremos popups vacíos.
-    if (fuerzaActual < 60 && !tieneMacho) return null;
+    const bluffConsultable =
+      fuerzaActual >= 42 &&
+      azarContextual(ctx, "consultar-bluff-truco") < p.bluff * 0.18;
+    if (fuerzaActual < 58 && !tieneMacho && !bluffConsultable) return null;
   }
 
   // Etiqueta trucera: en baza 1 con la ventana de envido todavía abierta
@@ -415,6 +550,9 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   if (ventanaEnvidoAbierta) return null;
 
   const fuerza = fuerzaTruco(vista.enMano);
+  const fuerzaConEquipo = fuerzaEquipo(ctx);
+  const respaldoAliado = maxJerarquia(cartasAliadasEnMano(ctx));
+  const rival = lecturaRival(ctx);
   const bazasGanadas = mano.bazas.filter(
     (b) => b.ganadorEquipo === yo.equipo
   ).length;
@@ -427,6 +565,10 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   // puntos así que somos más exigentes con la fuerza requerida.
   let umbral = 50 - p.agresion * 14 - bazasGanadas * 12;
   umbral -= ventajaPorCartasVistas(ctx);
+  umbral -= respaldoAliado >= 12 ? 8 : respaldoAliado >= 10 ? 4 : 0;
+  umbral -= presionDeMarcador(ctx) * 0.5;
+  if (rival.fuertesVistas >= 2) umbral -= 4;
+  if (rival.maxOculta >= 13 && respaldoAliado < 10 && fuerza < 45) umbral += 4;
   if (cantoLegal === "cantar_retruco") umbral += 10;
   if (cantoLegal === "cantar_vale4") umbral += 16;
   if (distancia < -7) umbral -= 8; // vengo perdiendo, juego más fuerte
@@ -444,7 +586,7 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   );
   if (tieneMachoActual) umbral -= 20;
 
-  if (fuerza >= umbral) return { tipo: cantoLegal, jugadorId };
+  if (fuerzaConEquipo >= umbral) return { tipo: cantoLegal, jugadorId };
 
   // Bluff: cantar para asustar. Es más creíble si ya ganamos una baza,
   // si quedan pocas altas ocultas, o si venimos abajo y necesitamos
@@ -453,11 +595,15 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
     cantoLegal === "cantar_truco" &&
     (bazasGanadas >= 1 ||
       mano.bazas[0].jugadas.length === 0 ||
-      distancia < -6);
-  if (puedoBluff && fuerza < 50) {
+      distancia < -6 ||
+      respaldoAliado >= 9);
+  if (puedoBluff && fuerzaConEquipo < umbral) {
     const pocasAltasOcultas = contarDesconocidasFuertes(vista) <= 4;
-    const prob = p.bluff * (pocasAltasOcultas ? 0.34 : 0.22);
-    if (Math.random() < prob) {
+    const prob =
+      p.bluff * (pocasAltasOcultas ? 0.34 : 0.22) +
+      (respaldoAliado >= 10 ? 0.1 : 0) +
+      Math.max(0, presionDeMarcador(ctx)) * 0.01;
+    if (azarContextual(ctx, "bluff-truco") < prob) {
       return { tipo: cantoLegal, jugadorId };
     }
   }
@@ -485,6 +631,12 @@ function elegirCarta(ctx: ContextoCanto): Accion {
   const rivalesPorJugar = Math.max(0, cartasRestantesRivales(estado, yo));
   const muchasAltasOcultas = contarDesconocidasFuertes(vista) >= 7;
   const quedanMachosOcultos = maximaDesconocida(vista) >= 13;
+  const idsQueJugaron = new Set(baza.jugadas.map((j) => j.jugadorId));
+  const aliadasPendientes = compañerosDe(estado, yo)
+    .filter((j) => !idsQueJugaron.has(j.id))
+    .flatMap((j) => mano.cartasPorJugador[j.id] || []);
+  const mejorAliadaPendiente = maxJerarquia(aliadasPendientes);
+  const respaldoAliadoTotal = maxJerarquia(cartasAliadasEnMano(ctx));
 
   // Mejor carta del rival y del compañero ya tiradas en esta baza.
   let mejorRivalEnBaza = -1;
@@ -521,6 +673,13 @@ function elegirCarta(ctx: ContextoCanto): Accion {
   if (mejorRivalEnBaza >= 0) {
     const ganadora = ordenadas.find((c) => jerarquia(c) > mejorRivalEnBaza);
     if (ganadora) {
+      const aliadoPuedeMatar = mejorAliadaPendiente > mejorRivalEnBaza;
+      const bazaEsDeVidaOMuerte =
+        (numBaza === 2 && bazasPerdidas >= 1) ||
+        (numBaza === 3 && bazasGanadas <= bazasPerdidas);
+      if (aliadoPuedeMatar && !bazaEsDeVidaOMuerte) {
+        return { tipo: "jugar_carta", jugadorId, cartaId: ordenadas[0].id };
+      }
       // Si ya gané la primera, puedo regalarla acá (parda ok).
       if (numBaza === 2 && bazasGanadas >= 1) {
         // Tirar la más chica que gane (asegurar 2-0).
@@ -533,7 +692,10 @@ function elegirCarta(ctx: ContextoCanto): Accion {
       }
       // Bluff por carta: a veces tiro la más alta cuando podía tirar baja
       // (para que el rival piense que tengo aún más).
-      if (p.bluff > 0.6 && Math.random() < p.bluff * 0.12) {
+      if (
+        p.bluff > 0.6 &&
+        azarContextual(ctx, "sobreactuar-carta") < p.bluff * 0.12
+      ) {
         const top = ordenadas[ordenadas.length - 1];
         return { tipo: "jugar_carta", jugadorId, cartaId: top.id };
       }
@@ -582,6 +744,13 @@ function elegirCarta(ctx: ContextoCanto): Accion {
     // Primera baza: el mano puede liderar fuerte para imponer respeto, o
     // guardar la mejor para una baza decisiva. Personalidad decide.
     if (esMano) {
+      if (respaldoAliadoTotal >= 12 && ordenadas.length >= 3) {
+        return {
+          tipo: "jugar_carta",
+          jugadorId,
+          cartaId: ordenadas[0].id
+        };
+      }
       if (muchasAltasOcultas && ordenadas.length >= 3 && p.cautela > 0.45) {
         return {
           tipo: "jugar_carta",
@@ -590,8 +759,13 @@ function elegirCarta(ctx: ContextoCanto): Accion {
         };
       }
       if (p.agresion > 0.6) {
-        // Bot agresivo lidera con la segunda mejor (guarda la top).
-        const idx = Math.min(1, ordenadas.length - 1);
+        // Bot agresivo lidera con la segunda mejor si tiene doble respaldo;
+        // si no, muestra la mejor para comprar iniciativa.
+        const top = jerarquia(ordenadas[ordenadas.length - 1]);
+        const segunda = jerarquia(
+          ordenadas[ordenadas.length - 2] || ordenadas[0]
+        );
+        const idx = top >= 12 && segunda >= 9 ? 1 : 0;
         return {
           tipo: "jugar_carta",
           jugadorId,
@@ -613,13 +787,24 @@ function elegirCarta(ctx: ContextoCanto): Accion {
       const idxMedio = Math.floor(ordenadas.length / 2);
       return { tipo: "jugar_carta", jugadorId, cartaId: ordenadas[idxMedio].id };
     }
+    if (respaldoAliadoTotal >= 11 && ordenadas.length > 1) {
+      return { tipo: "jugar_carta", jugadorId, cartaId: ordenadas[0].id };
+    }
     return { tipo: "jugar_carta", jugadorId, cartaId: ordenadas[0].id };
   }
 
   // Segunda o tercera baza, primero en tirar.
   if (numBaza === 2) {
     if (bazasGanadas >= 1) {
-      // Gané la 1ra: puedo guardar la mejor para 3ra y tirar media. 2-1 me asegura mano.
+      // Gané la 1ra: si el compañero tiene respaldo, bajo chica para
+      // tentar al rival; si no, juego media y guardo la mejor para 3ra.
+      if (respaldoAliadoTotal >= 10) {
+        return {
+          tipo: "jugar_carta",
+          jugadorId,
+          cartaId: ordenadas[0].id
+        };
+      }
       const idxMedio = Math.floor(ordenadas.length / 2);
       return {
         tipo: "jugar_carta",
