@@ -18,6 +18,7 @@ import { PERSONAJES } from "@/data/jugadores";
 import {
   deberiaConsultar,
   accionDesdeConsulta,
+  consultaTrucoSugerida,
   type ConsultaCompañero
 } from "@/lib/consultaCompañero";
 
@@ -244,38 +245,18 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     // Antes de actuar: ¿el bot debería consultar al humano?
     //   - Envido (baza 1, ventana abierta, bot es pie): consulta envido.
     //   - Jugar (baza 2/3 cuando el bot abre la baza): consulta jugá/vení.
-    // Para la consulta de "jugar" calculamos la acción que el bot
-    // tomaría — si decide cantar truco / retruco, lo dejamos hacer
-    // y no consultamos sobre la carta.
-    const c = deberiaConsultar(estado, actor);
-    let consultaFinal: ConsultaCompañero | null = null;
-    if (c) {
+    // Primero miramos si la mano pide truco: esa pregunta tiene prioridad
+    // sobre "Jugá/Vení", porque si no el humano no llega a autorizar el canto.
+    let consultaFinal: ConsultaCompañero | null = consultaTrucoSugerida(
+      estado,
+      actor
+    );
+    const c = consultaFinal ? null : deberiaConsultar(estado, actor);
+    if (!consultaFinal && c) {
       consultaFinal = c;
       if (c.tipo === "jugar") {
         const accionPreview = decidirAccionBot(estado, actor.id);
         if (accionPreview.tipo !== "jugar_carta") consultaFinal = null;
-      }
-    }
-    // Consulta de truco: la IA quiere cantar y el bot tiene compañero
-    // humano — pedimos confirmación antes de despachar.
-    if (!consultaFinal) {
-      const accionPreview = decidirAccionBot(estado, actor.id);
-      const esCantoTruco =
-        accionPreview.tipo === "cantar_truco" ||
-        accionPreview.tipo === "cantar_retruco" ||
-        accionPreview.tipo === "cantar_vale4";
-      const tieneCompañeroHumano = estado.jugadores.some(
-        (j) => j.equipo === actor.equipo && j.id !== actor.id && !j.esBot
-      );
-      if (esCantoTruco && tieneCompañeroHumano) {
-        consultaFinal = {
-          tipo: "truco",
-          botJugadorId: actor.id,
-          cantoTipo: accionPreview.tipo as
-            | "cantar_truco"
-            | "cantar_retruco"
-            | "cantar_vale4"
-        };
       }
     }
     // Si el humano acaba de resolver una consulta para este bot,

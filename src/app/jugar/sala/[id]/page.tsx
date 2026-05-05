@@ -37,6 +37,7 @@ import { decidirAccionBot } from "@/lib/truco/ia";
 import {
   deberiaConsultar,
   accionDesdeConsulta,
+  consultaTrucoSugerida,
   type ConsultaCompañero as ConsultaT,
   type DecisionConsulta
 } from "@/lib/consultaCompañero";
@@ -226,39 +227,16 @@ export default function SalaPage() {
 
     // ¿Debería consultarle al humano antes de actuar?
     //   - Envido (baza 1, ventana abierta, bot es pie): consulta envido.
-    //   - Jugar (baza 2/3 cuando el bot abre la baza): consulta jugá/vení.
+    //   - Jugar (cuando el bot debe tirar carta): consulta jugá/vení.
     //   - Truco: si la IA quiere cantar truco/retruco/vale4 y el bot
     //     tiene compañero humano, le pedimos permiso al humano antes.
-    const c = deberiaConsultar(estado, actor);
-    let consultaFinal: ConsultaT | null = null;
-    if (c) {
+    let consultaFinal: ConsultaT | null = consultaTrucoSugerida(estado, actor);
+    const c = consultaFinal ? null : deberiaConsultar(estado, actor);
+    if (!consultaFinal && c) {
       consultaFinal = c;
       if (c.tipo === "jugar") {
         const accionPreview = decidirAccionBot(estado, actor.id);
         if (accionPreview.tipo !== "jugar_carta") consultaFinal = null;
-      }
-    }
-    // Si no hay consulta de envido/jugar, evaluamos la acción que la IA
-    // tomaría — si es un canto de truco y el bot tiene compañero humano,
-    // disparamos la consulta de truco.
-    if (!consultaFinal) {
-      const accionPreview = decidirAccionBot(estado, actor.id);
-      const esCantoTruco =
-        accionPreview.tipo === "cantar_truco" ||
-        accionPreview.tipo === "cantar_retruco" ||
-        accionPreview.tipo === "cantar_vale4";
-      const tieneCompañeroHumano = estado.jugadores.some(
-        (j) => j.equipo === actor.equipo && j.id !== actor.id && !j.esBot
-      );
-      if (esCantoTruco && tieneCompañeroHumano) {
-        consultaFinal = {
-          tipo: "truco",
-          botJugadorId: actor.id,
-          cantoTipo: accionPreview.tipo as
-            | "cantar_truco"
-            | "cantar_retruco"
-            | "cantar_vale4"
-        };
       }
     }
     // Si el humano acaba de resolver una consulta para este bot, no le

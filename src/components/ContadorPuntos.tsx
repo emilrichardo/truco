@@ -24,7 +24,7 @@ export function ContadorPuntos({
       {enBuenas && esMio && <Buenas />}
       <span className="sr-only">{mostrado}</span>
       <span
-        className="inline-flex flex-wrap items-center gap-[2px] max-w-[78px] sm:max-w-[96px]"
+        className="inline-flex flex-wrap items-center gap-[2px] max-w-[92px] sm:max-w-[112px]"
         aria-hidden
         title={`${mostrado} puntos`}
       >
@@ -58,13 +58,13 @@ function Buenas() {
 
 function GrupoFosforos({ count }: { count: number }) {
   return (
-    <span className="relative inline-block w-[13px] h-[13px] shrink-0">
-      {count >= 1 && <Fosforo className="left-[2px] top-0 rotate-0" />}
-      {count >= 2 && <Fosforo className="right-[2px] top-0 rotate-0" />}
-      {count >= 3 && <Fosforo className="left-[1px] bottom-[2px] rotate-90" />}
-      {count >= 4 && <Fosforo className="right-[1px] bottom-[2px] rotate-90" />}
+    <span className="relative inline-block w-[16px] h-[16px] shrink-0">
+      {count >= 1 && <Fosforo className="left-[3px] top-[1px] rotate-90" />}
+      {count >= 2 && <Fosforo className="right-[1px] top-[3px] rotate-0" />}
+      {count >= 3 && <Fosforo className="left-[3px] bottom-[1px] rotate-90" />}
+      {count >= 4 && <Fosforo className="left-[1px] top-[3px] rotate-0" />}
       {count >= 5 && (
-        <Fosforo className="left-[5px] top-[1px] rotate-45 scale-[1.18]" />
+        <Fosforo className="left-[7px] top-[1px] rotate-45 scale-y-[1.28]" />
       )}
     </span>
   );

@@ -3,6 +3,7 @@
 // Se usa en modo Solo (salaLocal) y en sala online (sala/[id]/page).
 import { decidirAccionBot } from "@/lib/truco/ia";
 import { calcularEnvido, jerarquia } from "@/lib/truco/cartas";
+import { accionesLegales } from "@/lib/truco/motor";
 import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
 
 /** Consulta del bot compañero al humano antes de tirar carta.
@@ -46,6 +47,81 @@ export type DecisionConsulta =
   | "carta_especifica"
   | "confirmar_truco"
   | "rechazar_truco";
+
+export function consultaTrucoSugerida(
+  estado: EstadoJuego,
+  bot: Jugador
+): ConsultaCompañero | null {
+  if (!bot.esBot) return null;
+  const mano = estado.manoActual;
+  if (!mano) return null;
+  if (mano.envidoCantoActivo || mano.trucoCantoActivo) return null;
+
+  const tieneCompañeroHumano = estado.jugadores.some(
+    (j) => j.equipo === bot.equipo && j.id !== bot.id && !j.esBot
+  );
+  if (!tieneCompañeroHumano) return null;
+
+  const legales = accionesLegales(estado, bot.id);
+  const cantoTipo = legales.includes("cantar_truco")
+    ? "cantar_truco"
+    : legales.includes("cantar_retruco")
+      ? "cantar_retruco"
+      : legales.includes("cantar_vale4")
+        ? "cantar_vale4"
+        : null;
+  if (!cantoTipo) return null;
+
+  const accionPreview = decidirAccionBot(estado, bot.id);
+  if (esCantoTruco(accionPreview.tipo)) {
+    return {
+      tipo: "truco",
+      botJugadorId: bot.id,
+      cantoTipo: accionPreview.tipo
+    };
+  }
+
+  // Si la IA eligió jugar carta, hacemos una segunda lectura táctica más
+  // simple para no esconder manos muy claras detrás de "Jugá/Vení".
+  const ventanaEnvidoAbierta =
+    mano.bazas.length === 1 &&
+    !mano.envidoResuelto &&
+    mano.bazas[0].jugadas.length < estado.jugadores.length;
+  if (ventanaEnvidoAbierta) return null;
+
+  const cartas = mano.cartasPorJugador[bot.id] || [];
+  const jerarquias = cartas.map(jerarquia).sort((a, b) => b - a);
+  const primera = jerarquias[0] || 0;
+  const segunda = jerarquias[1] || 0;
+  const tercera = jerarquias[2] || 0;
+  const bazasGanadas = mano.bazas.filter(
+    (b) => b.ganadorEquipo === bot.equipo
+  ).length;
+  const bazasPerdidas = mano.bazas.filter(
+    (b) => b.ganadorEquipo !== null && b.ganadorEquipo !== bot.equipo
+  ).length;
+  const potencia = primera * 4 + segunda * 2 + tercera + bazasGanadas * 8;
+
+  const manoPideTruco =
+    cantoTipo === "cantar_truco"
+      ? primera >= 13 || (primera >= 11 && segunda >= 9) || potencia >= 72
+      : cantoTipo === "cantar_retruco"
+        ? primera >= 14 || (primera >= 13 && segunda >= 9) || potencia >= 78
+        : (primera >= 14 && segunda >= 10) || potencia >= 84;
+
+  if (!manoPideTruco || bazasPerdidas > bazasGanadas + 1) return null;
+  return { tipo: "truco", botJugadorId: bot.id, cantoTipo };
+}
+
+function esCantoTruco(
+  tipo: Accion["tipo"]
+): tipo is "cantar_truco" | "cantar_retruco" | "cantar_vale4" {
+  return (
+    tipo === "cantar_truco" ||
+    tipo === "cantar_retruco" ||
+    tipo === "cantar_vale4"
+  );
+}
 
 /** Decide si el bot que está por actuar debe pedir input al humano antes
  *  de tirar carta. Aplica cuando el bot es PIE de su equipo y el

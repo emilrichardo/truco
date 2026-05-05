@@ -1,7 +1,10 @@
 // Tests de deberiaConsultar — el bot debe pedir input al humano antes
 // de tirar carta SIEMPRE, no solo cuando es pie de equipo.
 import { describe, expect, it } from "vitest";
-import { deberiaConsultar } from "@/lib/consultaCompañero";
+import {
+  deberiaConsultar,
+  consultaTrucoSugerida
+} from "@/lib/consultaCompañero";
 import { aplicar, estado1v1, estado2v2 } from "./helpers";
 
 describe("deberiaConsultar — consulta jugar en cualquier baza/posición", () => {
@@ -115,6 +118,27 @@ describe("deberiaConsultar — consulta jugar en cualquier baza/posición", () =
     const c = deberiaConsultar(e, p2);
     expect(c).not.toBeNull();
     expect(c?.tipo).toBe("jugar");
+  });
+
+  it("prioriza preguntar por truco sobre Jugá/Vení cuando el bot tiene mano fuerte", () => {
+    const e = estado2v2(["human", "bot", "bot", "bot"]);
+    const mano = e.manoActual!;
+    mano.envidoResuelto = true;
+    mano.turnoJugadorId = "P2";
+    mano.cartasPorJugador["P2"] = [
+      { id: "p2-macho", numero: 1, palo: "espada" },
+      { id: "p2-4", numero: 4, palo: "copa" },
+      { id: "p2-5", numero: 5, palo: "oro" }
+    ];
+    const p2 = e.jugadores.find((j) => j.id === "P2")!;
+
+    expect(deberiaConsultar(e, p2)?.tipo).toBe("jugar");
+    const c = consultaTrucoSugerida(e, p2);
+    expect(c).toMatchObject({
+      tipo: "truco",
+      botJugadorId: "P2",
+      cantoTipo: "cantar_truco"
+    });
   });
 
   it("no consulta si hay envido pendiente (debe responder)", () => {
