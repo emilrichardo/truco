@@ -14,6 +14,8 @@ export type Equipo = 0 | 1;
 
 export interface Jugador {
   id: string;
+  /** Perfil persistente del dispositivo/usuario en salas online. */
+  perfilId?: string;
   nombre: string;
   /** Slug del personaje (ej. "marcos"), referencia a /jugadores/<slug>.png */
   personaje: string;

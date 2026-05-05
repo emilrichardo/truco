@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
   const jugadorId = crypto.randomUUID();
   const jugador: Jugador = {
     id: jugadorId,
+    perfilId: perfilId ?? undefined,
     nombre: body.nombre,
     personaje: body.personaje,
     equipo: 0,

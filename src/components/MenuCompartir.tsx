@@ -19,7 +19,7 @@ export function MenuCompartir({
     setTieneShare(typeof navigator !== "undefined" && !!navigator.share);
   }, []);
 
-  const texto = `🃏 ¡Sumate a la mesa de truco entre primos!\nSala: *${salaId}*\n${url}`;
+  const texto = `🃏 ¡Sumate a mi mesa de truco!\nSala: *${salaId}*\n${url}`;
 
   const compartirWA = () => {
     const wa = `https://wa.me/?text=${encodeURIComponent(texto)}`;
@@ -62,7 +62,7 @@ export function MenuCompartir({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center mb-2">
-          <div className="label-slim acento-azul">Invitar a un primo</div>
+          <div className="label-slim acento-azul">Invitar amigo</div>
           <div className="font-display text-lg text-dorado">{salaId}</div>
         </div>
 

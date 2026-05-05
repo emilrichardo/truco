@@ -439,6 +439,7 @@ export default function SalaPage() {
   // re-flippea al usuario, dejándolo trabado en la sala aunque haya
   // pedido salir. Una vez true, no se vuelve a false (se desmonta).
   const saliendoRef = useRef(false);
+  const recuperacionDuplicadoRef = useRef<string | null>(null);
 
   // Reconectar: si vuelvo a la sala con una sesión guardada y mi
   // jugador está marcado como bot (porque me desconecté o agotó mi
@@ -453,6 +454,34 @@ export default function SalaPage() {
       console.warn("[reconectar] error", e)
     );
   }, [estado, miId, salaId]);
+
+  // Reparación de salas creadas antes del fix: si el mismo perfil quedó
+  // duplicado en espera y el localStorage apunta al duplicado no-creador,
+  // retomamos el asiento original y liberamos el duplicado.
+  useEffect(() => {
+    if (!estado || estado.iniciada || !miId || !miSlug) return;
+    if (recuperacionDuplicadoRef.current === estado.salaId) return;
+    const meta = getPersonaje(miSlug);
+    if (!meta) return;
+    const actual = estado.jugadores.find((j) => j.id === miId);
+    if (!actual || actual.asiento === 0) return;
+    const original = estado.jugadores
+      .filter(
+        (j) =>
+          j.id !== actual.id &&
+          j.asiento === 0 &&
+          j.nombre === meta.nombre &&
+          j.personaje === miSlug
+      )
+      .sort((a, b) => a.asiento - b.asiento)[0];
+    if (!original) return;
+
+    recuperacionDuplicadoRef.current = estado.salaId;
+    setMiId(original.id);
+    guardarSesion({ salaId, jugadorId: original.id });
+    reconectarSalaOnline(salaId, original.id).catch(() => {});
+    abandonarSalaOnline(salaId, actual.id).catch(() => {});
+  }, [estado, miId, miSlug, salaId]);
 
   // Presence ping: mientras tengo la pestaña abierta, cada 15s avisamos
   // al server que sigo acá. La function es idempotente — si ya estoy
@@ -495,6 +524,19 @@ export default function SalaPage() {
   // Auto-unirse a la sala si ya tengo perfil pero no estoy en jugadores.
   useEffect(() => {
     if (!estado || !miSlug || unidoIntentado) return;
+    const sesion = leerSesion(salaId);
+    if (sesion) {
+      const jugadorSesion = estado.jugadores.find(
+        (j) => j.id === sesion.jugadorId
+      );
+      if (jugadorSesion) {
+        if (miId !== sesion.jugadorId) setMiId(sesion.jugadorId);
+        if (!jugadorSesion.conectado || jugadorSesion.esBot) {
+          reconectarSalaOnline(salaId, sesion.jugadorId).catch(() => {});
+        }
+        return;
+      }
+    }
     const yaSoy = miId && estado.jugadores.some((j) => j.id === miId);
     if (yaSoy || (salaMeta?.iniciada ?? false)) return;
     setUnidoIntentado(true);
@@ -866,7 +908,7 @@ export default function SalaPage() {
           <button
             onClick={() => setMenuCompartir(true)}
             className="btn btn-primary !px-3 !py-1.5 !min-h-0 text-xs flex items-center gap-1.5 shrink-0 font-bold"
-            title="Invitar a un primo"
+            title="Invitar amigo"
           >
             <svg
               viewBox="0 0 24 24"
@@ -882,7 +924,7 @@ export default function SalaPage() {
               <path d="M10 13a5 5 0 0 0 7.07 0l3.54-3.54a5 5 0 0 0-7.07-7.07l-1.41 1.41" />
               <path d="M14 11a5 5 0 0 0-7.07 0l-3.54 3.54a5 5 0 0 0 7.07 7.07l1.41-1.41" />
             </svg>
-            <span>Invitar a un primo</span>
+            <span>Invitar amigo</span>
           </button>
         </header>
       ) : (
@@ -1240,24 +1282,18 @@ function SalaEspera({
   const ocupados = slots.filter((s) => !!s.j).length;
   const faltan = total - ocupados;
   const todosListos = faltan === 0;
-  const [mezclarEquipos, setMezclarEquipos] = useState(false);
-  const [completarConBots, setCompletarConBots] = useState(false);
   const [iniciando, setIniciando] = useState(false);
-  // Si el usuario activó "Completar con bots", al iniciar lanzamos
-  // primero un sumarBot por cada asiento libre y después invocamos
-  // onIniciar. El botón muestra "Cargando…" durante toda esa
-  // secuencia para que se vea que la acción está en curso.
-  const puedeIniciar =
-    !iniciando &&
-    (todosListos || (completarConBots && !!onAutoCompletarBots));
+  // Si faltan jugadores y el creador comienza, completamos esos lugares
+  // con bots automáticamente. Sin un botón intermedio: menos fricción.
+  const puedeIniciar = !iniciando && (todosListos || !!onAutoCompletarBots);
   const handleIniciar = async () => {
     if (!puedeIniciar) return;
     setIniciando(true);
     try {
-      if (faltan > 0 && completarConBots && onAutoCompletarBots) {
+      if (faltan > 0 && onAutoCompletarBots) {
         await onAutoCompletarBots();
       }
-      onIniciar(mezclarEquipos);
+      onIniciar(false);
     } finally {
       // Si onIniciar falla por algún error, liberamos el botón. En el
       // happy path la sala transita a "iniciada" y SalaEspera se
@@ -1293,34 +1329,6 @@ function SalaEspera({
           />
         ))}
       </div>
-      {/* Toggles estilo botón ocupando media pantalla cada uno. En 1v1
-       *  el "Sortear compañeros" no tiene sentido, así que el "Completar
-       *  con bots" toma todo el ancho. */}
-      <div className="px-2 sm:px-4 py-2 grid grid-cols-2 gap-2">
-        {total === 4 && (
-          <ToggleBoton
-            activo={mezclarEquipos}
-            onClick={() => setMezclarEquipos((v) => !v)}
-            icono={<IconoBarajar />}
-            label="Sortear"
-            sublabel="Al azar"
-          />
-        )}
-        {onAutoCompletarBots && (
-          <ToggleBoton
-            activo={completarConBots}
-            onClick={() => setCompletarConBots((v) => !v)}
-            icono={<IconoBotAuto />}
-            label="Completar"
-            sublabel={
-              faltan > 0
-                ? `${faltan} bot${faltan === 1 ? "" : "s"}`
-                : "Listos"
-            }
-            disabled={faltan === 0}
-          />
-        )}
-      </div>
       <div className="border-t border-border bg-surface/40 p-3 flex items-center gap-2">
         <button
           onClick={onCerrar}
@@ -1332,12 +1340,10 @@ function SalaEspera({
         <div className="flex-1 text-center text-xs subtitulo-claim">
           {todosListos ? (
             <span className="text-dorado">¡Todos listos!</span>
-          ) : completarConBots ? (
-            <span className="text-dorado">Completaremos con bots</span>
+          ) : onAutoCompletarBots ? (
+            <span className="text-dorado">Se completará con bots</span>
           ) : (
-            <span className="text-text-dim">
-              {faltan === 1 ? "Falta 1 primo" : `Faltan ${faltan} primos`}
-            </span>
+            <span className="text-text-dim">Esperando comenzar</span>
           )}
         </div>
         <button
@@ -1346,10 +1352,10 @@ function SalaEspera({
           className="btn btn-primary flex-1 sm:flex-initial sm:px-6"
           title={
             puedeIniciar
-              ? "Empezar partida"
+              ? "Comenzar partida"
               : iniciando
                 ? "Sumando bots…"
-                : "Esperá a que se sienten todos o tocá Completar con bots"
+                : "Esperá al creador de la sala"
           }
         >
           {iniciando ? (
@@ -1361,126 +1367,11 @@ function SalaEspera({
               Cargando…
             </span>
           ) : (
-            "Iniciar"
+            "Comenzar"
           )}
         </button>
       </div>
     </div>
-  );
-}
-
-/** Botón estilo toggle compacto. Diseñado para entrar en mobile en 2
- *  columnas. Cuando está activo, borde y texto dorados, con un check
- *  chiquito en la esquina. */
-function ToggleBoton({
-  activo,
-  onClick,
-  icono,
-  label,
-  sublabel,
-  disabled
-}: {
-  activo: boolean;
-  onClick: () => void;
-  icono: React.ReactNode;
-  label: string;
-  sublabel?: string;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={activo}
-      className={`relative flex items-center gap-1.5 px-2 py-1.5 rounded-lg border-2 transition text-left min-w-0 ${
-        disabled
-          ? "border-border/40 bg-surface/20 opacity-50 cursor-not-allowed"
-          : activo
-            ? "border-dorado bg-dorado/10 text-dorado"
-            : "border-border bg-surface/60 text-crema hover:border-azul-criollo/60"
-      }`}
-    >
-      <span
-        className={`flex-shrink-0 w-7 h-7 rounded flex items-center justify-center border ${
-          activo ? "border-dorado/60 bg-dorado/15" : "border-border bg-carbon/40"
-        }`}
-      >
-        {icono}
-      </span>
-      <span className="flex-1 min-w-0 text-left">
-        <span className="block font-display text-[11px] sm:text-xs leading-tight truncate">
-          {label}
-        </span>
-        {sublabel && (
-          <span className="block text-[9px] text-text-dim leading-tight truncate">
-            {sublabel}
-          </span>
-        )}
-      </span>
-      {activo && (
-        <span
-          className="absolute top-1 right-1 w-3 h-3 rounded-full bg-dorado flex items-center justify-center"
-          aria-hidden
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="var(--carbon)"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-2.5 h-2.5"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        </span>
-      )}
-    </button>
-  );
-}
-
-function IconoBarajar() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="18"
-      height="18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M16 3h5v5" />
-      <path d="M4 20l17-17" />
-      <path d="M21 16v5h-5" />
-      <path d="M15 15l6 6" />
-      <path d="M4 4l5 5" />
-    </svg>
-  );
-}
-
-function IconoBotAuto() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="18"
-      height="18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <rect x="3" y="8" width="18" height="12" rx="2" />
-      <path d="M12 8V4M9 4h6" />
-      <circle cx="9" cy="14" r="1" fill="currentColor" />
-      <circle cx="15" cy="14" r="1" fill="currentColor" />
-      <path d="M3 13h-1M21 13h1" />
-    </svg>
   );
 }
 
@@ -1554,7 +1445,7 @@ function SlotEspera({
             ?
           </div>
           <div className="text-center text-text-dim/70 text-xs italic subtitulo-claim">
-            Esperando primo
+            Esperando amigo
           </div>
           {onSumarBot && (
             <button

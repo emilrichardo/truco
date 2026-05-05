@@ -13,7 +13,6 @@ export default function CrearSalaPage() {
   const router = useRouter();
   const [miSlug, setMiSlug, listo] = usePersonajeLocal();
   const [cambiar, setCambiar] = useState(false);
-  const [conFlor, setConFlor] = useState(false);
   const [tamanio, setTamanio] = useState<2 | 4>(4);
   const [publica, setPublica] = useState(false);
   // Puntos siempre a 18 (9 malas + 9 buenas) por ahora.
@@ -41,7 +40,7 @@ export default function CrearSalaPage() {
       personaje: miSlug,
       tamanio,
       puntosObjetivo: puntos,
-      conFlor,
+      conFlor: false,
       publica
     });
     if (!r.ok || !r.sala_id || !r.jugador_id) {
@@ -120,15 +119,6 @@ export default function CrearSalaPage() {
           />
         </Opcion>
 
-        <Opcion label="Flor">
-          <Choice activo={!conFlor} onClick={() => setConFlor(false)}>
-            Sin flor
-          </Choice>
-          <Choice activo={conFlor} onClick={() => setConFlor(true)}>
-            Con flor (+3 pts)
-          </Choice>
-        </Opcion>
-
         <label className="flex items-center gap-2 mb-4 cursor-pointer select-none p-2 -mx-2 rounded hover:bg-azul-criollo/10 transition">
           <input
             type="checkbox"
@@ -173,32 +163,6 @@ function Opcion({ label, children }: { label: string; children: React.ReactNode 
       <div className="label-slim mb-1.5">{label}</div>
       <div className="grid grid-cols-2 gap-2">{children}</div>
     </div>
-  );
-}
-
-function Choice({
-  activo,
-  onClick,
-  children
-}: {
-  activo: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  // Activo: solo se diferencia por borde dorado + texto dorado, sin
-  // pintar el fondo (queda más sobrio que btn-primary lleno).
-  return (
-    <button
-      onClick={onClick}
-      aria-pressed={activo}
-      className={`btn ${
-        activo
-          ? "!border-dorado !text-dorado"
-          : ""
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 

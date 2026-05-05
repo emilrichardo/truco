@@ -61,6 +61,37 @@ Deno.serve(async (req) => {
 
   const estado = sala.estado as EstadoJuego;
   const total = sala.modo === "2v2" ? 4 : 2;
+
+  const existente = estado.jugadores
+    .filter((j) => {
+      const mismoPerfil = !!perfilId && j.perfilId === perfilId;
+      const legacyMismoJugador =
+        !j.perfilId &&
+        j.nombre === body.nombre &&
+        j.personaje === body.personaje &&
+        (!j.conectado || j.esBot);
+      return mismoPerfil || legacyMismoJugador;
+    })
+    .sort((a, b) => a.asiento - b.asiento)[0];
+  if (existente) {
+    existente.perfilId = perfilId ?? existente.perfilId;
+    existente.conectado = true;
+    existente.esBot = false;
+    estado.version = (estado.version || 0) + 1;
+
+    const { error: errUpd } = await sb
+      .from("salas")
+      .update({ estado })
+      .eq("id", body.sala_id);
+    if (errUpd) return fail(`update: ${errUpd.message}`, 500);
+
+    return ok({
+      jugador_id: existente.id,
+      asiento: existente.asiento,
+      perfil_id: perfilId
+    });
+  }
+
   const ocupados = new Set(estado.jugadores.map((j) => j.asiento));
   let asiento =
     body.asiento_preferido !== undefined && !ocupados.has(body.asiento_preferido)
@@ -76,6 +107,7 @@ Deno.serve(async (req) => {
   const jugadorId = crypto.randomUUID();
   const jugador: Jugador = {
     id: jugadorId,
+    perfilId: perfilId ?? undefined,
     nombre: body.nombre,
     personaje: body.personaje,
     equipo: (asiento % 2) as 0 | 1,

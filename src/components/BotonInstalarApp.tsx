@@ -35,7 +35,13 @@ function yaInstalada(): boolean {
   );
 }
 
-export function BotonInstalarApp() {
+export function BotonInstalarApp({
+  className,
+  label = "Instalar app"
+}: {
+  className?: string;
+  label?: string;
+}) {
   const [promptEvt, setPromptEvt] = useState<BeforeInstallPromptEvent | null>(
     null
   );
@@ -87,7 +93,10 @@ export function BotonInstalarApp() {
       <button
         type="button"
         onClick={onClick}
-        className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
+        className={
+          className ||
+          "inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
+        }
         aria-label="Instalar como aplicación"
       >
         <svg
@@ -104,7 +113,7 @@ export function BotonInstalarApp() {
           <polyline points="7 10 12 15 17 10" />
           <path d="M5 21h14" />
         </svg>
-        <span>Instalar app</span>
+        <span>{label}</span>
       </button>
       {mostrarTipsIOS && (
         <div

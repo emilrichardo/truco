@@ -258,25 +258,25 @@ export default function HomePage() {
         </section>
       )}
 
-      <footer className="text-center mt-20 sm:mt-24 pt-6 border-t border-border/40 space-y-2">
-        <div className="flex items-center justify-center gap-4 flex-wrap">
+      <footer className="text-center mt-20 sm:mt-24 pt-6 border-t border-border/40 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
           <Link
             href="/reglas"
-            className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
+            className="btn btn-ghost !min-h-0 !py-2 !px-3 !text-[11px]"
           >
             📖 Reglas
           </Link>
-          <span className="text-text-dim/40">·</span>
           <Link
             href="/ranking"
-            className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
+            className="btn btn-ghost !min-h-0 !py-2 !px-3 !text-[11px]"
           >
-            🏆 Tabla de posiciones
+            🏆 Ranking
           </Link>
-          <span className="text-text-dim/40">·</span>
-          <BotonCompartirJuego />
-          <span className="text-text-dim/40">·</span>
-          <BotonInstalarApp />
+          <BotonCompartirJuego className="btn btn-ghost !min-h-0 !py-2 !px-3 !text-[11px] w-full" />
+          <BotonInstalarApp
+            label="Descargar app"
+            className="btn btn-primary !min-h-0 !py-2 !px-3 !text-[11px] w-full"
+          />
         </div>
         <div className="text-text-dim/60 text-[10px] subtitulo-claim">
           Hecho con asado y mate · {new Date().getFullYear()}
@@ -290,7 +290,7 @@ export default function HomePage() {
  *  sala puntual). Usa la Web Share API en mobile y cae en copiar al
  *  clipboard en desktop. Mensaje pensado para WhatsApp: emoji + claim
  *  + URL para que el preview de OG complete con el logo. */
-function BotonCompartirJuego() {
+function BotonCompartirJuego({ className }: { className?: string }) {
   const [tieneShare, setTieneShare] = useState(false);
   const [copiado, setCopiado] = useState(false);
 
@@ -328,7 +328,10 @@ function BotonCompartirJuego() {
     <button
       type="button"
       onClick={compartir}
-      className="inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
+      className={
+        className ||
+        "inline-flex items-center gap-1.5 text-text-dim hover:text-dorado transition text-xs subtitulo-claim"
+      }
       aria-label="Compartir el juego con amigos"
     >
       {copiado ? (
