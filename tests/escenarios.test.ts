@@ -3,7 +3,7 @@
 //  2. Después de cantar real_envido, re-cantar desde el mismo equipo es no-op.
 //  3. Bot mano no canta envido (deja al pie).
 //  4. Bot no se va al mazo cuando tiene compañero humano.
-//  5. ir_al_mazo solo en turno.
+//  5. ir_al_mazo fuera de turno, salvo cantos pendientes del rival.
 import { describe, expect, it } from "vitest";
 import { decidirAccionBot } from "@/lib/truco/ia";
 import { accionesLegales, aplicarAccion } from "@/lib/truco/motor";
@@ -109,7 +109,16 @@ describe("escenario: bot mano no canta envido (2v2)", () => {
   });
 });
 
-describe("escenario: ir_al_mazo solo en turno (regresión)", () => {
+describe("escenario: ir_al_mazo fuera de turno", () => {
+  it("usuario puede ir al mazo aunque no sea su turno si no hay canto pendiente", () => {
+    const e = estado1v1();
+    e.manoActual!.turnoJugadorId = "B";
+    const legales = accionesLegales(e, "U");
+    expect(legales).toContain("ir_al_mazo");
+    const r = aplicarAccion(e, { tipo: "ir_al_mazo", jugadorId: "U" });
+    expect(r.ok).toBe(true);
+  });
+
   it("usuario NO puede ir al mazo mientras el bot debe responder", () => {
     let e = estado1v1();
     e = aplicar(e, { tipo: "cantar_envido", jugadorId: "U" });
@@ -118,7 +127,7 @@ describe("escenario: ir_al_mazo solo en turno (regresión)", () => {
     expect(r.ok).toBe(false);
   });
 
-  it("legales NO incluye ir_al_mazo cuando no es mi turno", () => {
+  it("legales NO incluye ir_al_mazo cuando mi canto está pendiente de respuesta", () => {
     let e = estado1v1();
     e = aplicar(e, { tipo: "cantar_envido", jugadorId: "U" });
     const legales = accionesLegales(e, "U");

@@ -881,7 +881,10 @@ export function decidirAccionBot(estado: EstadoJuego, jugadorId: string): Accion
   // (ej. compañero del que cantó truco, fuera de turno) cerrara la
   // mano sin sentido. Devolvemos jugar_carta vacío como sentinela —
   // el server lo rechaza silenciosamente, sin tocar el estado.
-  if (legales.includes("ir_al_mazo")) {
+  if (
+    legales.includes("ir_al_mazo") &&
+    estado.manoActual?.turnoJugadorId === jugadorId
+  ) {
     return { tipo: "ir_al_mazo", jugadorId };
   }
   return { tipo: "jugar_carta", jugadorId, cartaId: "" };

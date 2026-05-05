@@ -1,6 +1,6 @@
 // Tests del flujo de truco — incluyen los bugs reportados:
 //  - Doble cantar_truco del mismo equipo (no debe acumular).
-//  - ir_al_mazo fuera de turno (debe rechazar).
+//  - ir_al_mazo fuera de turno (debe permitirse sin cantos pendientes).
 //  - Truco out-of-turn permitido.
 import { describe, expect, it } from "vitest";
 import { accionesLegales, aplicarAccion } from "@/lib/truco/motor";
@@ -91,12 +91,25 @@ describe("truco — bloqueos (regresiones)", () => {
   });
 });
 
-describe("ir_al_mazo — solo en turno", () => {
-  it("rechaza ir_al_mazo cuando NO es mi turno (regresión)", () => {
+describe("ir_al_mazo — permitido fuera de turno", () => {
+  it("acepta ir_al_mazo aunque NO sea mi turno si no hay cantos pendientes", () => {
+    const e = estado1v1();
+    e.manoActual!.turnoJugadorId = "B";
+    const r = aplicarAccion(e, { tipo: "ir_al_mazo", jugadorId: "U" });
+    expect(r.ok).toBe(true);
+    expect(r.estado.puntos[1]).toBe(1);
+  });
+
+  it("legales incluye ir_al_mazo aunque NO sea mi turno si no hay cantos pendientes", () => {
+    const e = estado1v1();
+    e.manoActual!.turnoJugadorId = "B";
+    const legales = accionesLegales(e, "U");
+    expect(legales).toContain("ir_al_mazo");
+  });
+
+  it("rechaza ir_al_mazo si mi equipo cantó y el rival debe responder", () => {
     let e = estado1v1();
-    // Forzamos turno al bot.
     e = aplicar(e, { tipo: "cantar_truco", jugadorId: "U" });
-    // Ahora es turno del bot para responder. El usuario intenta mazo.
     const r = aplicarAccion(e, { tipo: "ir_al_mazo", jugadorId: "U" });
     expect(r.ok).toBe(false);
   });

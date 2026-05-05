@@ -518,22 +518,20 @@ function chequearFinPartida(estado: EstadoJuego): boolean {
 
 function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
   const mano = estado.manoActual!;
-  // Permitido en tu turno O cuando tu equipo está respondiendo a un
-  // envido/truco pendiente (es la forma "concedo todo y termino la
-  // mano"). Sino un bot mal-dispachado podría cerrar la mano fuera
-  // de contexto.
+  // Permitido aunque no sea tu turno mientras no haya un canto pendiente
+  // que deba responder el otro equipo. Si tu equipo debe responder, ir al
+  // mazo equivale a conceder el canto y la mano.
   const debeResponderEnvido =
     !!mano.envidoCantoActivo &&
     mano.envidoCantoActivo.equipoQueDebeResponder === jugador.equipo;
   const debeResponderTruco =
     !!mano.trucoCantoActivo &&
     mano.trucoCantoActivo.equipoQueDebeResponder === jugador.equipo;
-  if (
-    mano.turnoJugadorId !== jugador.id &&
-    !debeResponderEnvido &&
-    !debeResponderTruco
-  ) {
-    return { ok: false, error: "Solo te podés ir al mazo en tu turno.", estado };
+  const hayCantoPendienteDeOtroEquipo =
+    (!!mano.envidoCantoActivo && !debeResponderEnvido) ||
+    (!!mano.trucoCantoActivo && !debeResponderTruco);
+  if (hayCantoPendienteDeOtroEquipo) {
+    return { ok: false, error: "Hay un canto pendiente.", estado };
   }
 
   const eq = jugador.equipo;
@@ -1309,10 +1307,13 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
     out.push("cantar_envido", "cantar_real_envido", "cantar_falta_envido");
   }
 
+  if (!mano.envidoCantoActivo && !mano.trucoCantoActivo) {
+    out.push("ir_al_mazo");
+  }
+
   // Si es su turno y no hay cantos pendientes:
   if (mano.turnoJugadorId === j.id) {
     out.push("jugar_carta");
-    out.push("ir_al_mazo");
   }
   // Truco / retruco / vale 4: se ofrecen también fuera de turno mientras
   // no haya un envido o truco pendiente. Es la regla que la mayoría
