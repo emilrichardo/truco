@@ -72,6 +72,34 @@ describe("IA — envido con mano alta", () => {
   });
 });
 
+describe("IA — iniciativa profesional", () => {
+  it("abre falta envido cuando tiene 33 y puede presionar la mano", () => {
+    const e = estado1v1();
+    e.manoActual!.turnoJugadorId = "B";
+    setCartas(e, "B", [
+      { numero: 7, palo: "espada" },
+      { numero: 6, palo: "espada" },
+      { numero: 4, palo: "oro" }
+    ]);
+
+    const accion = decidirAccionBot(e, "B");
+    expect(accion.tipo).toBe("cantar_falta_envido");
+  });
+
+  it("con poco envido pero cartas bravas abre truco temprano", () => {
+    const e = estado1v1();
+    e.manoActual!.turnoJugadorId = "B";
+    setCartas(e, "B", [
+      { numero: 1, palo: "espada" },
+      { numero: 3, palo: "basto" },
+      { numero: 4, palo: "oro" }
+    ]);
+
+    const accion = decidirAccionBot(e, "B");
+    expect(accion.tipo).toBe("cantar_truco");
+  });
+});
+
 describe("IA — bot juega siempre algo válido (regresión fallback)", () => {
   it("con cualquier mano, decidirAccionBot no devuelve ir_al_mazo cuando hay envido pendiente", () => {
     let e = estado1v1();
