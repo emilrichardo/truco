@@ -7,9 +7,12 @@ import type {
   MensajeChat
 } from "@/lib/truco/types";
 import { urlPersonaje } from "@/data/jugadores";
-import { ICONOS_COMPANERO, ORDENES_COMPANERO } from "@/lib/chatRapido";
+import {
+  ICONOS_COMPANERO,
+  ICONOS_EMOCIONES,
+  ORDENES_COMPANERO
+} from "@/lib/chatRapido";
 
-const REACCIONES = ["👏", "🔥", "😂", "🤔", "🤬", "🧉"];
 const FRASES = ["Mazo", "Faltaba", "Mucha cancha", "Te vi"];
 // Stickers santiagueños/criollos. La URL es relativa a /public.
 const STICKERS: { url: string; alt: string }[] = [
@@ -199,7 +202,7 @@ export function Chat({
         )}
         {/* Reacciones rápidas */}
         <div className="border-t border-border p-1.5 flex flex-wrap gap-1 bg-surface-2/30">
-          {REACCIONES.map((r) => (
+          {ICONOS_EMOCIONES.map((r) => (
             <button
               key={r}
               type="button"

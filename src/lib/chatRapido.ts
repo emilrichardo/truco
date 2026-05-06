@@ -12,5 +12,6 @@ export const ICONOS_COMPANERO = ["👀", "✋", "🧉", "🪙", "⚡", "🤫"];
 
 // Reacciones emocionales rápidas: lo que sentís en el momento.
 export const ICONOS_EMOCIONES = [
-  "😂", "🔥", "💪", "😎", "😡", "🥵", "😱", "🎉"
+  "😂", "💪", "😎", "😡", "😱", "🎉",
+  "💀", "🤥", "😤", "🤬", "🫣", "🤦🏻‍♂️", "🙈", "👀"
 ];

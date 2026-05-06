@@ -12,3 +12,6 @@ node_modules
 # Supabase CLI
 supabase/.temp/
 supabase/.branches/
+
+# Salidas generadas por scripts de optimización/subida.
+.generated/

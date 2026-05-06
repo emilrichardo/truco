@@ -1,5 +1,6 @@
-// Catálogo de personajes "primos". Para reemplazar uno: pisá la imagen
-// /public/jugadores/<slug>.png y, si querés, ajustá el nombre acá.
+// Catálogo de personajes "primos". Las imágenes viven en Supabase Storage:
+// bucket "jugadores", path "<slug>.webp". Para desarrollo sin Supabase queda
+// un fallback liviano en /public/jugadores/<slug>.webp.
 
 export interface PersonajeMeta {
   slug: string;
@@ -25,9 +26,18 @@ export function getPersonaje(slug: string): PersonajeMeta | undefined {
   return PERSONAJES.find((p) => p.slug === slug);
 }
 
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+const JUGADORES_BUCKET =
+  process.env.NEXT_PUBLIC_SUPABASE_JUGADORES_BUCKET || "jugadores";
+const JUGADORES_VERSION = process.env.NEXT_PUBLIC_JUGADORES_VERSION || "";
+
 export function urlPersonaje(slug: string): string {
-  // Servimos webp por default — pesa ~150KB vs ~1.7MB del PNG original.
-  // Los .png siguen en disco como fallback / para edición; si querés
-  // forzarlos pasá la url con .png a mano.
-  return `/jugadores/${slug}.webp`;
+  const archivo = `${encodeURIComponent(slug)}.webp`;
+  const version = JUGADORES_VERSION
+    ? `?v=${encodeURIComponent(JUGADORES_VERSION)}`
+    : "";
+  if (SUPABASE_URL) {
+    return `${SUPABASE_URL}/storage/v1/object/public/${JUGADORES_BUCKET}/${archivo}${version}`;
+  }
+  return `/jugadores/${archivo}${version}`;
 }

@@ -2,6 +2,7 @@
 // Preload de imágenes en background para que cuando se renderizan ya están
 // en cache del browser.
 import { useEffect } from "react";
+import { urlPersonaje } from "@/data/jugadores";
 
 const PALOS = ["espada", "basto", "oro", "copa"] as const;
 const NUMEROS = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12] as const;
@@ -40,12 +41,12 @@ export function precargarCartas() {
 }
 
 /** Pre-cachea avatares de los jugadores presentes. Apunta al webp para
- *  matchear lo que sirve urlPersonaje (mucho más liviano que el PNG). */
+ *  matchear lo que sirve urlPersonaje (Supabase Storage en producción). */
 export function precargarAvatares(slugs: string[]) {
   if (typeof window === "undefined") return;
   for (const s of slugs) {
     const img = new Image();
-    img.src = `/jugadores/${s}.webp`;
+    img.src = urlPersonaje(s);
   }
 }
 

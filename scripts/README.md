@@ -1,5 +1,28 @@
 # Scripts
 
+## `subir-jugadores-supabase.ts` — optimizar y subir avatares
+
+Genera WebP livianos desde `public/jugadores` y los sube al bucket público
+`jugadores` de Supabase Storage.
+
+```sh
+npm run avatars:optimize  # sólo genera .generated/jugadores
+npm run avatars:upload    # optimiza y sube a Supabase
+```
+
+Variables:
+
+```sh
+NEXT_PUBLIC_SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+NEXT_PUBLIC_SUPABASE_JUGADORES_BUCKET=jugadores
+AVATAR_WIDTH=360
+AVATAR_QUALITY=74
+```
+
+Después de reemplazar imágenes, cambiá `NEXT_PUBLIC_JUGADORES_VERSION` para
+bustear cache del CDN.
+
 ## `generar-voces.ts` — generar clips de voz con ElevenLabs
 
 Genera los MP3 de cada canto del truco (envido, truco, vale 4, quiero, etc.)

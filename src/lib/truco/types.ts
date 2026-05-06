@@ -17,7 +17,7 @@ export interface Jugador {
   /** Perfil persistente del dispositivo/usuario en salas online. */
   perfilId?: string;
   nombre: string;
-  /** Slug del personaje (ej. "marcos"), referencia a /jugadores/<slug>.png */
+  /** Slug del personaje (ej. "marcos"), referencia al avatar en Storage. */
   personaje: string;
   equipo: Equipo;
   /** Posición sentado en la mesa, 0..N-1, en orden anti-horario. */
