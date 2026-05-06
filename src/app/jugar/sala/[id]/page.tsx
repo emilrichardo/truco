@@ -209,21 +209,9 @@ export default function SalaPage() {
       );
     }
     if (!actor) {
-      console.debug("[bot-dispatch] sin actor", {
-        turno: mano.turnoJugadorId,
-        envido: !!mano.envidoCantoActivo,
-        truco: !!mano.trucoCantoActivo,
-        version: estado.version
-      });
       setConsulta(null);
       return;
     }
-    console.debug("[bot-dispatch] actor detectado", {
-      bot: actor.id,
-      asiento: actor.asiento,
-      esMiTurno: mano.turnoJugadorId === actor.id,
-      version: estado.version
-    });
 
     // ¿Debería consultarle al humano antes de actuar?
     //   - Envido (baza 1, ventana abierta, bot es pie): consulta envido.
@@ -289,10 +277,6 @@ export default function SalaPage() {
     botTimerRef.current = window.setTimeout(() => {
       const accion = decidirAccionBot(estado, actor!.id);
       const versionAlMandar = estado.version;
-      console.debug(
-        "[bot-dispatch] enviando",
-        { bot: actor!.id, accion: accion.tipo, version: versionAlMandar }
-      );
       enviarAccionOnline(salaId, miId, accion)
         .then((r) => {
           if (r.ok) {

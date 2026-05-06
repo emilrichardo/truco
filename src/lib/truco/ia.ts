@@ -310,17 +310,28 @@ function decidirEnvido(ctx: ContextoCanto): Accion | null {
   if (cadena.length >= 2) threshold += 1; // subida = un poco más exigente
   if (valorAcumulado >= 5) threshold += 2; // mucha plata en juego
 
-  const aceptar = envidoEquipo >= threshold;
+  const aceptarBase = envidoEquipo >= threshold;
+  const aceptarDeAtras =
+    voyPerdiendo &&
+    envidoEquipo >= threshold - 4 &&
+    azarContextual(ctx, "quiero-envido-de-atras") <
+      p.riesgo * 0.38 + p.bluff * 0.12;
+  const aceptarPicante =
+    !aceptarBase &&
+    envidoEquipo >= threshold - 2 &&
+    azarContextual(ctx, "quiero-envido-picante") <
+      p.riesgo * 0.28 + p.agresion * 0.12;
+  const aceptar = aceptarBase || aceptarDeAtras || aceptarPicante;
 
   // ¿Subir? Necesita envido alto + acción legal. Bajamos thresholds.
   const puedeSubirReal =
     legales.includes("cantar_real_envido") && ultimoCanto !== "real_envido";
   const puedeSubirFalta = legales.includes("cantar_falta_envido");
 
-  if (puedeSubirReal && envidoEquipo >= 28 + (1 - p.agresion) * 2) {
+  if (puedeSubirReal && envidoEquipo >= 27 + (1 - p.agresion) * 2) {
     return { tipo: "cantar_real_envido", jugadorId };
   }
-  if (puedeSubirFalta && envidoEquipo >= 31 + (1 - p.agresion) * 2) {
+  if (puedeSubirFalta && envidoEquipo >= 30 + (1 - p.agresion) * 2) {
     return { tipo: "cantar_falta_envido", jugadorId };
   }
   // Falta envido oportunista: si voy perdiendo y tengo mano decente.
@@ -330,9 +341,23 @@ function decidirEnvido(ctx: ContextoCanto): Accion | null {
 
   // Bluff: subir con mano débil para presionar. Más frecuente que antes.
   if (puedeSubirReal && envidoEquipo < 24) {
-    const probBluff = p.bluff * 0.25 - cadena.length * 0.05;
+    const probBluff =
+      p.bluff * 0.36 +
+      (voyPerdiendo ? 0.08 : 0) -
+      cadena.length * 0.05;
     if (azarContextual(ctx, "bluff-real-envido") < probBluff) {
       return { tipo: "cantar_real_envido", jugadorId };
+    }
+  }
+  if (
+    puedeSubirFalta &&
+    envidoEquipo >= 22 &&
+    envidoEquipo < 29 &&
+    (voyPerdiendo || distancia > 6)
+  ) {
+    const probBluff = p.bluff * 0.18 + (voyPerdiendo ? 0.08 : 0);
+    if (azarContextual(ctx, "bluff-falta-envido") < probBluff) {
+      return { tipo: "cantar_falta_envido", jugadorId };
     }
   }
 
@@ -373,7 +398,7 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
     nivel === "truco" ? 2 : nivel === "retruco" ? 3 : 4;
 
   // Threshold para aceptar — bajado: el bot pelea más manos.
-  let umbral = 32 - p.riesgo * 8 - ventajaBazas * 10;
+  let umbral = 25 - p.riesgo * 10 - ventajaBazas * 10;
   umbral -= ventajaPorCartasVistas(ctx);
   umbral -= respaldoAliado >= 12 ? 8 : respaldoAliado >= 10 ? 4 : 0;
   umbral -= presionDeMarcador(ctx) * 0.45;
@@ -383,8 +408,23 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
   if (nivel === "vale4") umbral += 6;    // vale 4 = más exigente
   if (valorEnJuego >= 3) umbral += 2;
 
-  const aceptar =
+  const aceptarBase =
     fuerzaConEquipo >= umbral || (expBazas >= 1.7 && ventajaBazas >= 0);
+  const aceptarDeMentira =
+    !aceptarBase &&
+    fuerzaConEquipo >= 20 &&
+    nivel !== "vale4" &&
+    azarContextual(ctx, "quiero-truco-de-mentira") <
+      p.bluff * 0.33 +
+        p.riesgo * 0.2 +
+        Math.max(0, presionDeMarcador(ctx)) * 0.012;
+  const aceptarPorMesa =
+    !aceptarBase &&
+    fuerzaConEquipo >= 26 &&
+    (rival.fuertesVistas >= 1 || respaldoAliado >= 9) &&
+    azarContextual(ctx, "quiero-truco-lectura-mesa") <
+      p.riesgo * 0.34 + p.agresion * 0.12;
+  const aceptar = aceptarBase || aceptarDeMentira || aceptarPorMesa;
 
   // ¿Subir? — bajado a 58 (era 65). El bot resube más seguido.
   const puedeSubir =
@@ -392,7 +432,7 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
     (nivel === "retruco" && legales.includes("cantar_vale4"));
 
   const umbralSubida =
-    58 + (1 - p.agresion) * 6 - (respaldoAliado >= 12 ? 8 : 0);
+    50 + (1 - p.agresion) * 6 - (respaldoAliado >= 12 ? 8 : 0);
   if (
     puedeSubir &&
     fuerzaConEquipo >= umbralSubida &&
@@ -405,9 +445,9 @@ function decidirTruco(ctx: ContextoCanto): Accion | null {
 
   // Bluff: resubir con fuerza media cuando el rival ya gastó cartas altas,
   // tenemos respaldo del compañero, o el marcador exige mover la mano.
-  if (puedeSubir && ventajaBazas >= 0 && fuerzaConEquipo >= 36) {
+  if (puedeSubir && ventajaBazas >= -1 && fuerzaConEquipo >= 32) {
     const probBluff =
-      p.bluff * 0.18 +
+      p.bluff * 0.26 +
       (rival.fuertesVistas >= 1 ? 0.08 : 0) +
       (respaldoAliado >= 10 ? 0.07 : 0) +
       Math.max(0, presionDeMarcador(ctx)) * 0.01;
@@ -523,6 +563,25 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
     (j) => j.equipo === yo.equipo && j.id !== jugadorId && !j.esBot
   );
   if (tengoCompañeroHumano) {
+    const baza = mano.bazas[mano.bazas.length - 1];
+    const idsQueJugaron = new Set(baza.jugadas.map((j) => j.jugadorId));
+    const mejorRival = baza.jugadas.reduce((max, jugada) => {
+      const jug = estado.jugadores.find((j) => j.id === jugada.jugadorId);
+      if (!jug || jug.equipo === yo.equipo) return max;
+      return Math.max(max, jerarquia(jugada.carta));
+    }, -1);
+    const humanoPendientePuedeMatar =
+      mejorRival >= 0 &&
+      estado.jugadores.some((j) => {
+        if (j.esBot || j.equipo !== yo.equipo || idsQueJugaron.has(j.id)) {
+          return false;
+        }
+        return (mano.cartasPorJugador[j.id] || []).some(
+          (c) => jerarquia(c) > mejorRival
+        );
+      });
+    if (humanoPendientePuedeMatar) return null;
+
     const fuerzaActual = fuerzaEquipo(ctx);
     const cartasYaJugadas = mano.bazas.flatMap((b) =>
       b.jugadas.map((j) => j.carta)
@@ -539,16 +598,9 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   }
 
   // Etiqueta trucera: en baza 1 con la ventana de envido todavía abierta
-  // (envido no resuelto y nadie tiró carta todavía o sólo algunos), el bot
-  // NO canta truco — el envido tiene que jugarse primero. Si la mano de
-  // envido del bot es floja se aguanta, juega carta y deja que el envido
-  // se cierre solo.
-  const ventanaEnvidoAbierta =
-    mano.bazas.length === 1 &&
-    !mano.envidoResuelto &&
-    mano.bazas[0].jugadas.length < estado.jugadores.length;
-  if (ventanaEnvidoAbierta) return null;
-
+  // el bot prioriza el envido, pero ya no queda mudo con manos muy bravas
+  // o con un bluff creíble. Si tiene cartas de truco claras, toma la
+  // iniciativa y deja que el rival decida si corta con envido.
   const fuerza = fuerzaTruco(vista.enMano);
   const fuerzaConEquipo = fuerzaEquipo(ctx);
   const respaldoAliado = maxJerarquia(cartasAliadasEnMano(ctx));
@@ -561,9 +613,27 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   ).length;
   const distancia = estado.puntos[yo.equipo] - estado.puntos[1 - yo.equipo];
 
+  const ventanaEnvidoAbierta =
+    mano.bazas.length === 1 &&
+    !mano.envidoResuelto &&
+    mano.bazas[0].jugadas.length < estado.jugadores.length;
+  if (ventanaEnvidoAbierta) {
+    const miEnvido = calcularEnvido(vista.originales);
+    const top = maxJerarquia(vista.enMano);
+    const trucoClaramenteMejor =
+      fuerzaConEquipo >= 70 ||
+      top >= 13 ||
+      (distancia < -7 && fuerzaConEquipo >= 48);
+    const bluffTemprano =
+      miEnvido < 24 &&
+      fuerzaConEquipo >= 42 &&
+      azarContextual(ctx, "truco-temprano-bluff") < p.bluff * 0.16;
+    if (!trucoClaramenteMejor && !bluffTemprano) return null;
+  }
+
   // Threshold base. Al subir a retruco / vale 4 estamos arriesgando más
   // puntos así que somos más exigentes con la fuerza requerida.
-  let umbral = 50 - p.agresion * 14 - bazasGanadas * 12;
+  let umbral = 46 - p.agresion * 15 - bazasGanadas * 12;
   umbral -= ventajaPorCartasVistas(ctx);
   umbral -= respaldoAliado >= 12 ? 8 : respaldoAliado >= 10 ? 4 : 0;
   umbral -= presionDeMarcador(ctx) * 0.5;
@@ -600,7 +670,7 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   if (puedoBluff && fuerzaConEquipo < umbral) {
     const pocasAltasOcultas = contarDesconocidasFuertes(vista) <= 4;
     const prob =
-      p.bluff * (pocasAltasOcultas ? 0.34 : 0.22) +
+      p.bluff * (pocasAltasOcultas ? 0.42 : 0.3) +
       (respaldoAliado >= 10 ? 0.1 : 0) +
       Math.max(0, presionDeMarcador(ctx)) * 0.01;
     if (azarContextual(ctx, "bluff-truco") < prob) {

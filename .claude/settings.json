@@ -108,10 +108,18 @@
       "Read(//private/tmp/**)",
       "Bash(pkill -f \"generar-voces\")",
       "Bash(grep -n \"Revancha\\\\|tamanio=\\\\${tamanio}\" src/app/jugar/solo/partida/page.tsx)",
-      "Bash(supabase status *)"
+      "Bash(supabase status *)",
+      "Bash(curl -s 'https://yetxwbvjrubjgbejmibb.supabase.co/rest/v1/perfiles?select=id,nombre,personaje,device_id&order=nombre' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldHh3YnZqcnViamdiZWptaWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzU5MjEsImV4cCI6MjA5MjgxMTkyMX0.gMAdDfYDldoPRsCYYePvNgmXgqge6YTG0-Y31a7nG7Y' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldHh3YnZqcnViamdiZWptaWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzU5MjEsImV4cCI6MjA5MjgxMTkyMX0.gMAdDfYDldoPRsCYYePvNgmXgqge6YTG0-Y31a7nG7Y')",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(f'Total perfiles: {len\\(data\\)}'\\); [print\\(f'{p[\\\\\"nombre\\\\\"]:20s} {p[\\\\\"personaje\\\\\"]:15s} device={p[\\\\\"device_id\\\\\"][:12] if p[\\\\\"device_id\\\\\"] else None}... id={p[\\\\\"id\\\\\"][:8]}'\\) for p in data]\")",
+      "Bash(curl -s 'https://yetxwbvjrubjgbejmibb.supabase.co/rest/v1/partida_jugadores?select=nombre,personaje,perfil_id,es_bot&perfil_id=is.null&es_bot=eq.false' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldHh3YnZqcnViamdiZWptaWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzU5MjEsImV4cCI6MjA5MjgxMTkyMX0.gMAdDfYDldoPRsCYYePvNgmXgqge6YTG0-Y31a7nG7Y' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldHh3YnZqcnViamdiZWptaWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzU5MjEsImV4cCI6MjA5MjgxMTkyMX0.gMAdDfYDldoPRsCYYePvNgmXgqge6YTG0-Y31a7nG7Y')",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); print\\(f'CON perfil_id \\(no bots\\): {len\\(data\\)}'\\); from collections import Counter; c=Counter\\(\\(p['nombre'],p['personaje']\\) for p in data\\); [print\\(f'  {k[0]:15s} {k[1]:15s} → {v} partidas'\\) for k,v in c.most_common\\(\\)]\")",
+      "Bash(curl -s 'https://yetxwbvjrubjgbejmibb.supabase.co/rest/v1/partida_jugadores?select=nombre,personaje&perfil_id=is.null&es_bot=eq.false' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldHh3YnZqcnViamdiZWptaWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzU5MjEsImV4cCI6MjA5MjgxMTkyMX0.gMAdDfYDldoPRsCYYePvNgmXgqge6YTG0-Y31a7nG7Y' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldHh3YnZqcnViamdiZWptaWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzU5MjEsImV4cCI6MjA5MjgxMTkyMX0.gMAdDfYDldoPRsCYYePvNgmXgqge6YTG0-Y31a7nG7Y')",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s 'https://yetxwbvjrubjgbejmibb.supabase.co/rest/v1/partidas_recientes?limit=3' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldHh3YnZqcnViamdiZWptaWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzU5MjEsImV4cCI6MjA5MjgxMTkyMX0.gMAdDfYDldoPRsCYYePvNgmXgqge6YTG0-Y31a7nG7Y' -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlldHh3YnZqcnViamdiZWptaWJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcyMzU5MjEsImV4cCI6MjA5MjgxMTkyMX0.gMAdDfYDldoPRsCYYePvNgmXgqge6YTG0-Y31a7nG7Y')"
     ],
     "additionalDirectories": [
-      "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones"
+      "/Volumes/Emil/neuraz/projects/trucoprimos/jugadores/ilustraciones",
+      "/tmp"
     ]
   }
 }

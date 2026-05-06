@@ -100,6 +100,7 @@ type Tarea = () => void;
 const cola: Tarea[] = [];
 let reproduciendo = false;
 let muteado = false;
+const timeoutsActivos = new Set<number>();
 
 function avanzar() {
   if (cola.length === 0) {
@@ -114,6 +115,11 @@ function avanzar() {
 function encolar(t: Tarea) {
   cola.push(t);
   if (!reproduciendo) avanzar();
+}
+
+function limpiarTimeoutsActivos() {
+  timeoutsActivos.forEach((id) => window.clearTimeout(id));
+  timeoutsActivos.clear();
 }
 
 /** Encola un dataUrl (audio personalizado del jugador) en la misma
@@ -184,10 +190,59 @@ function reproducirArchivo(src: string) {
   });
 }
 
-export function reproducirCanto(
+function reproducirArchivoDiferido(
+  src: string,
+  delayMs: number,
+  debeOmitir?: () => boolean
+) {
+  const precarga = cargarHowl(src);
+  if (precarga.state() === "unloaded") precarga.load();
+  encolar(() => {
+    if (muteado) {
+      avanzar();
+      return;
+    }
+
+    let timeoutId = 0;
+    const iniciar = () => {
+      timeoutsActivos.delete(timeoutId);
+      if (muteado) {
+        avanzar();
+        return;
+      }
+      if (debeOmitir?.()) {
+        avanzar();
+        return;
+      }
+      const h = cargarHowl(src);
+      const onEnd = () => {
+        h.off("end", onEnd);
+        h.off("loaderror", onErr);
+        h.off("playerror", onErr);
+        avanzar();
+      };
+      const onErr = (_id: number, err: unknown) => {
+        console.warn("[truco] error reproduciendo voz", src, err);
+        h.off("end", onEnd);
+        h.off("loaderror", onErr);
+        h.off("playerror", onErr);
+        avanzar();
+      };
+      h.once("end", onEnd);
+      h.once("loaderror", onErr);
+      h.once("playerror", onErr);
+      h.play();
+    };
+
+    timeoutId = window.setTimeout(iniciar, Math.max(0, delayMs));
+    timeoutsActivos.add(timeoutId);
+  });
+}
+
+function srcCanto(
   canto: CategoriaCanto,
   opts: OpcionesCanto & { variante?: number }
-) {
+): string {
   const voz = vozDeJugador(opts.jugadorId);
   // Si nos pasaron `variante` específica (porque el motor matcheó la frase
   // textual del chat con el array de FRASES), usamos esa. Si no, picamos
@@ -197,9 +252,29 @@ export function reproducirCanto(
       ? opts.variante
       : 1 + Math.floor(Math.random() * totalVariantes(canto));
   const archivo = String(idx).padStart(2, "0") + ".mp3";
-  const src = `/audio/voces/${voz}/${canto}/${archivo}`;
-  console.debug("[truco] canto", { canto, voz, src, jugadorId: opts.jugadorId });
+  return `/audio/voces/${voz}/${canto}/${archivo}`;
+}
+
+export function reproducirCanto(
+  canto: CategoriaCanto,
+  opts: OpcionesCanto & { variante?: number }
+) {
+  const src = srcCanto(canto, opts);
   reproducirArchivo(src);
+}
+
+/** Igual que reproducirCanto(), pero reserva el lugar en la cola FIFO
+ *  inmediatamente y espera antes de reproducir. Sirve para cantos de
+ *  otros humanos: damos tiempo a que llegue un audio personalizado, sin
+ *  permitir que los mensajes siguientes ("Tengo 27", "Son buenas") se
+ *  adelanten al "Quiero". */
+export function reproducirCantoDiferido(
+  canto: CategoriaCanto,
+  opts: OpcionesCanto & { variante?: number },
+  delayMs: number,
+  debeOmitir?: () => boolean
+) {
+  reproducirArchivoDiferido(srcCanto(canto, opts), delayMs, debeOmitir);
 }
 
 /** Reproduce una reacción (gane_mano / perdio_mano / etc.) en paralelo —
@@ -404,6 +479,7 @@ export function silenciarTodo() {
   muteado = true;
   // Detener cualquier reproducción en curso y vaciar cola.
   cola.length = 0;
+  limpiarTimeoutsActivos();
   cacheHowl.forEach((h) => h.stop());
 }
 
@@ -416,6 +492,7 @@ export function activarSonido() {
  *  la mano anterior no se monten con el nuevo reparto. */
 export function cortarReproduccion() {
   cola.length = 0;
+  limpiarTimeoutsActivos();
   cacheHowl.forEach((h) => h.stop());
   reproduciendo = false;
 }

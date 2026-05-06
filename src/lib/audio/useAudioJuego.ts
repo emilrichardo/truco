@@ -15,6 +15,7 @@ import {
   identificarTanto,
   precargarVoces,
   reproducirCanto,
+  reproducirCantoDiferido,
   reproducirPuntosEnvido,
   reproducirReaccion,
   setAsientosJugadores
@@ -281,11 +282,7 @@ function procesarMensaje(m: MensajeChat, chat: MensajeChat[] = []) {
         const jugadorId = m.jugadorId;
         const cantoKey = cantoDefaultASuppressionKey(id.canto);
 
-        // Reproducción de la voz default — la encapsulamos para poder
-        // diferirla 250ms cuando el canto es "personalizable", así si
-        // el chat con el audio del jugador llega justo después del
-        // evento del motor, alcanzamos a verlo y suprimimos la default.
-        const reproducirDefault = () => {
+        const debeSuprimirDefault = () => {
           if (cantoKey) {
             const ts = audiosPersonalizadosRecientes.get(
               `${jugadorId}:${cantoKey}`
@@ -297,9 +294,18 @@ function procesarMensaje(m: MensajeChat, chat: MensajeChat[] = []) {
             ) {
               audiosPersonalizadosRecientes.delete(`${jugadorId}:${cantoKey}`);
               if (id.canto === "ir_al_mazo") sonidoMazo();
-              return;
+              return true;
             }
           }
+          return false;
+        };
+
+        // Reproducción de la voz default — la encapsulamos para poder
+        // diferirla cuando el canto es "personalizable", así si el chat
+        // con el audio del jugador llega justo después del evento del
+        // motor, alcanzamos a verlo y suprimimos la default.
+        const reproducirDefault = () => {
+          if (debeSuprimirDefault()) return;
           const reproductor = esReaccion(id.canto)
             ? reproducirReaccion
             : reproducirCanto;
@@ -311,18 +317,27 @@ function procesarMensaje(m: MensajeChat, chat: MensajeChat[] = []) {
         };
 
         // Decidimos si delayamos o no:
-        //  - Si el canto es de OTRO humano: delay (puede llegar audio
-        //    custom de él vía chat, hay que esperar el race).
+        //  - Si el canto es de OTRO humano: reservamos su lugar en la
+        //    cola y esperamos un toque (puede llegar audio custom de él
+        //    vía chat, hay que esperar el race).
         //  - Si es mío: marcarAudioReciente ya seteó el flag sync
         //    (si tengo audio); reproducir inmediato (suppress chequea
         //    el flag y skipea si corresponde).
         //  - Si es de un bot: no tiene audio custom posible, inmediato.
-        // Sin esto, "Tengo X" / "Son buenas" sonaban antes del "Quiero"
-        // porque el quiero estaba diferido pero los puntos no.
+        // Reservar la cola evita el bug "Tengo X / Son buenas / Quiero"
+        // al resolver el envido.
         const esOtroHumano =
           jugadorId !== miIdActual && !botIds.has(jugadorId);
         if (cantoKey && esOtroHumano) {
-          window.setTimeout(reproducirDefault, DELAY_DEFAULT_MS);
+          reproducirCantoDiferido(
+            id.canto,
+            {
+              jugadorId,
+              variante: id.variante > 0 ? id.variante : undefined
+            },
+            DELAY_DEFAULT_MS,
+            debeSuprimirDefault
+          );
         } else {
           reproducirDefault();
         }
