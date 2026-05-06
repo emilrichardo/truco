@@ -233,12 +233,6 @@ export default function HomePage() {
                       <span>{s.modo === "2v2" ? "Parejas" : "Mano a mano"}</span>
                       <span className="text-text-dim/40">·</span>
                       <span>{s.jugadores}/{s.cupos} jugadores</span>
-                      {s.con_flor && (
-                        <>
-                          <span className="text-text-dim/40">·</span>
-                          <span className="text-dorado">🌸 con flor</span>
-                        </>
-                      )}
                     </div>
                   </div>
                   <div

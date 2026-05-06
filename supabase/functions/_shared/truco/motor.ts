@@ -7,9 +7,7 @@ import {
   esMachoEfectivo,
   jerarquia,
   mezclar,
-  nombreCarta,
-  tieneFlor,
-  valorFlor
+  nombreCarta
 } from "./cartas.ts";
 import type {
   Accion,
@@ -63,7 +61,7 @@ function equipoContrario(eq: Equipo): Equipo {
 /** Suma puntos a un equipo capando en `puntosObjetivo` — la partida
  *  se gana al llegar al objetivo, no tiene sentido mostrar 21/18 ni
  *  arrastrar excedente. Centralizado acá para no replicar el cap en
- *  cada lugar que otorga puntos (envido, truco, mazo, flor, etc.). */
+ *  cada lugar que otorga puntos (envido, truco, mazo, etc.). */
 function darPuntos(estado: EstadoJuego, eq: Equipo, n: number) {
   if (n <= 0) return;
   estado.puntos[eq] = Math.min(
@@ -95,13 +93,11 @@ export function crearEstadoInicial(opts: {
   jugadores: Jugador[];
   modo: "1v1" | "2v2";
   puntosObjetivo?: 18 | 30;
-  conFlor?: boolean;
 }): EstadoJuego {
   return {
     salaId: opts.salaId,
     jugadores: opts.jugadores,
     modo: opts.modo,
-    conFlor: opts.conFlor ?? false,
     puntosObjetivo: opts.puntosObjetivo ?? 30,
     puntos: [0, 0],
     manoActual: null,
@@ -155,9 +151,6 @@ function repartirNuevaMano(estado: EstadoJuego, manoJugadorId: string) {
     trucoCantoActivo: null,
     envidoResuelto: false,
     envidoResolucion: null,
-    florResuelta: false,
-    florResolucion: null,
-    florCantores: [],
     equipoConTruco: null,
     valorMano: 1,
     irAlMazoEquipo: null,
@@ -210,8 +203,6 @@ export function aplicarAccion(estado: EstadoJuego, accion: Accion): ResultadoAcc
     case "cantar_real_envido":
     case "cantar_falta_envido":
       return cantarEnvido(estado, jugador, accion.tipo);
-    case "cantar_flor":
-      return cantarFlor(estado, jugador);
     case "cantar_truco":
     case "cantar_retruco":
     case "cantar_vale4":
@@ -626,95 +617,6 @@ function pasarMano(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
   return { ok: true, estado };
 }
 
-// ============== Flor ==============
-
-/** Recolecta las cartas originales de un jugador en la mano actual:
- *  las que tiene en mano + las que ya tiró en bazas. Usado para detectar
- *  flor / calcular envido sin importar cuántas haya jugado. */
-function cartasOriginalesDe(estado: EstadoJuego, jugadorId: string): Carta[] {
-  const mano = estado.manoActual!;
-  const enMano = mano.cartasPorJugador[jugadorId] || [];
-  const tiradas: Carta[] = [];
-  for (const b of mano.bazas) {
-    for (const j of b.jugadas) if (j.jugadorId === jugadorId) tiradas.push(j.carta);
-  }
-  return [...enMano, ...tiradas];
-}
-
-function cantarFlor(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
-  const mano = estado.manoActual!;
-  if (!estado.conFlor) {
-    return { ok: false, error: "Esta partida es sin flor.", estado };
-  }
-  if (mano.florResuelta) {
-    return { ok: false, error: "La flor ya fue resuelta.", estado };
-  }
-  if (mano.envidoCantoActivo || mano.envidoResuelto) {
-    return { ok: false, error: "Ya hubo envido — la flor era antes.", estado };
-  }
-  if (mano.bazas.length > 1 || mano.bazas[0].jugadas.length === estado.jugadores.length) {
-    return { ok: false, error: "Sólo se canta flor en la primera baza.", estado };
-  }
-  // El jugador que canta debe TENER flor.
-  const cartasOrig = cartasOriginalesDe(estado, jugador.id);
-  if (!tieneFlor(cartasOrig)) {
-    return { ok: false, error: "No tenés flor.", estado };
-  }
-  // Verificación: el jugador no debe haber tirado carta todavía. Cantar
-  // flor después de jugar es fuera de tiempo.
-  const yaJugo = mano.bazas[0].jugadas.some((j) => j.jugadorId === jugador.id);
-  if (yaJugo) {
-    return { ok: false, error: "Ya tiraste carta — flor extemporánea.", estado };
-  }
-
-  // Sin contraflor: cada jugador con flor canta y suma +3 a su equipo
-  // de manera independiente. NO comparamos tantos — eso sólo aplica con
-  // contraflor (no implementado todavía). Si tu compañero también tiene
-  // flor, la canta cuando le toque y suma otros +3.
-  mano.florCantores.push(jugador.id);
-  anuncio(estado, jugador.id, fraseAleatoria("flor"), "canto");
-  const puntos = 3;
-  darPuntos(estado, jugador.equipo, puntos);
-  mano.puntosOtorgados.push({
-    equipo: jugador.equipo,
-    puntos,
-    motivo: `Flor (+${puntos})`
-  });
-  anuncio(
-    estado,
-    "",
-    `Equipo ${jugador.equipo + 1} +${puntos} pts (flor)`,
-    "puntos"
-  );
-
-  // ¿Quedan más jugadores con flor sin cantar todavía? Si sí, dejamos
-  // la flor abierta para que canten cuando les toque su turno. Si no,
-  // marcamos resuelta — el envido queda anulado para esta mano.
-  const otrosConFlorPendientes = estado.jugadores.some(
-    (j) =>
-      j.id !== jugador.id &&
-      !mano.florCantores.includes(j.id) &&
-      tieneFlor(cartasOriginalesDe(estado, j.id))
-  );
-  if (!otrosConFlorPendientes) {
-    mano.florResuelta = true;
-    mano.florResolucion = {
-      ganadorEquipo: jugador.equipo,
-      puntos,
-      detalle: `Flor cantada por ${mano.florCantores.length} jugador(es).`,
-      cantos: mano.florCantores.map((id) => ({
-        jugadorId: id,
-        puntos: valorFlor(cartasOriginalesDe(estado, id))
-      }))
-    };
-  }
-  if (chequearFinPartida(estado)) {
-    return { ok: true, estado };
-  }
-  estado.version++;
-  return { ok: true, estado };
-}
-
 // ============== Envido ==============
 
 function cantarEnvido(
@@ -723,13 +625,6 @@ function cantarEnvido(
   tipo: "cantar_envido" | "cantar_real_envido" | "cantar_falta_envido"
 ): ResultadoAccion {
   const mano = estado.manoActual!;
-  // Si ya alguien cantó flor en esta mano, el envido queda anulado —
-  // los puntos de la flor ya fueron repartidos. (Se puede "negar la
-  // flor" no cantándola y cantando envido en su lugar; eso vive en
-  // accionesLegales que ofrece ambas opciones al jugador con flor.)
-  if (estado.conFlor && mano.florCantores.length > 0) {
-    return { ok: false, error: "Hubo flor — no se canta envido.", estado };
-  }
   // Solo se puede cantar envido durante la primera baza (ninguna baza terminada aún)
   // y antes de que el jugador "mano" haya jugado su segunda carta.
   if (mano.bazas[0].jugadas.length === estado.jugadores.length || mano.bazas.length > 1) {
@@ -1258,34 +1153,16 @@ export function accionesLegales(estado: EstadoJuego, jugadorId: string): Accion[
     return out;
   }
 
-  // Flor: si la partida es con flor y el jugador tiene 3 cartas del mismo
-  // palo, puede cantarla en baza 1 antes de tirar carta y antes de
-  // haberla ya cantado. Cada flor cantada suma +3 al equipo de quien
-  // canta — múltiples jugadores con flor pueden cantar. Tener flor NO
-  // obliga a cantarla: el jugador puede negar la flor y cantar envido.
-  if (estado.conFlor && mano.bazas.length === 1) {
-    const cartasOrig = cartasOriginalesDe(estado, j.id);
-    const yaJugo = mano.bazas[0].jugadas.some((x) => x.jugadorId === j.id);
-    const yaCantoFlor = mano.florCantores.includes(j.id);
-    if (tieneFlor(cartasOrig) && !yaJugo && !yaCantoFlor) {
-      out.push("cantar_flor");
-    }
-  }
-
   // Envido cantable en baza 1 por CUALQUIER jugador (esté en turno o no),
   // siempre que la baza no haya terminado y nadie haya cantado todavía.
   // Esta es la regla de truco argentino — el pie puede cortar la mano
   // antes de que el contrario juegue, sin esperar su turno. Si el truco
   // ya fue aceptado (trucoEstado != "ninguno") el envido se bloquea —
   // la única excepción es "envido está primero" que vive en el bloque
-  // de respuesta a un canto pendiente más arriba. Si alguien CANTÓ flor,
-  // se cobra esa y el envido queda anulado. Tener flor sin cantarla NO
-  // bloquea el envido — el jugador puede "negar la flor" (no cantarla)
-  // y elegir el envido en su lugar.
+  // de respuesta a un canto pendiente más arriba.
   const envidoCantableEnBaza1 =
     !mano.envidoResuelto &&
     !mano.envidoCantoActivo &&
-    mano.florCantores.length === 0 &&
     mano.trucoEstado === "ninguno" &&
     mano.bazas.length === 1 &&
     mano.bazas[0].jugadas.length < estado.jugadores.length;

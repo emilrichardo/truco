@@ -82,6 +82,18 @@ describe("envido — flujo básico", () => {
     expect(legales).not.toContain("cantar_real_envido");
     expect(legales).toContain("cantar_falta_envido");
   });
+
+  it("si me cantan truco antes, puedo cortar con envido en un solo toque", () => {
+    let e = estado1v1();
+    e = aplicar(e, { tipo: "cantar_truco", jugadorId: "B" });
+
+    const legales = accionesLegales(e, "U");
+    expect(legales).toContain("cantar_envido");
+
+    e = aplicar(e, { tipo: "cantar_envido", jugadorId: "U" });
+    expect(e.manoActual?.envidoCantoActivo?.cadena).toEqual(["envido"]);
+    expect(e.manoActual?.trucoCantoActivo?.nivel).toBe("truco");
+  });
 });
 
 describe("envido — bloqueos", () => {

@@ -26,8 +26,7 @@ export function estado1v1(): EstadoJuego {
     salaId: "sala-test",
     jugadores,
     modo: "1v1",
-    puntosObjetivo: 18,
-    conFlor: false
+    puntosObjetivo: 18
   });
   iniciarPartida(e);
   return e;
@@ -44,8 +43,7 @@ export function estado2v2(
     salaId: "sala-test",
     jugadores,
     modo: "2v2",
-    puntosObjetivo: 18,
-    conFlor: false
+    puntosObjetivo: 18
   });
   iniciarPartida(e);
   return e;

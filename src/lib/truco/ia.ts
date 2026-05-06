@@ -551,7 +551,7 @@ function intentarCantarEnvido(ctx: ContextoCanto): Accion | null {
   if (distancia > 8) umbral += 2;
   if (distancia < -5) umbral -= 3;
 
-  // Si tengo flor (3 del mismo palo) → casi siempre canto, es info ganada.
+  // Tres del mismo palo suele dejar un envido alto; empujamos un poco el canto.
   const palos = new Set(vista.originales.map((c) => c.palo));
   if (palos.size === 1) umbral -= 4;
 
@@ -997,15 +997,6 @@ export function decidirAccionBot(estado: EstadoJuego, jugadorId: string): Accion
   if (respEnvido) return respEnvido;
   const respTruco = decidirTruco(ctx);
   if (respTruco) return respTruco;
-
-  // Flor: si la partida es con flor y el bot la tiene, la canta sí o sí
-  // antes de cualquier otra cosa. La flor da +3 sin pedir respuesta —
-  // dejarla pasar es regalar puntos. (En este sistema simplificado el
-  // que canta dispara la resolución global; otros con flor revelan
-  // automáticamente.)
-  if (legales.includes("cantar_flor")) {
-    return { tipo: "cantar_flor", jugadorId };
-  }
 
   // Cantos espontáneos (mi turno, decido si abrir el envido o el truco).
   const cantoEnv = intentarCantarEnvido(ctx);

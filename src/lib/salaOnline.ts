@@ -116,7 +116,6 @@ export async function crearSalaOnline(payload: {
   personaje: string;
   tamanio: 2 | 4;
   puntosObjetivo: 18 | 30;
-  conFlor: boolean;
   publica?: boolean;
 }): Promise<SalaResp> {
   return invocar("sala-crear", {
@@ -125,7 +124,6 @@ export async function crearSalaOnline(payload: {
     personaje: payload.personaje,
     tamanio: payload.tamanio,
     puntos_objetivo: payload.puntosObjetivo,
-    con_flor: payload.conFlor,
     publica: !!payload.publica
   });
 }
@@ -133,7 +131,6 @@ export async function crearSalaOnline(payload: {
 export interface SalaPublicaResumen {
   id: string;
   modo: "1v1" | "2v2";
-  con_flor: boolean;
   creador: string | null;
   jugadores: number;
   cupos: number;
@@ -196,7 +193,6 @@ export async function listarSalasPublicasOnline(): Promise<{
     return {
       id: f.id,
       modo: f.modo,
-      con_flor: !!f.estado.conFlor,
       creador: f.created_by
         ? nombresPorPerfil.get(f.created_by) ?? null
         : null,

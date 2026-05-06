@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import clsx from "clsx";
 import type { Accion, EstadoJuego } from "@/lib/truco/types";
 import { accionesLegales } from "@/lib/truco/motor";
 import { CartaEspanola } from "./CartaEspanola";
@@ -412,6 +413,7 @@ export function PanelAcciones({
         puedo={puedo}
         debeResponderEnvido={debeResponderEnvido}
         debeResponderTruco={debeResponderTruco}
+        envidoEstaPrimero={envidoEstaPrimero}
         estadoVersion={estado.version}
       />
 
@@ -469,6 +471,7 @@ function BotoneraMenu({
   puedo,
   debeResponderEnvido,
   debeResponderTruco,
+  envidoEstaPrimero,
   estadoVersion
 }: {
   miId: string;
@@ -478,6 +481,7 @@ function BotoneraMenu({
   puedo: (t: Accion["tipo"]) => boolean;
   debeResponderEnvido: boolean;
   debeResponderTruco: boolean;
+  envidoEstaPrimero: boolean;
   /** Versión del estado — sirve para liberar el debounce de cantos
    *  cuando llega un cambio del server, no por timeout fijo. */
   estadoVersion: number;
@@ -628,19 +632,15 @@ function BotoneraMenu({
             setMenuAbierto((m) => (m === "envido" ? null : "envido"))
           }
           onElegir={(t) => disparar(t)}
+          accionRapida={
+            envidoEstaPrimero &&
+            opcionesEnvido.some((op) => op.tipo === "cantar_envido")
+              ? "cantar_envido"
+              : undefined
+          }
+          acentuado={envidoEstaPrimero}
           disabled={accionPendiente}
         />
-      )}
-
-      {puedo("cantar_flor") && (
-        <button
-          className="btn btn-primary"
-          disabled={accionPendiente}
-          onClick={() => disparar("cantar_flor")}
-          title="Tenés 3 cartas del mismo palo — flor"
-        >
-          🌼 Flor
-        </button>
       )}
 
       {cantoTruco && (
@@ -693,6 +693,7 @@ function BotonDropdown({
   abierto,
   onToggle,
   onElegir,
+  accionRapida,
   acentuado,
   disabled
 }: {
@@ -702,30 +703,57 @@ function BotonDropdown({
   abierto: boolean;
   onToggle: () => void;
   onElegir: (tipo: Accion["tipo"]) => void;
+  accionRapida?: Accion["tipo"];
   acentuado?: boolean;
   disabled?: boolean;
 }) {
   const tieneVarias = opciones.length > 1;
+  const opcionRapida = accionRapida
+    ? opciones.find((op) => op.tipo === accionRapida)
+    : null;
   const labelMostrado =
-    tieneVarias || !opciones[0] ? label : opciones[0].label;
+    tieneVarias || !opciones[0] ? (opcionRapida?.label ?? label) : opciones[0].label;
   const iconoMostrado =
-    tieneVarias || !opciones[0] ? icono : opciones[0].icono ?? icono;
+    tieneVarias || !opciones[0] ? (opcionRapida?.icono ?? icono) : opciones[0].icono ?? icono;
   const onTap = () => {
-    if (tieneVarias) onToggle();
+    if (tieneVarias && opcionRapida) onElegir(opcionRapida.tipo);
+    else if (tieneVarias) onToggle();
     else if (opciones.length === 1) onElegir(opciones[0].tipo);
   };
+  const mostrarChevronSeparado = tieneVarias && !!opcionRapida;
   return (
     <div className="relative">
-      <button
-        className={acentuado ? "btn btn-primary" : "btn"}
-        onClick={onTap}
-        disabled={disabled}
-        aria-haspopup={tieneVarias ? "menu" : undefined}
-        aria-expanded={tieneVarias ? abierto : undefined}
-      >
-        {iconoMostrado} {labelMostrado}
-        {tieneVarias && <ChevronArriba />}
-      </button>
+      <div className={mostrarChevronSeparado ? "flex" : undefined}>
+        <button
+          className={clsx(
+            acentuado ? "btn btn-primary" : "btn",
+            mostrarChevronSeparado && "rounded-r-none"
+          )}
+          onClick={onTap}
+          disabled={disabled}
+          aria-haspopup={tieneVarias && !mostrarChevronSeparado ? "menu" : undefined}
+          aria-expanded={tieneVarias && !mostrarChevronSeparado ? abierto : undefined}
+        >
+          {iconoMostrado} {labelMostrado}
+          {tieneVarias && !mostrarChevronSeparado && <ChevronArriba />}
+        </button>
+        {mostrarChevronSeparado && (
+          <button
+            type="button"
+            className={clsx(
+              acentuado ? "btn btn-primary" : "btn",
+              "rounded-l-none px-2 border-l border-black/20"
+            )}
+            onClick={onToggle}
+            disabled={disabled}
+            aria-label={`Más opciones de ${label}`}
+            aria-haspopup="menu"
+            aria-expanded={abierto}
+          >
+            <ChevronArriba />
+          </button>
+        )}
+      </div>
       {abierto && tieneVarias && (
         <div
           role="menu"

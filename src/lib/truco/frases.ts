@@ -16,7 +16,6 @@ export type CategoriaFrase =
   | "envido_envido"
   | "real_envido"
   | "falta_envido"
-  | "flor"
   | "truco"
   | "retruco"
   | "vale_cuatro"
@@ -59,15 +58,6 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "Vamos con falta envido.",
     "Falta envido, chango.",
     "Te clavo falta envido."
-  ],
-  flor: [
-    "¡Flor!",
-    "Te canto flor.",
-    "Flor, amigo.",
-    "Tengo flor.",
-    "Va flor.",
-    "Flor, chango.",
-    "Tengo flor, primo."
   ],
   truco: [
     "Truco.",

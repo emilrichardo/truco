@@ -33,7 +33,7 @@ export default function ReglasPage() {
         Reglas del <span className="acento">Truco</span>
       </h1>
       <p className="text-center text-text-dim text-xs subtitulo-claim mb-5">
-        Versión criolla — sin flor
+        Versión criolla norteña
       </p>
 
       <article className="papel p-5 md:p-6 space-y-5 text-sm leading-relaxed">
@@ -179,9 +179,8 @@ export default function ReglasPage() {
               <p>
                 Sumás los puntos de las cartas del mismo palo. El máximo
                 es 33 y el mínimo 0. Cada carta vale su número (figuras
-                10, 11 y 12 valen 0). Si tenés dos del mismo palo, sumás
-                esas dos + 20. Si tenés las tres del mismo palo (sin
-                flor), sumás las dos más altas + 20.
+                10, 11 y 12 valen 0). Si tenés dos o tres cartas del
+                mismo palo, sumás las dos más altas + 20.
               </p>
               <p className="mt-2">
                 El envido se canta sólo en la primera ronda y antes de
@@ -226,20 +225,6 @@ export default function ReglasPage() {
                 juega primero el envido y después se contesta el truco.
                 Una vez respondido el truco, ya no se puede cantar
                 envido.
-              </p>
-            </Seccion>
-
-            <Seccion titulo="La flor (opcional)">
-              <p>
-                Antes de empezar la partida se decide si se juega con o
-                sin flor. Tener flor es tener las tres cartas del mismo
-                palo. Se canta antes de la primera carta y vale 3 puntos
-                directos (no hace falta que la quieran).
-              </p>
-              <p className="mt-2">
-                Si los dos equipos tienen flor, pueden subir cantando{" "}
-                <em>Contra Flor</em> o <em>Contra Flor al Resto</em>. La
-                tiene que cantar el que la lleva, no un compañero.
               </p>
             </Seccion>
 

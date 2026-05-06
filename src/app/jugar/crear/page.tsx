@@ -40,7 +40,6 @@ export default function CrearSalaPage() {
       personaje: miSlug,
       tamanio,
       puntosObjetivo: puntos,
-      conFlor: false,
       publica
     });
     if (!r.ok || !r.sala_id || !r.jugador_id) {

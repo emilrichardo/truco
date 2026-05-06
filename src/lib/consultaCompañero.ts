@@ -159,22 +159,18 @@ export function deberiaConsultar(
         (c) => distanciaDeJuego(c.asiento) < miDist
       );
       if (botEsPie) {
-        if (estado.conFlor && mano.florCantores.length > 0) {
-          // sin envido por flor — caemos al "consulta de jugar"
-        } else {
-          const envidoCantable =
-            !mano.envidoResuelto &&
-            mano.trucoEstado === "ninguno" &&
-            mano.bazas[0].jugadas.length < estado.jugadores.length;
-          if (envidoCantable) {
-            const cartas = mano.cartasPorJugador[bot.id] || [];
-            const envidoBot = calcularEnvido(cartas);
-            return {
-              tipo: "envido",
-              botJugadorId: bot.id,
-              envidoBot
-            };
-          }
+        const envidoCantable =
+          !mano.envidoResuelto &&
+          mano.trucoEstado === "ninguno" &&
+          mano.bazas[0].jugadas.length < estado.jugadores.length;
+        if (envidoCantable) {
+          const cartas = mano.cartasPorJugador[bot.id] || [];
+          const envidoBot = calcularEnvido(cartas);
+          return {
+            tipo: "envido",
+            botJugadorId: bot.id,
+            envidoBot
+          };
         }
       }
     }

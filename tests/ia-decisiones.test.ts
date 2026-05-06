@@ -86,7 +86,7 @@ describe("IA — iniciativa profesional", () => {
     expect(accion.tipo).toBe("cantar_falta_envido");
   });
 
-  it("con poco envido pero cartas bravas abre truco temprano", () => {
+  it("con cartas bravas no abre truco antes de que pase la primera baza", () => {
     const e = estado1v1();
     e.manoActual!.turnoJugadorId = "B";
     setCartas(e, "B", [
@@ -94,6 +94,36 @@ describe("IA — iniciativa profesional", () => {
       { numero: 3, palo: "basto" },
       { numero: 4, palo: "oro" }
     ]);
+
+    const accion = decidirAccionBot(e, "B");
+    expect(accion.tipo).not.toBe("cantar_truco");
+    expect(["cantar_envido", "cantar_real_envido", "cantar_falta_envido"])
+      .not.toContain(accion.tipo);
+  });
+
+  it("después de ganar la primera baza sí toma iniciativa con truco", () => {
+    let e = estado1v1();
+    setCartas(e, "U", [
+      { numero: 4, palo: "espada" },
+      { numero: 5, palo: "basto" },
+      { numero: 6, palo: "oro" }
+    ]);
+    setCartas(e, "B", [
+      { numero: 7, palo: "oro" },
+      { numero: 1, palo: "espada" },
+      { numero: 1, palo: "basto" }
+    ]);
+
+    e = aplicar(e, {
+      tipo: "jugar_carta",
+      jugadorId: "U",
+      cartaId: "test-U-0"
+    });
+    e = aplicar(e, {
+      tipo: "jugar_carta",
+      jugadorId: "B",
+      cartaId: "test-B-0"
+    });
 
     const accion = decidirAccionBot(e, "B");
     expect(accion.tipo).toBe("cantar_truco");

@@ -25,7 +25,7 @@ bustear cache del CDN.
 
 ## `generar-voces.ts` — generar clips de voz con ElevenLabs
 
-Genera los MP3 de cada canto del truco (envido, flor, truco, vale 4, quiero, etc.)
+Genera los MP3 de cada canto del truco (envido, truco, vale 4, quiero, etc.)
 con voces latinas argentinas, priorizando un tono norteño tipo Tucumán,
 Santiago del Estero, Córdoba y Salta.
 
@@ -48,7 +48,6 @@ Santiago del Estero, Córdoba y Salta.
    public/audio/voces/
    ├── lalo/
    │   ├── envido/01.mp3 02.mp3 ...
-   │   ├── flor/01.mp3 02.mp3 ...
    │   ├── truco/01.mp3 ...
    │   ├── ...
    │   └── envido_puntos/00.mp3 ... 33.mp3

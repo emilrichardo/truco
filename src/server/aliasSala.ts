@@ -48,7 +48,6 @@ const ALIASES = [
   "matrera-vieja",
   "no-quiero-ni-ver",
   "mucha-cancha",
-  "buena-flor",
   "cara-rota",
   "tirando-a-matar",
   "tres-de-espada",

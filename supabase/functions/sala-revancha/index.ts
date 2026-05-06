@@ -44,8 +44,7 @@ Deno.serve(async (req) => {
       conectado: true
     })),
     modo: estadoActual.modo,
-    puntosObjetivo: estadoActual.puntosObjetivo,
-    conFlor: estadoActual.conFlor
+    puntosObjetivo: estadoActual.puntosObjetivo
   });
   iniciarPartida(nuevoEstado);
 

@@ -18,7 +18,6 @@ export type CategoriaCanto =
   | "envido_envido"
   | "real_envido"
   | "falta_envido"
-  | "flor"
   | "truco"
   | "retruco"
   | "vale_cuatro"
@@ -439,7 +438,6 @@ export function identificarCanto(texto: string): CantoIdentificado | null {
   else if (t.includes("real envido")) canto = "real_envido";
   else if (/envido[^a-z]+envido/.test(t)) canto = "envido_envido";
   else if (t.includes("envido")) canto = "envido";
-  else if (t.includes("flor")) canto = "flor";
   else if (t.includes("vale cuatro") || t.includes("vale 4")) canto = "vale_cuatro";
   else if (t.includes("retruco")) canto = "retruco";
   else if (t.includes("truco")) canto = "truco";
@@ -457,7 +455,7 @@ export function precargarVoces(jugadorIds: string[]) {
   if (typeof window === "undefined") return;
   const vocesUsadas = new Set(jugadorIds.map(vozDeJugador));
   const cantos: CategoriaCanto[] = [
-    "envido", "envido_envido", "real_envido", "falta_envido", "flor",
+    "envido", "envido_envido", "real_envido", "falta_envido",
     "truco", "retruco", "vale_cuatro",
     "quiero", "no_quiero", "ir_al_mazo",
     "son_buenas", "son_mejores"

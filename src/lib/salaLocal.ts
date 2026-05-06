@@ -52,8 +52,6 @@ export interface ConfigSalaLocal {
   miPersonaje: string;
   tamanio: 2 | 4;
   puntosObjetivo: 18 | 30;
-  /** Si la partida se juega con flor (3 cartas mismo palo = +3 pts). */
-  conFlor: boolean;
   /** Si está presente, fuerza los personajes de los bots en orden de
    *  asiento (bot 1 = botPersonajes[0], bot 2 = botPersonajes[1], etc).
    *  Lo usa el botón "Revancha" para mantener a los mismos oponentes. */
@@ -113,7 +111,6 @@ function mismaConfig(a: ConfigSalaLocal, b: ConfigSalaLocal): boolean {
   return (
     a.tamanio === b.tamanio &&
     a.puntosObjetivo === b.puntosObjetivo &&
-    a.conFlor === b.conFlor &&
     a.miPersonaje === b.miPersonaje
   );
 }
@@ -186,8 +183,7 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
       salaId: `solo-${nuevoIdLocal().slice(6)}`,
       jugadores,
       modo: config.tamanio === 4 ? "2v2" : "1v1",
-      puntosObjetivo: config.puntosObjetivo,
-      conFlor: config.conFlor
+      puntosObjetivo: config.puntosObjetivo
     });
     iniciarPartida(inicial);
     guardarSnapshot({ estado: inicial, miId: yoId, config });

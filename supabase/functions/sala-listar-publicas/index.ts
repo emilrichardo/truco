@@ -7,7 +7,6 @@ import type { EstadoJuego } from "../_shared/truco/types.ts";
 interface SalaResumen {
   id: string;
   modo: "1v1" | "2v2";
-  con_flor: boolean;
   creador: string | null;
   jugadores: number;
   cupos: number;
@@ -65,7 +64,6 @@ Deno.serve(async (req) => {
     return {
       id: f.id,
       modo: f.modo,
-      con_flor: !!f.estado.conFlor,
       creador: f.created_by ? nombresPorPerfil.get(f.created_by) ?? null : null,
       jugadores: jugHumanos,
       cupos,
