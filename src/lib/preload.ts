@@ -3,11 +3,13 @@
 // en cache del browser.
 import { useEffect } from "react";
 import { urlPersonaje } from "@/data/jugadores";
+import { todasLasTexturasMesa } from "@/lib/texturasMesa";
 
 const PALOS = ["espada", "basto", "oro", "copa"] as const;
 const NUMEROS = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12] as const;
 
 let cartasYaPrecargadas = false;
+let texturasMesaYaPrecargadas = false;
 
 /** Pre-cachea las 40 cartas españolas. Idempotente: solo corre la primera vez.
  *  Antes espaciábamos los fetches a 30ms (= ~1.2s para empezar el último);
@@ -50,9 +52,21 @@ export function precargarAvatares(slugs: string[]) {
   }
 }
 
+export function precargarTexturasMesa() {
+  if (typeof window === "undefined") return;
+  if (texturasMesaYaPrecargadas) return;
+  texturasMesaYaPrecargadas = true;
+  for (const src of todasLasTexturasMesa()) {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = src;
+  }
+}
+
 export function usePreloadCartas() {
   useEffect(() => {
     precargarCartas();
+    precargarTexturasMesa();
   }, []);
 }
 

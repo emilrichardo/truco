@@ -2,7 +2,7 @@
 // Reproducción de cantos del truco con clips MP3 generados con ElevenLabs.
 //
 // Estructura de archivos en /public:
-//   /audio/voces/<voz>/<canto>/<NN>.mp3        (5 variantes: 01..05)
+//   /audio/voces/<voz>/<canto>/<NN>.mp3        (N variantes: 01..NN)
 //   /audio/voces/<voz>/envido_puntos/<NN>.mp3  (00..07, 20..33)
 //
 // Asignación de voz: cada jugador recibe una voz estable basada en hash de
@@ -18,6 +18,7 @@ export type CategoriaCanto =
   | "envido_envido"
   | "real_envido"
   | "falta_envido"
+  | "flor"
   | "truco"
   | "retruco"
   | "vale_cuatro"
@@ -406,7 +407,7 @@ export function identificarTanto(texto: string): number | null {
 
 export interface CantoIdentificado {
   canto: CategoriaCanto;
-  /** Índice 1..5 que matchea el archivo `0N.mp3` y la posición en
+  /** Índice 1..N que matchea el archivo `0N.mp3` y la posición en
    *  `FRASES[canto]`. -1 si no pudimos resolver el variante exacto y
    *  caemos en pickeo random. */
   variante: number;
@@ -438,6 +439,7 @@ export function identificarCanto(texto: string): CantoIdentificado | null {
   else if (t.includes("real envido")) canto = "real_envido";
   else if (/envido[^a-z]+envido/.test(t)) canto = "envido_envido";
   else if (t.includes("envido")) canto = "envido";
+  else if (t.includes("flor")) canto = "flor";
   else if (t.includes("vale cuatro") || t.includes("vale 4")) canto = "vale_cuatro";
   else if (t.includes("retruco")) canto = "retruco";
   else if (t.includes("truco")) canto = "truco";
@@ -455,7 +457,7 @@ export function precargarVoces(jugadorIds: string[]) {
   if (typeof window === "undefined") return;
   const vocesUsadas = new Set(jugadorIds.map(vozDeJugador));
   const cantos: CategoriaCanto[] = [
-    "envido", "envido_envido", "real_envido", "falta_envido",
+    "envido", "envido_envido", "real_envido", "falta_envido", "flor",
     "truco", "retruco", "vale_cuatro",
     "quiero", "no_quiero", "ir_al_mazo",
     "son_buenas", "son_mejores"

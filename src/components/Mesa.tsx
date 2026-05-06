@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import clsx from "clsx";
 import type { EstadoJuego, Jugador, Carta } from "@/lib/truco/types";
 import { jerarquia } from "@/lib/truco/cartas";
@@ -14,6 +15,7 @@ import {
 import { urlPersonaje } from "@/data/jugadores";
 import { useCartasLanzando } from "@/lib/cartasLanzando";
 import { MazoReparto } from "./MazoReparto";
+import { texturaMesaAleatoria } from "@/lib/texturasMesa";
 
 type Posicion =
   | "abajo-izquierda"
@@ -138,6 +140,16 @@ export function Mesa({
   }
 
   const numeroDeBaza = estado.manoActual?.bazas.length || 0;
+  const texturaMesa = texturaMesaAleatoria(
+    [
+      estado.salaId,
+      estado.primerManoJugadorId ?? "",
+      estado.jugadores.map((j) => j.personaje).join("|")
+    ].join(":")
+  );
+  const estiloTapete = {
+    "--tapete-textura": `url("${texturaMesa}")`
+  } as CSSProperties;
   // Cartas que el usuario local está lanzando ahora mismo (animación
   // del PanelAcciones). Las ocultamos de las jugadas de la mesa
   // mientras dura la animación — sino se ven dos cartas (la dragged
@@ -163,7 +175,7 @@ export function Mesa({
       {/* Tapete + cartas tiradas en plano 2D. Avatares y mini-manos quedan
        * afuera para conservar la UI sin deformaciones. */}
       <div className="absolute inset-0">
-        <div className="absolute inset-1 sm:inset-2 tapete" />
+        <div className="absolute inset-1 sm:inset-2 tapete" style={estiloTapete} />
         {/* Mazo apilado en el centro mientras se reparte. Aparece al
          * cambiar el numero de mano y se desvanece a los ~1.5s. */}
         <MazoReparto manoNumero={estado.manoActual?.numero ?? 0} />

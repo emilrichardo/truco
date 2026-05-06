@@ -1,8 +1,9 @@
-// Frases del truco — versión limpia y básica.
+// Frases del truco — versión clara, norteña y jugable.
 //
 // Decisiones:
-//  - Sin malas palabras ni modismos. Conversaciones cordiales y claras.
-//  - 4-5 variantes por categoría para variedad sin caer en slang.
+//  - Rechazar un envido/truco siempre dice "no quiero", nunca "paso".
+//  - Modismos suaves del norte argentino para que el TTS suene más criollo.
+//  - 5-7 variantes por categoría para variedad sin ensuciar la mesa.
 //  - SIN reacciones de fin de mano / fin de partida — eran ráfagas de
 //    voces simultáneas que ensuciaban la mesa. El banner ResultadoMano
 //    ya marca el cierre visualmente.
@@ -31,80 +32,106 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
     "Te canto envido.",
     "Envido, amigo.",
     "Te voy con envido.",
-    "Va envido."
+    "Va envido.",
+    "Te tiro envido.",
+    "Envido, chango."
   ],
   envido_envido: [
     "Envido envido.",
     "Te canto envido envido.",
     "Envido envido, amigo.",
-    "Voy con envido envido."
+    "Voy con envido envido.",
+    "Envido envido, primo.",
+    "Te subo envido envido."
   ],
   real_envido: [
     "Real envido.",
     "Te canto real envido.",
     "Real envido, amigo.",
-    "Voy con real envido."
+    "Voy con real envido.",
+    "Real envido, chango.",
+    "Va real envido, primo."
   ],
   falta_envido: [
     "Falta envido.",
     "Te canto falta envido.",
     "Falta envido, amigo.",
-    "Vamos con falta envido."
+    "Vamos con falta envido.",
+    "Falta envido, chango.",
+    "Te clavo falta envido."
   ],
   flor: [
     "¡Flor!",
     "Te canto flor.",
     "Flor, amigo.",
     "Tengo flor.",
-    "Va flor."
+    "Va flor.",
+    "Flor, chango.",
+    "Tengo flor, primo."
   ],
   truco: [
     "Truco.",
     "Te canto truco.",
     "Truco, amigo.",
     "Va truco.",
-    "Te voy con truco."
+    "Te voy con truco.",
+    "Truco, chango.",
+    "Te apuro con truco."
   ],
   retruco: [
     "Quiero retruco.",
     "Retruco.",
     "Te retruco.",
-    "Va retruco."
+    "Va retruco.",
+    "Retruco, chango.",
+    "Te canto retruco."
   ],
   vale_cuatro: [
     "Vale cuatro.",
     "Quiero vale cuatro.",
-    "Va vale cuatro."
+    "Va vale cuatro.",
+    "Vale cuatro, chango.",
+    "Te llevo a vale cuatro."
   ],
   quiero: [
     "Quiero.",
     "Sí, quiero.",
     "Quiero, amigo.",
-    "Dale, quiero."
+    "Dale, quiero.",
+    "Quiero, chango.",
+    "Venga, quiero."
   ],
   no_quiero: [
     "No quiero.",
-    "No, gracias.",
-    "No quiero, amigo.",
-    "Paso."
+    "No quiero, gracias.",
+    "No quiero, chango.",
+    "No quiero, primo.",
+    "No quiero, está bien.",
+    "No quiero, dejalo ahí."
   ],
   ir_al_mazo: [
     "Me voy al mazo.",
     "Al mazo.",
     "Mazo.",
-    "Voy al mazo."
+    "Voy al mazo.",
+    "Me voy al mazo, chango.",
+    "Ya fue, al mazo."
   ],
   son_buenas: [
     "Son buenas.",
     "Son buenas, amigo.",
     "Son buenas para vos.",
-    "Las tuyas son buenas."
+    "Las tuyas son buenas.",
+    "Son buenas, chango.",
+    "Buenas las tuyas."
   ],
   son_mejores: [
     "Son mejores.",
     "Son mejores, amigo.",
     "Acá son mejores.",
-    "Tengo mejores."
+    "Tengo mejores.",
+    "Son mejores, chango.",
+    "Las mías son mejores."
   ]
 };
 

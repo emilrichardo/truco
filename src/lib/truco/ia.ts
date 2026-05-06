@@ -666,14 +666,24 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
     if (fuerzaActual < 50 && !tieneMacho && !bluffConsultable) return null;
   }
 
-  // Etiqueta trucera: en baza 1 con la ventana de envido todavía abierta
-  // el bot prioriza el envido, pero ya no queda mudo con manos muy bravas
-  // o con un bluff creíble. Si tiene cartas de truco claras, toma la
-  // iniciativa y deja que el rival decida si corta con envido.
+  // Etiqueta trucera: en la primera baza el bot no abre truco como reflejo.
+  // Esa ventana suele ser de envido; el truco se vuelve más natural después
+  // de ver la primera carta/baza. Sólo rompemos la etiqueta con mano
+  // verdaderamente monstruosa o marcador muy urgente.
   const fuerza = fuerzaTruco(vista.enMano);
   const fuerzaConEquipo = fuerzaEquipo(ctx);
   const respaldoAliado = maxJerarquia(cartasAliadasEnMano(ctx));
   const rival = lecturaRival(ctx);
+  const cartasYaJugadas = mano.bazas.flatMap((b) =>
+    b.jugadas.map((j) => j.carta)
+  );
+  const tieneMachoActual = vista.enMano.some((c) =>
+    esMachoEfectivo(c, cartasYaJugadas)
+  );
+  const top = maxJerarquia(vista.enMano);
+  const segunda = vista.enMano
+    .map((c) => jerarquia(c))
+    .sort((a, b) => b - a)[1] ?? 0;
   const bazasGanadas = mano.bazas.filter(
     (b) => b.ganadorEquipo === yo.equipo
   ).length;
@@ -682,23 +692,21 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   ).length;
   const distancia = estado.puntos[yo.equipo] - estado.puntos[1 - yo.equipo];
 
-  const ventanaEnvidoAbierta =
+  const primeraBazaAbierta =
     mano.bazas.length === 1 &&
-    !mano.envidoResuelto &&
     mano.bazas[0].jugadas.length < estado.jugadores.length;
-  if (ventanaEnvidoAbierta) {
+  if (primeraBazaAbierta && cantoLegal === "cantar_truco") {
     const miEnvido = calcularEnvido(vista.originales);
-    const top = maxJerarquia(vista.enMano);
-    const trucoClaramenteMejor =
-      fuerzaConEquipo >= 58 ||
-      top >= 12 ||
-      (distancia < -7 && fuerzaConEquipo >= 40);
-    const bluffTemprano =
-      miEnvido < 25 &&
-      fuerzaConEquipo >= 30 &&
-      azarContextual(ctx, "truco-temprano-bluff") <
-        p.bluff * 0.32 + p.agresion * 0.08;
-    if (!trucoClaramenteMejor && !bluffTemprano) return null;
+    const manoMonstruosa =
+      fuerzaConEquipo >= 78 &&
+      (tieneMachoActual || top >= 13) &&
+      segunda >= 9;
+    const marcadorPideGritar =
+      distancia < -10 &&
+      fuerzaConEquipo >= 62 &&
+      miEnvido < 24 &&
+      azarContextual(ctx, "truco-primera-urgente") < p.riesgo * 0.22;
+    if (!manoMonstruosa && !marcadorPideGritar) return null;
   }
 
   // Threshold base. Al subir a retruco / vale 4 estamos arriesgando más
@@ -718,12 +726,6 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   // Si tengo macho efectivo en mano, bajamos mucho el umbral — la baza
   // está prácticamente asegurada y subir es lo correcto. Esto cubre el
   // caso del 1 de basto cuando ya cayó el 1 de espada (y similares).
-  const cartasYaJugadas = mano.bazas.flatMap((b) =>
-    b.jugadas.map((j) => j.carta)
-  );
-  const tieneMachoActual = vista.enMano.some((c) =>
-    esMachoEfectivo(c, cartasYaJugadas)
-  );
   if (tieneMachoActual) umbral -= 20;
 
   if (fuerzaConEquipo >= umbral) return { tipo: cantoLegal, jugadorId };
@@ -733,8 +735,8 @@ function intentarCantarTruco(ctx: ContextoCanto): Accion | null {
   // mover el avispero.
   const puedoBluff =
     cantoLegal === "cantar_truco" &&
+    !primeraBazaAbierta &&
     (bazasGanadas >= 1 ||
-      mano.bazas[0].jugadas.length === 0 ||
       distancia < -6 ||
       respaldoAliado >= 8 ||
       estaCercaDeCierre(estado, yo.equipo));

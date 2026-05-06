@@ -623,7 +623,7 @@ body {
    * el marrón de --madera durante un instante. Coincide mejor con el
    * resto de la UI dark. */
   background-color: #080D0F;
-  background-image: url("/texturas/textura-mesa.png");
+  background-image: var(--tapete-textura, url("/texturas/textura-mesa.png"));
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
