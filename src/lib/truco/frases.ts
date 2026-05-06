@@ -1,8 +1,9 @@
-// Frases del truco — versión limpia y básica.
+// Frases del truco — versión clara, norteña y jugable.
 //
 // Decisiones:
-//  - Sin malas palabras ni modismos. Conversaciones cordiales y claras.
-//  - 4-5 variantes por categoría para variedad sin caer en slang.
+//  - Rechazar un envido/truco siempre dice "no quiero", nunca "paso".
+//  - Modismos suaves del norte argentino para que el TTS suene más criollo.
+//  - 4-5 variantes por categoría para variedad sin ensuciar la mesa.
 //  - SIN reacciones de fin de mano / fin de partida — eran ráfagas de
 //    voces simultáneas que ensuciaban la mesa. El banner ResultadoMano
 //    ya marca el cierre visualmente.
@@ -84,9 +85,9 @@ export const FRASES: Record<CategoriaFrase, string[]> = {
   ],
   no_quiero: [
     "No quiero.",
-    "No, gracias.",
-    "No quiero, amigo.",
-    "Paso."
+    "No quiero, gracias.",
+    "No quiero, chango.",
+    "No quiero, primo."
   ],
   ir_al_mazo: [
     "Me voy al mazo.",

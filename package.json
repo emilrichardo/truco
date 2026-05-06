@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "avatars:upload": "tsx scripts/subir-jugadores-supabase.ts",
     "avatars:optimize": "SKIP_UPLOAD=1 tsx scripts/subir-jugadores-supabase.ts",
+    "voices:generate": "tsx scripts/generar-voces.ts",
     "deploy:functions": "supabase functions deploy sala-accion sala-iniciar sala-cerrar sala-chat sala-crear sala-unirse sala-abandonar sala-agregar-bot sala-revancha"
   },
   "dependencies": {

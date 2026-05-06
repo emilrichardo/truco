@@ -26,7 +26,8 @@ bustear cache del CDN.
 ## `generar-voces.ts` — generar clips de voz con ElevenLabs
 
 Genera los MP3 de cada canto del truco (envido, truco, vale 4, quiero, etc.)
-con voces masculinas y frases con giros santiagueños.
+con voces latinas argentinas, priorizando un tono norteño tipo Tucumán,
+Santiago del Estero, Córdoba y Salta.
 
 ### Pasos
 
@@ -38,19 +39,19 @@ con voces masculinas y frases con giros santiagueños.
 2. **Correr el script** desde la raíz del proyecto:
 
    ```sh
-   ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
+   ELEVENLABS_API_KEY=sk_xxx npm run voices:generate
    ```
 
 3. **Ver los archivos generados**:
 
    ```
    public/audio/voces/
-   ├── charlie/
+   ├── lalo/
    │   ├── envido/01.mp3 02.mp3 03.mp3 04.mp3 05.mp3
    │   ├── truco/01.mp3 ... 05.mp3
    │   ├── ...
    │   └── envido_puntos/00.mp3 ... 33.mp3
-   └── daniel/
+   └── juan/
        └── ... (igual)
    ```
 
@@ -66,11 +67,11 @@ con voces masculinas y frases con giros santiagueños.
    cuando alguien canta. El sistema elige una variación al azar entre
    los archivos disponibles para que no suene siempre igual.
 
-### Para un acento más fiel a Santiago del Estero
+### Para un acento más fiel al norte argentino
 
-ElevenLabs no tiene un preset "santiagueño" por nombre, pero la **Voice
-Library** tiene voces compartidas por la comunidad — algunas etiquetadas
-como argentinas o del NOA.
+ElevenLabs no siempre ofrece un preset explícito "santiagueño", "salteño"
+o "tucumano" por nombre, pero la **Voice Library** tiene voces compartidas
+por la comunidad, algunas etiquetadas como argentinas o del NOA.
 
 1. Andá a https://elevenlabs.io/app/voice-library
 2. Filtrá por: `language: spanish`, `accent: argentine`, `gender: male`
@@ -85,8 +86,8 @@ como argentinas o del NOA.
 El script saltea archivos que ya existen. Para regenerar uno:
 
 ```sh
-rm public/audio/envido/01.mp3
-ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
+rm public/audio/voces/lalo/envido/01.mp3
+ELEVENLABS_API_KEY=sk_xxx npm run voices:generate
 # ahora regenera solo ese archivo
 ```
 
@@ -99,7 +100,7 @@ qué dice un canto, editá ese archivo y volvé a correr el script con
 `FORCE=1` para regenerar los MP3s afectados:
 
 ```sh
-SOLO_CANTOS=truco,retruco FORCE=1 ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
+SOLO_CANTOS=truco,retruco FORCE=1 ELEVENLABS_API_KEY=sk_xxx npm run voices:generate
 ```
 
 ### Voice settings ("cantadito")
@@ -108,8 +109,8 @@ En el script, `VOICE_SETTINGS` controla el tono emocional:
 
 | Setting | Valor actual | Efecto |
 |---|---|---|
-| `stability` | 0.3 | Bajo = más expresivo / dramático |
-| `style` | 0.65 | Alto = empuje emocional |
+| `stability` | 0.15 | Bajo = más expresivo / dramático |
+| `style` | 0.95 | Alto = empuje emocional |
 | `similarity_boost` | 0.7 | Fidelidad al timbre original |
 | `use_speaker_boost` | true | Mejora claridad |
 

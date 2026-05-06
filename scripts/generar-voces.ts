@@ -5,32 +5,27 @@
 // Así cada jugador tiene una voz consistente (asignada por hash del id)
 // pero con varias maneras de decir cada cosa para que no aburra.
 //
-// Frases adaptadas al habla del Norte Argentino (NOA / gaucho).
-// Cada canto tiene 5 niveles de intensidad para que la IA module según
-// confianza/bluff:
-//   1) tranquilo / callandito
-//   2) confiado / nomás
-//   3) desafiante / che
-//   4) fuerte / primito
-//   5) a todo pulmón / changooo, carajooo
+// Frases adaptadas al habla latina del Norte Argentino (NOA):
+// Tucumán, Santiago del Estero, Córdoba y Salta. El texto evita "paso"
+// para rechazos de envido/truco: ahí siempre se sintetiza "no quiero".
 //
-// Settings tuneados para "cantadito" santiagueño:
-// stability bajísimo (0.15) + style alto (0.85) = expresivo, modulado.
+// Settings tuneados para "cantadito" norteño:
+// stability bajísimo (0.15) + style alto (0.95) = expresivo, modulado.
 //
 // Uso:
-//   ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
+//   ELEVENLABS_API_KEY=sk_xxx npm run voices:generate
 //
 // Para generar solo una voz (útil si querés partir la cuota mensual):
-//   SOLO_VOZ=antoni ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
+//   SOLO_VOZ=lalo ELEVENLABS_API_KEY=sk_xxx npm run voices:generate
 //
 // Para regenerar clips que ya existen (cuando cambiaron los textos):
-//   FORCE=1 ELEVENLABS_API_KEY=sk_xxx npx tsx scripts/generar-voces.ts
+//   FORCE=1 ELEVENLABS_API_KEY=sk_xxx npm run voices:generate
 //
 // Para regenerar SOLO ciertos cantos (ahorra cuota):
 //   SOLO_CANTOS=quiero,no_quiero,ir_al_mazo FORCE=1 ELEVENLABS_API_KEY=sk_xxx ...
 //
-// COSTO: ~15-20k chars por corrida completa
-//   (5 voces × 12 cantos × 5 variantes + 22 puntos = ~310 clips).
+// COSTO: ~8-10k chars por corrida completa
+//   (4 voces × cantos disponibles + 22 puntos = ~200 clips).
 // Free tier ElevenLabs = 10k chars/mes — corré por voz para repartir.
 // El script saltea archivos existentes (salvo FORCE=1), así podés reanudar.
 
@@ -62,29 +57,50 @@ const SOLO_CANTOS = (process.env.SOLO_CANTOS || "")
   .map((s) => s.trim().toLowerCase())
   .filter(Boolean);
 
-// Voces premade gratuitas. Cada una se va a usar para TODOS los cantos.
-// Distintas por timbre para que jugadores distintos suenen distintos.
+// Cada voz se usa para TODOS los cantos. Distintas por timbre para que
+// jugadores distintos suenen distintos sin salir del clima argentino.
 interface Voz {
   slug: string;
   id: string;
   nombre: string;
+  region: string;
 }
 
 // Voces argentinas (locale=es-AR) de la Voice Library de ElevenLabs.
 // Lalo es la principal — única voz del catálogo etiquetada explícitamente
-// "norte argentino". Las otras 4 son suplentes argentinas seleccionadas
+// "norte argentino". Las otras 3 son suplentes argentinas seleccionadas
 // por timbre (deep / casual / spirited / smooth) para variar entre jugadores.
 //
 // IMPORTANTE: las voces de la Voice Library requieren plan pago (Starter
 // o superior) para usarse vía API. En free tier el endpoint TTS responde
 // HTTP 402. Para regenerar:
 //
-//   FORCE=1 npx tsx scripts/generar-voces.ts
+//   FORCE=1 npm run voices:generate
 const VOCES: Voz[] = [
-  { slug: "lalo",    id: "XmoCtjPCefjeLDu0eMSl", nombre: "Lalo"    },
-  { slug: "juan",    id: "dGjL92Li0y7ZUQ3MESQW", nombre: "Juan"    },
-  { slug: "manuel",  id: "L7pBVwjueW3IPcQt4Ej9", nombre: "Manuel"  },
-  { slug: "agustin", id: "D09EpJbk4um1HKSpeTSc", nombre: "Agustín" }
+  {
+    slug: "lalo",
+    id: "XmoCtjPCefjeLDu0eMSl",
+    nombre: "Lalo",
+    region: "NOA / norte argentino"
+  },
+  {
+    slug: "juan",
+    id: "dGjL92Li0y7ZUQ3MESQW",
+    nombre: "Juan",
+    region: "argentino latino, tono tucumano-cordobés"
+  },
+  {
+    slug: "manuel",
+    id: "L7pBVwjueW3IPcQt4Ej9",
+    nombre: "Manuel",
+    region: "argentino latino, tono salteño-santiagueño"
+  },
+  {
+    slug: "agustin",
+    id: "D09EpJbk4um1HKSpeTSc",
+    nombre: "Agustín",
+    region: "argentino latino, tono cordobés norteño"
+  }
 ];
 
 // Frases por canto: importadas directamente del módulo del juego para no
@@ -186,6 +202,7 @@ async function run() {
   let chars = 0;
 
   for (const voz of vocesAGenerar) {
+    console.log(`\nVoz ${voz.nombre} (${voz.slug}) — ${voz.region}`);
     const dirVoz = path.join(baseDir, voz.slug);
     fs.mkdirSync(dirVoz, { recursive: true });
 
