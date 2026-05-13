@@ -5,7 +5,12 @@
 //  - Doble cantar_envido no debería ser válido (mismo equipo).
 import { describe, expect, it } from "vitest";
 import { accionesLegales, aplicarAccion } from "@/lib/truco/motor";
+import type { Carta } from "@/lib/truco/types";
 import { aplicar, estado1v1, estado2v2 } from "./helpers";
+
+function carta(palo: Carta["palo"], numero: Carta["numero"]): Carta {
+  return { palo, numero, id: `${palo}-${numero}` };
+}
 
 describe("envido — flujo básico", () => {
   it("usuario canta envido → setea envidoCantoActivo y le pasa el turno al bot", () => {
@@ -93,6 +98,31 @@ describe("envido — flujo básico", () => {
     e = aplicar(e, { tipo: "cantar_envido", jugadorId: "U" });
     expect(e.manoActual?.envidoCantoActivo?.cadena).toEqual(["envido"]);
     expect(e.manoActual?.trucoCantoActivo?.nivel).toBe("truco");
+  });
+
+  it("guarda los tantos del ganador y perdedor cuando se quiere falta envido", () => {
+    let e = estado1v1();
+    e.manoActual!.cartasPorJugador.U = [
+      carta("oro", 7),
+      carta("oro", 6),
+      carta("espada", 1)
+    ];
+    e.manoActual!.cartasPorJugador.B = [
+      carta("copa", 7),
+      carta("copa", 5),
+      carta("basto", 4)
+    ];
+
+    e = aplicar(e, { tipo: "cantar_falta_envido", jugadorId: "U" });
+    e = aplicar(e, { tipo: "responder_quiero", jugadorId: "B" });
+
+    expect(e.ganadorPartida).toBe(0);
+    expect(e.manoActual?.envidoResolucion).toMatchObject({
+      ganadorEquipo: 0,
+      tipo: "falta_envido",
+      querido: true,
+      puntosEquipo: [33, 32]
+    });
   });
 });
 

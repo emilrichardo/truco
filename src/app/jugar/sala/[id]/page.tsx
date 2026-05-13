@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   abandonarSalaOnline,
+  anotarseColaEsperaOnline,
   agregarBotOnline,
   cerrarSalaOnline,
   enviarAccionOnline,
@@ -12,6 +13,7 @@ import {
   iniciarPartidaOnline,
   leerSesion,
   limpiarSalaActiva,
+  MAX_DURACION_SALA_MS,
   marcarBotOnline,
   marcarSalaActiva,
   reconectarSalaOnline,
@@ -45,6 +47,7 @@ import { ConsultaCompañero } from "@/components/ConsultaCompañero";
 import { ResultadoEnvido } from "@/components/ResultadoEnvido";
 import { ResultadoMano } from "@/components/ResultadoMano";
 import { AlertaPuntos } from "@/components/AlertaPuntos";
+import { FinPartidaModal } from "@/components/FinPartidaModal";
 
 /** Aplica una jugada de carta de forma optimista al estado local —
  *  agrega la carta a la baza actual SIN sacarla todavía de la mano
@@ -357,6 +360,7 @@ export default function SalaPage() {
   // cambian al cambiar el turno), y dispara setTimeout una vez.
   useEffect(() => {
     if (!miId || !salaId) return;
+    if (!estado?.jugadores.some((j) => j.id === miId)) return;
     if (!turnoHumanoActorId) return;
     const targetId = turnoHumanoActorId;
     const t = window.setTimeout(() => {
@@ -368,7 +372,7 @@ export default function SalaPage() {
     // turnoEpoch incluido en deps a propósito: cuando el mismo actor
     // recibe un turno nuevo (e.g., gana baza y abre la siguiente),
     // queremos reiniciar el plazo desde cero.
-  }, [turnoHumanoActorId, turnoEpoch, miId, salaId]);
+  }, [turnoHumanoActorId, turnoEpoch, miId, salaId, estado?.jugadores]);
 
   useEffect(() => {
     if (errorSala) setError(errorSala);
@@ -453,6 +457,7 @@ export default function SalaPage() {
   // También dispara al volver el foco a la pestaña.
   useEffect(() => {
     if (!miId || !estado?.iniciada || estado.ganadorPartida !== null) return;
+    if (!estado.jugadores.some((j) => j.id === miId)) return;
     const ping = () => {
       if (saliendoRef.current) return;
       reconectarSalaOnline(salaId, miId).catch(() => {});
@@ -483,13 +488,17 @@ export default function SalaPage() {
     }
   }, [estado, chatVisibleCount, chatAbierto]);
 
-  // Auto-unirse a la sala si ya tengo perfil pero no estoy en jugadores.
+  // Auto-unirse a la sala si ya tengo perfil pero no estoy en la sala.
+  // Si la partida ya empezó, el server me registra como espectador.
   useEffect(() => {
     if (!estado || !miSlug || unidoIntentado) return;
     const sesion = leerSesion(salaId);
     if (sesion) {
       const jugadorSesion = estado.jugadores.find(
         (j) => j.id === sesion.jugadorId
+      );
+      const espectadorSesion = estado.espectadores?.find(
+        (e) => e.id === sesion.jugadorId
       );
       if (jugadorSesion) {
         if (miId !== sesion.jugadorId) setMiId(sesion.jugadorId);
@@ -498,9 +507,15 @@ export default function SalaPage() {
         }
         return;
       }
+      if (espectadorSesion) {
+        if (miId !== sesion.jugadorId) setMiId(sesion.jugadorId);
+        return;
+      }
     }
     const yaSoy = miId && estado.jugadores.some((j) => j.id === miId);
-    if (yaSoy || (salaMeta?.iniciada ?? false)) return;
+    const yaSoyEspectador =
+      miId && (estado.espectadores ?? []).some((e) => e.id === miId);
+    if (yaSoy || yaSoyEspectador || salaMeta?.terminada) return;
     setUnidoIntentado(true);
     (async () => {
       const r = await unirseSalaOnline({
@@ -519,7 +534,7 @@ export default function SalaPage() {
         perfilId: r.perfil_id
       });
     })();
-  }, [estado, miSlug, miId, unidoIntentado, salaId, salaMeta?.iniciada]);
+  }, [estado, miSlug, miId, unidoIntentado, salaId, salaMeta?.terminada]);
 
   const enviarAccion = useCallback(
     async (a: Accion) => {
@@ -676,6 +691,7 @@ export default function SalaPage() {
     [salaId]
   );
   const [revanchaPedida, setRevanchaPedida] = useState(false);
+  const [colaEnviando, setColaEnviando] = useState(false);
   // Cuando el server resetea la sala (ganadorPartida vuelve a null), limpiamos
   // el flag para que el botón pueda ser usado en futuras partidas.
   useEffect(() => {
@@ -692,6 +708,13 @@ export default function SalaPage() {
     // Si ok, el realtime trae el nuevo estado y el modal desaparece solo
     // (ganadorPartida vuelve a null).
   }, [salaId, miId, revanchaPedida]);
+  const anotarmeCola = useCallback(async () => {
+    if (!miId || colaEnviando) return;
+    setColaEnviando(true);
+    const r = await anotarseColaEsperaOnline(salaId, miId);
+    if (!r.ok) setError(r.error || "No se pudo anotarte en la cola.");
+    setColaEnviando(false);
+  }, [salaId, miId, colaEnviando]);
   const cerrarSala = useCallback(async () => {
     if (cerrando) return;
     setCerrando(true);
@@ -718,12 +741,36 @@ export default function SalaPage() {
         }).catch(() => {});
       }
     }
-    await abandonarSalaOnline(salaId, miId);
-    // NO limpiamos la sala activa: el home la muestra para que el
-    // usuario pueda volver si cambia de opinión. Se limpia al cerrar
-    // la sala o al terminar la partida.
+    const r = await abandonarSalaOnline(salaId, miId);
+    if (r.ok) limpiarSalaActiva(salaId);
     router.replace("/");
   }, [salaId, miId, cerrando, router, estado]);
+
+  useEffect(() => {
+    if (!salaMeta?.iniciada || salaMeta.terminada || !salaMeta.created_at || !miId) {
+      return;
+    }
+
+    const venceEn =
+      new Date(salaMeta.created_at).getTime() + MAX_DURACION_SALA_MS - Date.now();
+    let cancelado = false;
+    const cerrarPorTiempo = async () => {
+      const r = await cerrarSalaOnline(salaId, miId);
+      if (!cancelado && !r.ok && !String(r.error || "").includes("ya_terminada")) {
+        setError(r.error || "No se pudo cerrar la sala por tiempo.");
+      }
+    };
+
+    if (venceEn <= 0) {
+      cerrarPorTiempo();
+      return;
+    }
+    const t = window.setTimeout(cerrarPorTiempo, venceEn);
+    return () => {
+      cancelado = true;
+      window.clearTimeout(t);
+    };
+  }, [salaMeta?.iniciada, salaMeta?.terminada, salaMeta?.created_at, salaId, miId]);
   const abrirChat = useCallback(() => {
     // En mobile abre el sheet, en desktop muestra el sidebar.
     setChatAbierto(true);
@@ -818,12 +865,15 @@ export default function SalaPage() {
     );
   }
 
-  const yaSoyJugador = miId && estado.jugadores.some((j) => j.id === miId);
+  const yaSoyJugador = !!miId && estado.jugadores.some((j) => j.id === miId);
+  const soyEspectador =
+    !!miId && (estado.espectadores ?? []).some((e) => e.id === miId);
   const total = estado.modo === "2v2" ? 4 : 2;
   const realesNecesarios = total - jugadoresReales.length;
   const meEnCurso = estado.iniciada && yaSoyJugador;
+  const puedoVerPartida = estado.iniciada && (yaSoyJugador || soyEspectador);
   const miEquipoEs0 =
-    estado.jugadores.find((j) => j.id === miId)?.equipo === 0;
+    soyEspectador || estado.jugadores.find((j) => j.id === miId)?.equipo === 0;
   // Soy el creador si soy el jugador en asiento 0 — sólo el creador
   // puede agregar/quitar bots y disparar el inicio de la partida.
   const soyCreador =
@@ -835,8 +885,28 @@ export default function SalaPage() {
   const rivalParaTitulo = es1v1
     ? estado.jugadores.find((j) => j.id !== miId)
     : undefined;
-  const tituloNos = es1v1 && yo ? yo.nombre : "Nos";
-  const tituloEllos = es1v1 && rivalParaTitulo ? rivalParaTitulo.nombre : "Ellos";
+  const jugadoresOrdenados = [...estado.jugadores].sort(
+    (a, b) => a.asiento - b.asiento
+  );
+  const tituloNos = es1v1
+    ? soyEspectador
+      ? jugadoresOrdenados[0]?.nombre ?? "Equipo 1"
+      : yo?.nombre ?? "Nos"
+    : soyEspectador
+      ? "Equipo 1"
+      : "Nos";
+  const tituloEllos = es1v1
+    ? soyEspectador
+      ? jugadoresOrdenados[1]?.nombre ?? "Equipo 2"
+      : rivalParaTitulo?.nombre ?? "Ellos"
+    : soyEspectador
+      ? "Equipo 2"
+      : "Ellos";
+  const estoyEnCola =
+    !!miId && (estado.colaEspera ?? []).some((e) => e.id === miId);
+  const posicionCola = estoyEnCola
+    ? (estado.colaEspera ?? []).findIndex((e) => e.id === miId) + 1
+    : 0;
 
   return (
     <main className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-bg">
@@ -988,7 +1058,7 @@ export default function SalaPage() {
       )}
 
       {/* Layout principal: mesa flexible + chat lateral en desktop / drawer en mobile */}
-      {estado.iniciada && yaSoyJugador && (
+      {puedoVerPartida && (
         <div className="flex-1 flex overflow-hidden relative">
           {/* Columna principal */}
           <div className="flex-1 flex flex-col overflow-hidden relative">
@@ -1000,26 +1070,39 @@ export default function SalaPage() {
                 turnoActorId={turnoHumanoActorId}
                 turnoTimerKey={turnoTimerKey}
                 turnoTimerMs={TURNO_HUMANO_MS}
+                espectador={soyEspectador}
+                revelarTodasLasCartas={soyEspectador}
               />
+              {soyEspectador && (
+                <PanelEspectador
+                  enCola={estoyEnCola}
+                  posicionCola={posicionCola}
+                  totalCola={(estado.colaEspera ?? []).length}
+                  enviando={colaEnviando}
+                  onAnotarse={anotarmeCola}
+                />
+              )}
               {/* Mi avatar: BR del área de mesa (encima del PanelAcciones)
                * para que quede arriba de mi mano de cartas. Lleva la
                * BarraEmociones adentro como badge en su esquina. */}
-              <MiAvatarBR
-                estado={estado}
-                miId={miId!}
-                enviarChat={enviarChat}
-                turnoActorId={turnoHumanoActorId}
-                turnoTimerKey={turnoTimerKey}
-                turnoTimerMs={TURNO_HUMANO_MS}
-              />
+              {!soyEspectador && (
+                <MiAvatarBR
+                  estado={estado}
+                  miId={miId!}
+                  enviarChat={enviarChat}
+                  turnoActorId={turnoHumanoActorId}
+                  turnoTimerKey={turnoTimerKey}
+                  turnoTimerMs={TURNO_HUMANO_MS}
+                />
+              )}
               {/* Toast efímero del envido cuando se resuelve. */}
-              <ResultadoEnvido estado={estado} miId={miId!} />
+              {!soyEspectador && <ResultadoEnvido estado={estado} miId={miId!} />}
               {/* Banner grande del cierre de mano (puntos ganados/perdidos). */}
-              <ResultadoMano estado={estado} miId={miId!} />
+              {!soyEspectador && <ResultadoMano estado={estado} miId={miId!} />}
               {/* Toast en tiempo real cuando se otorgan puntos en la mano
                * (envido no querido, truco no querido, ir al mazo, etc.). */}
-              <AlertaPuntos estado={estado} miId={miId!} />
-              {consulta && (
+              {!soyEspectador && <AlertaPuntos estado={estado} miId={miId!} />}
+              {!soyEspectador && consulta && (
                 <ConsultaCompañero
                   consulta={consulta}
                   estado={estado}
@@ -1084,68 +1167,35 @@ export default function SalaPage() {
             </div>
           )}
 
-
-          {/* Modal ganador con nombres y botón Revancha (sólo creador). */}
-          {estado.ganadorPartida !== null && (() => {
-            const equipoGanador = estado.ganadorPartida ?? 0;
-            const yoGane = miEquipoEs0 === (equipoGanador === 0);
-            const ganadores = estado.jugadores
-              .filter((j) => j.equipo === equipoGanador)
-              .map((j) => j.nombre);
-            const titulo = es1v1
-              ? yoGane
-                ? "¡Ganaste!"
-                : "Perdiste"
-              : yoGane
-                ? "¡Ganamos!"
-                : "Perdieron";
-            const subtitulo =
-              ganadores.length > 1
-                ? `Ganaron ${ganadores.slice(0, -1).join(", ")} y ${ganadores[ganadores.length - 1]}`
-                : `Ganó ${ganadores[0]}`;
-            return (
-              <div className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4">
-                <div className="papel p-5 text-center max-w-sm w-full">
-                  {yoGane && <div className="text-5xl mb-2">🏆</div>}
-                  <div
-                    className="titulo-marca text-2xl mb-2"
-                    style={{
-                      color: "var(--carbon)",
-                      textShadow: "1px 1px 0 rgba(217,164,65,0.5)"
-                    }}
-                  >
-                    {titulo}
-                  </div>
-                  <p
-                    className="text-sm mb-4 subtitulo-claim"
-                    style={{ color: "var(--madera-oscura)" }}
-                  >
-                    {subtitulo}
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {soyCreador && (
-                      <button
-                        type="button"
-                        onClick={pedirRevancha}
-                        disabled={revanchaPedida}
-                        className="btn btn-primary disabled:opacity-60"
-                      >
-                        {revanchaPedida ? "Repartiendo…" : "Revancha"}
-                      </button>
-                    )}
-                    {!soyCreador && (
-                      <p className="text-xs text-text-dim italic">
-                        Esperando que el creador inicie revancha…
-                      </p>
-                    )}
-                    <Link href="/" className="btn btn-ghost text-xs">
-                      Volver al inicio
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
+          {/* Modal ganador con resumen y botón Revancha (sólo creador). */}
+          {estado.ganadorPartida !== null && (
+            <FinPartidaModal
+              estado={estado}
+              miId={miId!}
+              acciones={
+                <>
+                  {soyCreador && (
+                    <button
+                      type="button"
+                      onClick={pedirRevancha}
+                      disabled={revanchaPedida}
+                      className="btn btn-primary disabled:opacity-60"
+                    >
+                      {revanchaPedida ? "Repartiendo…" : "Revancha"}
+                    </button>
+                  )}
+                  {!soyCreador && (
+                    <p className="text-xs text-text-dim italic">
+                      Esperando que el creador inicie revancha…
+                    </p>
+                  )}
+                  <Link href="/" className="btn btn-ghost text-xs">
+                    Volver al inicio
+                  </Link>
+                </>
+              }
+            />
+          )}
         </div>
       )}
 
@@ -1158,13 +1208,9 @@ export default function SalaPage() {
         />
       )}
 
-      {/* Confirmación de salida. Para el creador: cerrar la sala
-       *  entera. Para invitados: abandonar (la sala sigue para los
-       *  demás, vos podés volver desde el home). Antes el botón
-       *  llamaba siempre a cerrarSala — el server rechazaba a los
-       *  invitados ("solo_el_creador") pero el cliente igual limpiaba
-       *  el localStorage, así que el invitado perdía la opción de
-       *  volver desde el home. */}
+      {/* Confirmación de salida. Si la partida ya empezó, cualquier
+       *  jugador sentado que salga termina la partida y se premia al
+       *  equipo que va arriba; los espectadores sólo dejan de mirar. */}
       {confirmSalir && (
         <div
           className="fixed inset-0 sheet-bg flex items-center justify-center z-[1000] p-4"
@@ -1182,11 +1228,13 @@ export default function SalaPage() {
               )}
             </div>
             <p className="text-text-dim text-sm mb-4">
-              {soyCreador
-                ? estado.iniciada
-                  ? "La partida se va a dar por terminada para todos."
-                  : "La sala se elimina y los primos invitados no van a poder entrar."
-                : "La sala sigue para los demás. Podés volver a entrar desde el inicio si cambiás de opinión."}
+              {soyEspectador
+                ? "Vas a dejar de mirar la partida en vivo."
+                : estado.iniciada
+                  ? "La partida se dará por terminada y ganará el equipo que vaya arriba."
+                  : soyCreador
+                    ? "La sala se elimina y los primos invitados no van a poder entrar."
+                    : "La sala sigue para los demás. Podés volver a entrar desde el inicio si cambiás de opinión."}
             </p>
             <div className="flex gap-2">
               <button
@@ -1213,6 +1261,59 @@ export default function SalaPage() {
         </div>
       )}
     </main>
+  );
+}
+
+function PanelEspectador({
+  enCola,
+  posicionCola,
+  totalCola,
+  enviando,
+  onAnotarse
+}: {
+  enCola: boolean;
+  posicionCola: number;
+  totalCola: number;
+  enviando: boolean;
+  onAnotarse: () => void;
+}) {
+  return (
+    <div className="absolute left-1/2 top-3 -translate-x-1/2 z-[680] w-[min(92vw,28rem)] pointer-events-none">
+      <div className="card bg-carbon/90 border-dorado/50 backdrop-blur-sm p-2 shadow-xl pointer-events-auto">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-full border border-dorado/60 bg-azul-criollo/30 flex items-center justify-center text-base">
+            👀
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] uppercase tracking-widest text-dorado font-bold">
+              Mirando en vivo
+            </div>
+            <div className="text-[11px] text-text-dim leading-snug">
+              Estás viendo las cartas de todos los jugadores.
+            </div>
+          </div>
+          {enCola ? (
+            <div className="text-right">
+              <div className="text-[9px] uppercase tracking-widest text-text-dim">
+                En cola
+              </div>
+              <div className="font-display text-dorado leading-none">
+                #{posicionCola || totalCola}
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onAnotarse}
+              disabled={enviando}
+              className="btn btn-primary !min-h-0 !px-3 !py-2 !text-[10px] shrink-0 disabled:opacity-60"
+            >
+              {enviando ? "Anotando…" : "Sumarme"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1501,6 +1602,7 @@ function legibilizarError(crudo: string): string {
     target_no_es_bot: "Sólo se puede quitar a los bots.",
     no_iniciada: "La partida todavía no empezó.",
     ya_terminada: "La partida ya terminó.",
+    sala_expirada: "La sala superó 1 hora y se cerró automáticamente.",
     creador_no_puede_abandonar:
       "El creador no puede abandonar — usá Cerrar sala.",
     ya_empezo: "La partida ya empezó.",

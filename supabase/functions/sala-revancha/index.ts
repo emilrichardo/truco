@@ -46,6 +46,8 @@ Deno.serve(async (req) => {
     modo: estadoActual.modo,
     puntosObjetivo: estadoActual.puntosObjetivo
   });
+  nuevoEstado.espectadores = estadoActual.espectadores ?? [];
+  nuevoEstado.colaEspera = estadoActual.colaEspera ?? [];
   iniciarPartida(nuevoEstado);
 
   const { error: errUpd } = await sb

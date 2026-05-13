@@ -1,7 +1,12 @@
-// Une un jugador a una sala existente. Asigna asiento libre y equipo según
-// asiento (par→0, impar→1). Falla si la sala ya empezó o está llena.
+// Une un jugador a una sala existente. Si la partida todavía no empezó,
+// asigna asiento libre y equipo según asiento (par→0, impar→1). Si ya
+// empezó, lo registra como espectador para que pueda verla en vivo.
 import { admin, fail, ok, preflight, readJson } from "../_shared/lib.ts";
-import type { EstadoJuego, Jugador } from "../_shared/truco/types.ts";
+import {
+  finalizarSalaConGanador,
+  salaExpirada
+} from "../_shared/salaLifecycle.ts";
+import type { Espectador, EstadoJuego, Jugador } from "../_shared/truco/types.ts";
 
 interface Payload {
   sala_id: string;
@@ -57,9 +62,94 @@ Deno.serve(async (req) => {
     .eq("id", body.sala_id)
     .single();
   if (errSel || !sala) return fail("sala_no_encontrada", 404);
-  if (sala.iniciada) return fail("ya_empezo", 409);
+  if (sala.terminada) return fail("ya_terminada", 409);
+  if (salaExpirada(sala)) {
+    if (sala.iniciada) {
+      try {
+        await finalizarSalaConGanador(
+          sb,
+          sala,
+          "La sala superó 1 hora de duración. Se termina por tiempo y gana el equipo que iba arriba."
+        );
+      } catch (error) {
+        return fail(error instanceof Error ? error.message : String(error), 500);
+      }
+    }
+    return fail("sala_expirada", 409);
+  }
 
   const estado = sala.estado as EstadoJuego;
+  estado.espectadores = estado.espectadores ?? [];
+  estado.colaEspera = estado.colaEspera ?? [];
+
+  if (sala.iniciada) {
+    const existenteJugador = estado.jugadores.find(
+      (j) => (!!perfilId && j.perfilId === perfilId) || (!perfilId && j.nombre === body.nombre && j.personaje === body.personaje)
+    );
+    if (existenteJugador) {
+      existenteJugador.perfilId = perfilId ?? existenteJugador.perfilId;
+      existenteJugador.conectado = true;
+      existenteJugador.esBot = false;
+      estado.version = (estado.version || 0) + 1;
+
+      const { error: errUpd } = await sb
+        .from("salas")
+        .update({ estado })
+        .eq("id", body.sala_id);
+      if (errUpd) return fail(`update: ${errUpd.message}`, 500);
+
+      return ok({
+        jugador_id: existenteJugador.id,
+        asiento: existenteJugador.asiento,
+        perfil_id: perfilId,
+        rol: "jugador"
+      });
+    }
+
+    const existenteEspectador = estado.espectadores
+      .filter((e) => {
+        const mismoPerfil = !!perfilId && e.perfilId === perfilId;
+        const mismoNombre = e.nombre === body.nombre && e.personaje === body.personaje;
+        return mismoPerfil || mismoNombre;
+      })
+      .sort((a, b) => a.ts - b.ts)[0];
+    const espectador: Espectador = existenteEspectador ?? {
+      id: crypto.randomUUID(),
+      perfilId: perfilId ?? undefined,
+      nombre: body.nombre,
+      personaje: body.personaje,
+      conectado: true,
+      ts: Date.now()
+    };
+    espectador.perfilId = perfilId ?? espectador.perfilId;
+    espectador.nombre = body.nombre;
+    espectador.personaje = body.personaje;
+    espectador.conectado = true;
+    if (!existenteEspectador) estado.espectadores.push(espectador);
+    estado.version = (estado.version || 0) + 1;
+
+    estado.chat.push({
+      id: crypto.randomUUID().slice(0, 8),
+      jugadorId: espectador.id,
+      texto: `${espectador.nombre} entró a mirar la partida`,
+      ts: Date.now(),
+      evento: "sistema"
+    });
+    if (estado.chat.length > 200) estado.chat.shift();
+
+    const { error: errUpd } = await sb
+      .from("salas")
+      .update({ estado })
+      .eq("id", body.sala_id);
+    if (errUpd) return fail(`update: ${errUpd.message}`, 500);
+
+    return ok({
+      jugador_id: espectador.id,
+      perfil_id: perfilId,
+      rol: "espectador"
+    });
+  }
+
   const total = sala.modo === "2v2" ? 4 : 2;
 
   const existente = estado.jugadores
@@ -88,7 +178,8 @@ Deno.serve(async (req) => {
     return ok({
       jugador_id: existente.id,
       asiento: existente.asiento,
-      perfil_id: perfilId
+      perfil_id: perfilId,
+      rol: "jugador"
     });
   }
 
@@ -124,5 +215,5 @@ Deno.serve(async (req) => {
     .eq("id", body.sala_id);
   if (errUpd) return fail(`update: ${errUpd.message}`, 500);
 
-  return ok({ jugador_id: jugadorId, asiento, perfil_id: perfilId });
+  return ok({ jugador_id: jugadorId, asiento, perfil_id: perfilId, rol: "jugador" });
 });

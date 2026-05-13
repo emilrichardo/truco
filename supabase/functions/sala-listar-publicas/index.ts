@@ -1,7 +1,8 @@
-// Lista las salas públicas que están abiertas (creadas pero no iniciadas
-// y no terminadas), para mostrarlas en la home. Cualquiera puede entrar
-// sin necesitar el link directo.
+// Lista las salas públicas abiertas o en vivo, para mostrarlas en la home.
+// Cualquiera puede entrar sin necesitar el link directo; si ya empezó,
+// entra como espectador.
 import { admin, fail, ok, preflight } from "../_shared/lib.ts";
+import { MAX_DURACION_SALA_MS } from "../_shared/salaLifecycle.ts";
 import type { EstadoJuego } from "../_shared/truco/types.ts";
 
 interface SalaResumen {
@@ -10,6 +11,9 @@ interface SalaResumen {
   creador: string | null;
   jugadores: number;
   cupos: number;
+  iniciada: boolean;
+  espectadores: number;
+  enCola: number;
   created_at: string;
 }
 
@@ -19,14 +23,14 @@ Deno.serve(async (req) => {
 
   const sb = admin();
 
-  // Listamos públicas no iniciadas y no terminadas, más recientes
-  // primero. Limitamos para no traer cantidades enormes.
+  // Listamos públicas no terminadas, más recientes primero. Limitamos
+  // para no traer cantidades enormes.
   const { data, error } = await sb
     .from("salas")
-    .select("id, modo, estado, created_at, created_by")
+    .select("id, modo, estado, created_at, created_by, iniciada")
     .eq("publica", true)
-    .eq("iniciada", false)
     .eq("terminada", false)
+    .gte("created_at", new Date(Date.now() - MAX_DURACION_SALA_MS).toISOString())
     .order("created_at", { ascending: false })
     .limit(30);
 
@@ -38,6 +42,7 @@ Deno.serve(async (req) => {
     estado: EstadoJuego;
     created_at: string;
     created_by: string | null;
+    iniciada: boolean;
   }>;
 
   // Resolvemos el nombre del creador (1 query batch para todos los
@@ -67,6 +72,9 @@ Deno.serve(async (req) => {
       creador: f.created_by ? nombresPorPerfil.get(f.created_by) ?? null : null,
       jugadores: jugHumanos,
       cupos,
+      iniciada: !!f.iniciada,
+      espectadores: (f.estado.espectadores ?? []).length,
+      enCola: (f.estado.colaEspera ?? []).length,
       created_at: f.created_at
     };
   });

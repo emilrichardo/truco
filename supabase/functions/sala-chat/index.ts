@@ -48,14 +48,17 @@ Deno.serve(async (req) => {
   if (errSel || !sala) return fail("sala_no_encontrada", 404);
 
   const estado = sala.estado as EstadoJuego;
-  const jugador = estado.jugadores.find((j) => j.id === body.jugador_id);
+  const jugadorSentado = estado.jugadores.find((j) => j.id === body.jugador_id);
+  const jugador =
+    jugadorSentado ??
+    estado.espectadores?.find((e) => e.id === body.jugador_id);
   const destinatario = body.destinatario_id
     ? estado.jugadores.find((j) => j.id === body.destinatario_id)
     : undefined;
   if (body.destinatario_id && (!jugador || !destinatario)) {
     return fail("destinatario_invalido", 400);
   }
-  if (jugador && destinatario && jugador.equipo !== destinatario.equipo) {
+  if (destinatario && (!jugadorSentado || jugadorSentado.equipo !== destinatario.equipo)) {
     return fail("solo_companiero", 403);
   }
   const directo = !!destinatario;

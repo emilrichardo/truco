@@ -3,6 +3,11 @@
 // partida terminó, registra el resultado en el historial.
 import { admin, fail, ok, preflight, readJson } from "../_shared/lib.ts";
 import { aplicarAccion } from "../_shared/truco/motor.ts";
+import {
+  finalizarSalaConGanador,
+  registrarPartidaTerminada,
+  salaExpirada
+} from "../_shared/salaLifecycle.ts";
 import type { Accion, EstadoJuego } from "../_shared/truco/types.ts";
 
 interface Payload {
@@ -29,6 +34,18 @@ Deno.serve(async (req) => {
   if (errSel || !sala) return fail("sala_no_encontrada", 404);
   if (!sala.iniciada) return fail("no_iniciada", 409);
   if (sala.terminada) return fail("ya_terminada", 409);
+  if (salaExpirada(sala)) {
+    try {
+      await finalizarSalaConGanador(
+        sb,
+        sala,
+        "La sala superó 1 hora de duración. Se termina por tiempo y gana el equipo que iba arriba."
+      );
+    } catch (error) {
+      return fail(error instanceof Error ? error.message : String(error), 500);
+    }
+    return fail("sala_expirada", 409);
+  }
 
   // Resolución de quién actúa:
   //  - Caso normal: la acción es del propio jugador. Forzamos
@@ -78,52 +95,7 @@ Deno.serve(async (req) => {
     updates.ganador_equipo = r.estado.ganadorPartida;
     updates.terminada_at = new Date().toISOString();
 
-    const { data: partida, error: errPart } = await sb
-      .from("partidas")
-      .insert({
-        sala_id: body.sala_id,
-        modo: sala.modo,
-        puntos_objetivo: sala.puntos_objetivo,
-        ganador_equipo: r.estado.ganadorPartida,
-        duracion_seg: Math.round((Date.now() - new Date(sala.created_at).getTime()) / 1000),
-        estado_final: r.estado
-      })
-      .select()
-      .single();
-
-    if (!errPart && partida) {
-      // Registrar cada jugador con su resultado (perfil_id si hay).
-      // Para resolver perfil_id matcheamos nombre+personaje y, si hay
-      // varios perfiles con el mismo par (cada device_id nuevo crea
-      // uno), tomamos el más antiguo. Antes usábamos .maybeSingle() que
-      // devolvía null en caso de duplicados — el jugador quedaba sin
-      // perfil_id y desaparecía del ranking.
-      const filas = await Promise.all(
-        r.estado.jugadores.map(async (j) => {
-          const { data: perfiles } = await sb
-            .from("perfiles")
-            .select("id")
-            .eq("nombre", j.nombre)
-            .eq("personaje", j.personaje)
-            .order("created_at", { ascending: true })
-            .limit(1);
-          const perfilId = perfiles && perfiles[0] ? perfiles[0].id : null;
-          return {
-            partida_id: partida.id,
-            perfil_id: perfilId,
-            nombre: j.nombre,
-            personaje: j.personaje,
-            equipo: j.equipo,
-            asiento: j.asiento,
-            es_bot: j.esBot,
-            gano: r.estado.ganadorPartida === j.equipo,
-            puntos_finales:
-              j.equipo === 0 ? r.estado.puntos[0] : r.estado.puntos[1]
-          };
-        })
-      );
-      await sb.from("partida_jugadores").insert(filas);
-    }
+    await registrarPartidaTerminada(sb, sala, r.estado);
   }
 
   const { error: errUpd } = await sb

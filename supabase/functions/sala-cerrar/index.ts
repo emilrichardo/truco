@@ -2,6 +2,10 @@
 // como terminada. Sólo el creador (asiento 0) puede cerrarla; si llega
 // `jugador_id` se valida.
 import { admin, fail, ok, preflight, readJson } from "../_shared/lib.ts";
+import {
+  finalizarSalaConGanador,
+  salaExpirada
+} from "../_shared/salaLifecycle.ts";
 import type { EstadoJuego } from "../_shared/truco/types.ts";
 
 interface Payload {
@@ -19,16 +23,19 @@ Deno.serve(async (req) => {
   const sb = admin();
   const { data: sala, error: errSel } = await sb
     .from("salas")
-    .select("id, iniciada, terminada, estado")
+    .select("*")
     .eq("id", body.sala_id)
     .maybeSingle();
   if (errSel) return fail(errSel.message, 500);
   if (!sala) return ok({ ya_no_existe: true });
 
-  if (body.jugador_id) {
+  const expirada = salaExpirada(sala);
+  if (body.jugador_id && !expirada) {
     const estado = sala.estado as EstadoJuego;
-    const j = estado.jugadores.find((x) => x.id === body.jugador_id);
-    if (!j || j.asiento !== 0) return fail("solo_el_creador", 403);
+    const creador = estado.jugadores.find(
+      (x) => x.id === body.jugador_id && x.asiento === 0
+    );
+    if (!creador) return fail("solo_el_creador", 403);
   }
 
   if (!sala.iniciada) {
@@ -40,14 +47,20 @@ Deno.serve(async (req) => {
 
   if (sala.terminada) return ok({ ya_terminada: true });
 
-  // Estaba en curso: la marcamos como terminada sin ganador.
-  const { error } = await sb
-    .from("salas")
-    .update({
-      terminada: true,
-      terminada_at: new Date().toISOString()
-    })
-    .eq("id", body.sala_id);
-  if (error) return fail(error.message, 500);
-  return ok({ cerrada: true });
+  const estado = sala.estado as EstadoJuego;
+  const jugador = body.jugador_id
+    ? estado.jugadores.find((j) => j.id === body.jugador_id)
+    : undefined;
+  const texto = expirada
+    ? "La sala superó 1 hora de duración. Se termina por tiempo y gana el equipo que iba arriba."
+    : jugador
+      ? `${jugador.nombre} cerró la sala. La partida se termina y gana el equipo que iba arriba.`
+      : "La sala fue cerrada. La partida se termina y gana el equipo que iba arriba.";
+
+  try {
+    await finalizarSalaConGanador(sb, sala, texto, jugador?.id);
+  } catch (error) {
+    return fail(error instanceof Error ? error.message : String(error), 500);
+  }
+  return ok({ cerrada: true, terminada_por_tiempo: expirada });
 });

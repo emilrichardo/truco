@@ -531,12 +531,21 @@ function irAlMazo(estado: EstadoJuego, jugador: Jugador): ResultadoAccion {
 
   // Envido pendiente al mazo: regala 1 al rival como envido no querido.
   if (mano.envidoCantoActivo) {
+    const cantoTopMazo =
+      mano.envidoCantoActivo.cadena[mano.envidoCantoActivo.cadena.length - 1];
     darPuntos(estado, otro, 1);
     mano.puntosOtorgados.push({
       equipo: otro,
       puntos: 1,
       motivo: "Envido no querido (mazo)"
     });
+    mano.envidoResolucion = {
+      ganadorEquipo: otro,
+      puntos: 1,
+      detalle: `Envido no querido. Equipo ${otro + 1} +1.`,
+      tipo: cantoTopMazo,
+      querido: false
+    };
     mano.envidoCantoActivo = null;
     mano.envidoResuelto = true;
   }
@@ -911,7 +920,9 @@ function resolverEnvido(
     mano.envidoResolucion = {
       ganadorEquipo: eqGanador,
       puntos: puntosOtorgados,
-      detalle: `Envido no querido. Equipo ${eqGanador + 1} +${puntosOtorgados}.`
+      detalle: `Envido no querido. Equipo ${eqGanador + 1} +${puntosOtorgados}.`,
+      tipo: cantoTop,
+      querido: false
     };
     // Devuelvo el turno al "mano" o a quien le tocaba jugar carta.
     devolverTurnoAJugar(estado);
@@ -958,7 +969,14 @@ function resolverEnvido(
 
   darPuntos(estado, eqGanador, puntosOtorgados);
   mano.envidoResuelto = true;
-  mano.envidoResolucion = { ganadorEquipo: eqGanador, puntos: puntosOtorgados, detalle };
+  mano.envidoResolucion = {
+    ganadorEquipo: eqGanador,
+    puntos: puntosOtorgados,
+    detalle,
+    tipo: esFalta ? "falta_envido" : cantoTop,
+    querido: true,
+    puntosEquipo: [eq0.puntos, eq1.puntos]
+  };
   mano.puntosOtorgados.push({
     equipo: eqGanador,
     puntos: puntosOtorgados,

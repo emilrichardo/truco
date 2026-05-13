@@ -15,6 +15,7 @@ const STORAGE_SESION = "truco_primos_sesion";
  *  lee para ofrecer un "Volver a la partida en curso". Se limpia al
  *  cerrar/abandonar sala o cuando la partida termina. */
 const STORAGE_SALA_ACTIVA = "truco_primos_sala_activa";
+export const MAX_DURACION_SALA_MS = 60 * 60 * 1000;
 
 export interface SalaResp {
   ok: boolean;
@@ -23,6 +24,9 @@ export interface SalaResp {
   jugador_id?: string;
   perfil_id?: string;
   asiento?: number;
+  rol?: "jugador" | "espectador";
+  en_cola?: boolean;
+  posicion?: number;
   sala?: { id: string; estado: EstadoJuego; iniciada: boolean; terminada: boolean };
 }
 
@@ -134,6 +138,9 @@ export interface SalaPublicaResumen {
   creador: string | null;
   jugadores: number;
   cupos: number;
+  iniciada: boolean;
+  espectadores: number;
+  enCola: number;
   created_at: string;
 }
 
@@ -151,10 +158,10 @@ export async function listarSalasPublicasOnline(): Promise<{
 
   const { data, error } = await sb
     .from("salas")
-    .select("id, modo, estado, created_at, created_by")
+    .select("id, modo, estado, created_at, created_by, iniciada")
     .eq("publica", true)
-    .eq("iniciada", false)
     .eq("terminada", false)
+    .gte("created_at", new Date(Date.now() - MAX_DURACION_SALA_MS).toISOString())
     .order("created_at", { ascending: false })
     .limit(30);
 
@@ -169,6 +176,7 @@ export async function listarSalasPublicasOnline(): Promise<{
     estado: EstadoJuego;
     created_at: string;
     created_by: string | null;
+    iniciada: boolean;
   }>;
 
   const perfilIds = Array.from(
@@ -198,6 +206,9 @@ export async function listarSalasPublicasOnline(): Promise<{
         : null,
       jugadores: jugHumanos,
       cupos,
+      iniciada: !!f.iniciada,
+      espectadores: (f.estado.espectadores ?? []).length,
+      enCola: (f.estado.colaEspera ?? []).length,
       created_at: f.created_at
     };
   });
@@ -312,6 +323,16 @@ export async function revanchaOnline(
   });
 }
 
+export async function anotarseColaEsperaOnline(
+  salaId: string,
+  espectadorId: string
+): Promise<SalaResp> {
+  return invocar("sala-cola-espera", {
+    sala_id: salaId,
+    espectador_id: espectadorId
+  });
+}
+
 export async function enviarChatOnline(
   salaId: string,
   jugadorId: string,
@@ -343,7 +364,11 @@ export async function enviarChatOnline(
  */
 export function useSalaOnline(salaId: string | null) {
   const [estado, setEstado] = useState<EstadoJuego | null>(null);
-  const [salaMeta, setSalaMeta] = useState<{ iniciada: boolean; terminada: boolean } | null>(null);
+  const [salaMeta, setSalaMeta] = useState<{
+    iniciada: boolean;
+    terminada: boolean;
+    created_at: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cargadoInicial = useRef(false);
 
@@ -360,7 +385,7 @@ export function useSalaOnline(salaId: string | null) {
     (async () => {
       const { data, error: errSel } = await sb
         .from("salas")
-        .select("estado, iniciada, terminada")
+        .select("estado, iniciada, terminada, created_at")
         .eq("id", salaId)
         .maybeSingle();
       if (!activo) return;
@@ -374,7 +399,11 @@ export function useSalaOnline(salaId: string | null) {
       }
       cargadoInicial.current = true;
       setEstado(data.estado as EstadoJuego);
-      setSalaMeta({ iniciada: data.iniciada, terminada: data.terminada });
+      setSalaMeta({
+        iniciada: data.iniciada,
+        terminada: data.terminada,
+        created_at: data.created_at
+      });
     })();
 
     // Suscripción Realtime — UPDATEs en la fila de esta sala.
@@ -384,9 +413,18 @@ export function useSalaOnline(salaId: string | null) {
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "salas", filter: `id=eq.${salaId}` },
         (payload) => {
-          const nuevo = payload.new as { estado: EstadoJuego; iniciada: boolean; terminada: boolean };
+          const nuevo = payload.new as {
+            estado: EstadoJuego;
+            iniciada: boolean;
+            terminada: boolean;
+            created_at: string;
+          };
           setEstado(nuevo.estado);
-          setSalaMeta({ iniciada: nuevo.iniciada, terminada: nuevo.terminada });
+          setSalaMeta({
+            iniciada: nuevo.iniciada,
+            terminada: nuevo.terminada,
+            created_at: nuevo.created_at
+          });
         }
       )
       .subscribe();

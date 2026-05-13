@@ -214,7 +214,8 @@ export default function HomePage() {
           ) : (
             <div className="space-y-2">
               {salasPublicas.map((s) => {
-              const llena = s.jugadores >= s.cupos;
+              const llena = !s.iniciada && s.jugadores >= s.cupos;
+              const etiqueta = s.iniciada ? "Mirar" : llena ? "Llena" : "Entrar";
               return (
                 <Link
                   key={s.id}
@@ -223,7 +224,7 @@ export default function HomePage() {
                   aria-disabled={llena}
                 >
                   <div className="text-2xl flex-shrink-0">
-                    {s.modo === "2v2" ? "👥" : "🤜"}
+                    {s.iniciada ? "👀" : s.modo === "2v2" ? "👥" : "🤜"}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-display text-sm text-crema truncate">
@@ -232,17 +233,38 @@ export default function HomePage() {
                     <div className="text-text-dim text-[11px] flex items-center gap-2 flex-wrap">
                       <span>{s.modo === "2v2" ? "Parejas" : "Mano a mano"}</span>
                       <span className="text-text-dim/40">·</span>
-                      <span>{s.jugadores}/{s.cupos} jugadores</span>
+                      <span>
+                        {s.iniciada
+                          ? `${s.jugadores} jugando`
+                          : `${s.jugadores}/${s.cupos} jugadores`}
+                      </span>
+                      {s.iniciada && (
+                        <>
+                          <span className="text-text-dim/40">·</span>
+                          <span>{s.espectadores} mirando</span>
+                        </>
+                      )}
+                      {s.enCola > 0 && (
+                        <>
+                          <span className="text-text-dim/40">·</span>
+                          <span>{s.enCola} en cola</span>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div
                     className={`text-[10px] px-2 py-1 rounded font-bold uppercase tracking-widest flex-shrink-0 ${
-                      llena
+                      s.iniciada
+                        ? "bg-azul-criollo/25 text-crema"
+                        : llena
                         ? "bg-text-dim/20 text-text-dim"
                         : "bg-dorado/15 text-dorado"
                     }`}
                   >
-                    {llena ? "Llena" : "Entrar"}
+                    {s.iniciada && (
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-dorado mr-1 align-middle shadow-[0_0_5px_var(--dorado)]" />
+                    )}
+                    {etiqueta}
                   </div>
                 </Link>
               );

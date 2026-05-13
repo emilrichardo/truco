@@ -158,7 +158,7 @@ export function Chat({
             </div>
           )}
           {items.map((m) => {
-            const j = estado.jugadores.find((x) => x.id === m.jugadorId);
+            const j = participantePorId(estado, m.jugadorId);
             const esYo = m.jugadorId === miId;
             if (m.evento)
               return <ItemEvento key={m.id} m={m} jugadorNombre={j?.nombre} />;
@@ -290,6 +290,13 @@ export function Chat({
 function esVisibleParaMi(m: MensajeChat, miId: string): boolean {
   return (
     !m.destinatarioId || m.destinatarioId === miId || m.jugadorId === miId
+  );
+}
+
+function participantePorId(estado: EstadoJuego, id: string) {
+  return (
+    estado.jugadores.find((x) => x.id === id) ??
+    estado.espectadores?.find((x) => x.id === id)
   );
 }
 

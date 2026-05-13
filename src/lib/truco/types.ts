@@ -26,6 +26,16 @@ export interface Jugador {
   esBot: boolean;
 }
 
+export interface Espectador {
+  id: string;
+  /** Perfil persistente del dispositivo/usuario en salas online. */
+  perfilId?: string;
+  nombre: string;
+  personaje: string;
+  conectado: boolean;
+  ts: number;
+}
+
 /** Una baza es una vuelta de cartas en una mano. */
 export interface Baza {
   jugadas: { jugadorId: string; carta: Carta; tapada?: boolean }[];
@@ -62,6 +72,12 @@ export interface ResolucionEnvido {
   ganadorEquipo: Equipo;
   puntos: number;
   detalle: string;
+  /** Canto más alto que resolvió el envido. */
+  tipo?: EstadoEnvido;
+  /** True si se dijo "quiero"; false si fue no querido. */
+  querido?: boolean;
+  /** Tantos cantados por equipo cuando el envido fue querido. */
+  puntosEquipo?: [number, number];
 }
 
 export interface Mano {
@@ -158,6 +174,10 @@ export interface Accion {
 export interface EstadoJuego {
   salaId: string;
   jugadores: Jugador[];
+  /** Personas que entraron tarde a mirar la partida sin ocupar asiento. */
+  espectadores?: Espectador[];
+  /** Espectadores anotados para jugar en la próxima mesa/revancha. */
+  colaEspera?: Espectador[];
   /** 2v2 o 1v1: cantidad de equipos siempre 2. Tamaños 1, 2 o 4 jugadores. */
   modo: "1v1" | "2v2";
   puntosObjetivo: 18 | 30;

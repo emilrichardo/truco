@@ -14,6 +14,7 @@ import { ChatFlotante } from "@/components/ChatFlotante";
 import { ConsultaCompañero } from "@/components/ConsultaCompañero";
 import { ContadorPuntos } from "@/components/ContadorPuntos";
 import { MiAvatarBR } from "@/components/MiAvatarBR";
+import { FinPartidaModal } from "@/components/FinPartidaModal";
 import { usePreloadCartas } from "@/lib/preload";
 import { useAudioJuego } from "@/lib/audio/useAudioJuego";
 import {
@@ -280,75 +281,44 @@ function PartidaSoloInterno() {
           </div>
         )}
 
-        {estado.ganadorPartida !== null && mostrarFinPartida && (() => {
-          const yoGane = miEquipoEs0 === (estado.ganadorPartida === 0);
-          const equipoGanador = estado.ganadorPartida ?? 0;
-          // En 2v2 listamos los nombres del equipo ganador. En 1v1 alcanza
-          // con un solo nombre.
-          const ganadores = estado.jugadores
-            .filter((j) => j.equipo === equipoGanador)
-            .map((j) => j.nombre);
-          const titulo = es1v1
-            ? yoGane ? "¡Ganaste!" : "Perdiste"
-            : yoGane ? "¡Ganamos!" : "Perdieron";
-          const subtitulo =
-            ganadores.length > 1
-              ? `Ganaron ${ganadores.slice(0, -1).join(", ")} y ${ganadores[ganadores.length - 1]}`
-              : `Ganó ${ganadores[0]}`;
-          return (
-            <div className="absolute inset-0 sheet-bg flex items-center justify-center z-[1000] p-4 overflow-y-auto">
-              <div className="papel p-5 text-center max-w-sm w-full my-4">
-                {yoGane && <div className="text-5xl mb-2">🏆</div>}
-                <div
-                  className="titulo-marca text-2xl mb-2"
-                  style={{
-                    color: "var(--carbon)",
-                    textShadow: "1px 1px 0 rgba(217,164,65,0.5)"
+        {estado.ganadorPartida !== null && mostrarFinPartida && (
+          <FinPartidaModal
+            estado={estado}
+            miId={miId}
+            acciones={
+              <>
+                <button
+                  onClick={() => {
+                    // Hard reload para garantizar que el motor empiece
+                    // de cero. Pasamos `?bots=slug1,slug2,...` con TODOS
+                    // los bots ordenados por asiento — antes en 2v2 sólo
+                    // preservaba uno y los otros 2 cambiaban.
+                    const slugsBots = estado.jugadores
+                      .filter((j) => j.id !== miId)
+                      .sort((a, b) => a.asiento - b.asiento)
+                      .map((j) => j.personaje);
+                    const url = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}${
+                      slugsBots.length
+                        ? `&bots=${encodeURIComponent(slugsBots.join(","))}`
+                        : ""
+                    }`;
+                    borrarSnapshotLocal();
+                    window.location.href = url;
                   }}
+                  className="btn btn-primary w-full"
                 >
-                  {titulo}
-                </div>
-                <p
-                  className="text-sm mb-4 subtitulo-claim"
-                  style={{ color: "var(--madera-oscura)" }}
-                >
-                  {subtitulo}
-                </p>
-
-                <div className="flex flex-col gap-2">
-                  <button
-                    onClick={() => {
-                      // Hard reload para garantizar que el motor empiece
-                      // de cero. Pasamos `?bots=slug1,slug2,...` con TODOS
-                      // los bots ordenados por asiento — antes en 2v2 sólo
-                      // preservaba uno y los otros 2 cambiaban.
-                      const slugsBots = estado.jugadores
-                        .filter((j) => j.id !== miId)
-                        .sort((a, b) => a.asiento - b.asiento)
-                        .map((j) => j.personaje);
-                      const url = `/jugar/solo/partida?tamanio=${tamanio}&puntos=${puntos}${
-                        slugsBots.length
-                          ? `&bots=${encodeURIComponent(slugsBots.join(","))}`
-                          : ""
-                      }`;
-                      borrarSnapshotLocal();
-                      window.location.href = url;
-                    }}
-                    className="btn btn-primary w-full"
-                  >
-                    Revancha
-                  </button>
-                  <Link href="/jugar/solo" className="btn w-full">
-                    Cambiar de oponente
-                  </Link>
-                  <Link href="/" className="btn btn-ghost w-full text-xs">
-                    Volver al inicio
-                  </Link>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+                  Revancha
+                </button>
+                <Link href="/jugar/solo" className="btn w-full">
+                  Cambiar de oponente
+                </Link>
+                <Link href="/" className="btn btn-ghost w-full text-xs">
+                  Volver al inicio
+                </Link>
+              </>
+            }
+          />
+        )}
       </div>
     </main>
   );

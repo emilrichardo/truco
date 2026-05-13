@@ -80,7 +80,8 @@ export function ChatFlotante({
   };
 
   const nombreUltimo = ultimo
-    ? estado.jugadores.find((j) => j.id === ultimo.jugadorId)?.nombre
+    ? estado.jugadores.find((j) => j.id === ultimo.jugadorId)?.nombre ??
+      estado.espectadores?.find((e) => e.id === ultimo.jugadorId)?.nombre
     : null;
   const esYoUltimo = ultimo?.jugadorId === miId;
 

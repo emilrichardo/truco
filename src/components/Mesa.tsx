@@ -43,7 +43,9 @@ export function Mesa({
   enviarChat,
   turnoActorId,
   turnoTimerKey,
-  turnoTimerMs
+  turnoTimerMs,
+  espectador = false,
+  revelarTodasLasCartas = false
 }: {
   estado: EstadoJuego;
   miId: string;
@@ -56,6 +58,8 @@ export function Mesa({
   turnoActorId?: string | null;
   turnoTimerKey?: string | null;
   turnoTimerMs?: number;
+  espectador?: boolean;
+  revelarTodasLasCartas?: boolean;
 }) {
   // Toggle estable para "espiar" las cartas del compañero (solo en 2v2).
   const [verCompañero, setVerCompañero] = useState(false);
@@ -117,7 +121,11 @@ export function Mesa({
     hablandoReaccion
   } = useHablando(estado);
 
-  const me = estado.jugadores.find((j) => j.id === miId);
+  const me =
+    estado.jugadores.find((j) => j.id === miId) ??
+    (espectador
+      ? [...estado.jugadores].sort((a, b) => a.asiento - b.asiento)[0]
+      : undefined);
   if (!me) return null;
   const orden = ordenAlrededorDeMesa(estado.jugadores, me);
   const total = estado.jugadores.length;
@@ -230,12 +238,13 @@ export function Mesa({
       {/* Avatares (avatar + mini-hand) de los DEMÁS jugadores. Mi avatar
        *  vive afuera de Mesa, en el wrapper del page, fijo a BR del screen. */}
       {orden.map((j, idx) => {
-        if (j.id === miId) return null; // no rendero mi puesto acá
+        if (!espectador && j.id === miId) return null; // no rendero mi puesto acá
         const pos = posiciones[idx];
         if (!pos) return null;
         const esTurno = estado.manoActual?.turnoJugadorId === j.id;
         const esMano = estado.manoActual?.manoJugadorId === j.id;
-        const esCompañero = total === 4 && j.equipo === me.equipo;
+        const esCompañero =
+          !espectador && total === 4 && j.equipo === me.equipo;
         const cartasEnMano =
           estado.manoActual?.cartasPorJugador[j.id] || [];
         const esRival = total === 4 ? j.equipo !== me.equipo : true;
@@ -251,6 +260,7 @@ export function Mesa({
             esRival={esRival}
             esCompañero={esCompañero}
             cartasEnMano={cartasEnMano}
+            revelarCartas={revelarTodasLasCartas}
             mostrarCompañero={verCompañero}
             yaVioCompañero={yaVioCompañero}
             onToggleCompañero={toggleCompañero}
@@ -310,6 +320,7 @@ function PuestoJugador({
   esRival,
   esCompañero,
   cartasEnMano,
+  revelarCartas,
   mostrarCompañero,
   yaVioCompañero,
   onToggleCompañero,
@@ -331,6 +342,7 @@ function PuestoJugador({
   esRival?: boolean;
   esCompañero: boolean;
   cartasEnMano: Carta[];
+  revelarCartas?: boolean;
   mostrarCompañero: boolean;
   yaVioCompañero: boolean;
   onToggleCompañero: () => void;
@@ -344,7 +356,7 @@ function PuestoJugador({
   turnoTimerKey?: string | null;
   turnoTimerMs?: number;
 }) {
-  const cartasOcultas = !esCompañero || !mostrarCompañero;
+  const cartasOcultas = revelarCartas ? false : !esCompañero || !mostrarCompañero;
   const enLadoIzquierdo =
     pos === "abajo-izquierda" || pos === "arriba-izquierda";
   const enLadoSuperior =
@@ -726,7 +738,7 @@ function ManoOculta({
   const invitando = esCompañero && ocultas && !yaVioCompañero;
   // Cuando el usuario las descubrió, las agrandamos a "sm" (antes "xs")
   // para que se lean cómodas; mientras siguen tapadas, "xs" alcanza.
-  const tamañoCarta = esCompañero && !ocultas ? "sm" : "xs";
+  const tamañoCarta = !ocultas ? "sm" : "xs";
   return (
     <div
       role={onTap ? "button" : undefined}
@@ -750,6 +762,8 @@ function ManoOculta({
           ? ocultas
             ? "Tocá para ver las cartas de tu compañero"
             : "Tocá para ocultarlas"
+          : !ocultas
+            ? "Cartas visibles para espectadores"
           : undefined
       }
     >
