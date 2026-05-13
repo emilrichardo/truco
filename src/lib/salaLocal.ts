@@ -13,7 +13,8 @@ import {
   iniciarPartida
 } from "@/lib/truco/motor";
 import { decidirAccionBot } from "@/lib/truco/ia";
-import type { Accion, EstadoJuego, Jugador } from "@/lib/truco/types";
+import { calcularEnvido, jerarquia } from "@/lib/truco/cartas";
+import type { Accion, Carta, EstadoJuego, Jugador } from "@/lib/truco/types";
 import { PERSONAJES } from "@/data/jugadores";
 import {
   deberiaConsultar,
@@ -81,36 +82,109 @@ function charlaLocalBot(
   accion: Accion
 ) {
   const chance =
-    accion.tipo === "jugar_carta" ? 0.22 : accion.tipo.startsWith("cantar") ? 0.5 : 0.4;
+    accion.tipo === "jugar_carta"
+      ? 0.34
+      : accion.tipo.startsWith("cantar")
+        ? 0.78
+        : 0.62;
   if (Math.random() > chance) return;
+
+  const mano = estado.manoActual;
+  const cartas = mano ? cartasOriginalesDelJugador(mano, jugador.id) : [];
+  const tantos = calcularEnvido(cartas);
+  const fuerza = cartas.reduce((acc, c) => acc + jerarquia(c), 0);
+  const vieneMintiendo =
+    (accion.tipo.includes("envido") && tantos < 26) ||
+    (accion.tipo.includes("truco") && fuerza < 18);
+
   const textos: Record<string, string[]> = {
     jugar_carta: [
-      "A ver si la seguís ahora.",
+      "A ver si la seguís ahora 😎",
       "Te vi venir, primo.",
-      "Esta venía pidiendo mesa."
+      "Esta venía pidiendo mesa.",
+      "Jugá tranquilo, que igual te estoy leyendo 👀"
     ],
-    cantar_envido: ["Te lo digo con cara seria: envido.", "No arrugues ahora."],
-    cantar_real_envido: ["Real envido, que se prenda la mesa.", "Vamos a ver esos tantos."],
-    cantar_falta_envido: ["Falta envido. Ahora sí se juega.", "Te dejo pensando, chango."],
-    cantar_truco: ["Truco, pecho frío.", "Te apuro un poquito."],
-    cantar_retruco: ["Retruco. No era gratis.", "Dale, mostrá carácter."],
-    cantar_vale4: ["Vale cuatro. Todo o nada.", "Ahora sí: sin llorar."],
-    responder_quiero: ["Quiero. Me gusta el lío.", "Dale, quiero."],
-    responder_no_quiero: ["No quiero. Guardá ese chamuyo.", "No compro esa cara."],
-    ir_al_mazo: ["Al mazo, pero te estoy leyendo.", "Me retiro con dignidad dudosa."]
+    cantar_envido: [
+      "Envido. Cara de treinta tengo 😇",
+      "Te lo digo con cara seria: envido.",
+      "No arrugues ahora."
+    ],
+    cantar_real_envido: [
+      "Real envido, que se prenda la mesa 🔥",
+      "Vamos a ver esos tantos.",
+      "Real envido. Contá bien, boludo."
+    ],
+    cantar_falta_envido: [
+      "Falta envido. Ahora sí se juega 💀",
+      "Te dejo pensando, chango.",
+      "Falta envido. A ver si sos tan guapo."
+    ],
+    cantar_truco: [
+      "Truco, pecho frío 😎",
+      "Te apuro un poquito.",
+      "Truco. Tengo más cara que cartas, pero alcanza."
+    ],
+    cantar_retruco: [
+      "Retruco. No era gratis.",
+      "Dale, mostrá carácter.",
+      "Retruco, no te me escondás ahora 🤥"
+    ],
+    cantar_vale4: [
+      "Vale cuatro. Todo o nada.",
+      "Ahora sí: sin llorar.",
+      "Vale cuatro, fantasma. Firmá acá."
+    ],
+    responder_quiero: [
+      "Quiero. Me gusta el lío 💪",
+      "Dale, quiero.",
+      "Quiero. Esa actuación no me asusta."
+    ],
+    responder_no_quiero: [
+      "No quiero. Guardá ese chamuyo.",
+      "No compro esa cara.",
+      "No quiero. Esta no te la financio."
+    ],
+    ir_al_mazo: [
+      "Al mazo, pero te estoy leyendo.",
+      "Me retiro con dignidad dudosa.",
+      "Al mazo. Ganaste esta, no te agrandés."
+    ]
   };
-  const opciones = textos[accion.tipo] || ["Mirá que estoy pensando."];
+  const bluff = [
+    "Tengo una mano hermosa, creeme 🤥",
+    "Me sobra paño. Vos sabrás.",
+    "Esta viene cargada, primo."
+  ];
+  const opciones = vieneMintiendo
+    ? [...(textos[accion.tipo] || []), ...bluff]
+    : textos[accion.tipo] || ["Mirá que estoy pensando."];
   const texto = opciones[Math.floor(Math.random() * opciones.length)];
+  const reacciones = ["😂", "😎", "💪", "🤥", "👀", "😤", "🤬"];
+  const reaccion =
+    Math.random() < 0.28
+      ? reacciones[Math.floor(Math.random() * reacciones.length)]
+      : undefined;
   estado.chat.push({
     id: nuevoIdLocal().slice(6),
     jugadorId: jugador.id,
     texto,
+    reaccion,
     ts: Date.now(),
     ia: true,
     emocion: accion.tipo.includes("no_quiero") ? "enojo" : "picardia"
   });
   if (estado.chat.length > 80) estado.chat.shift();
   estado.version++;
+}
+
+function cartasOriginalesDelJugador(
+  mano: NonNullable<EstadoJuego["manoActual"]>,
+  jugadorId: string
+): Carta[] {
+  const tiradas = mano.bazas.flatMap((b) =>
+    b.jugadas.filter((j) => j.jugadorId === jugadorId).map((j) => j.carta)
+  );
+  return [...(mano.cartasPorJugador[jugadorId] || []), ...tiradas];
 }
 
 function elegirPersonajeLibre(jugadores: Jugador[]): string {

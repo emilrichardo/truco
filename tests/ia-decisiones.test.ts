@@ -70,6 +70,46 @@ describe("IA — envido con mano alta", () => {
       "cantar_falta_envido"
     ]).toContain(accion.tipo);
   });
+
+  it("con 20 de envido no compra ni abre el canto por reflejo", () => {
+    let e = estado1v1();
+    setCartas(e, "B", [
+      { numero: 10, palo: "espada" },
+      { numero: 11, palo: "espada" },
+      { numero: 4, palo: "oro" }
+    ]);
+    e = aplicar(e, { tipo: "cantar_envido", jugadorId: "U" });
+    const respuesta = decidirAccionBot(e, "B");
+    expect(respuesta.tipo).toBe("responder_no_quiero");
+
+    const otra = estado1v1();
+    otra.manoActual!.turnoJugadorId = "B";
+    setCartas(otra, "B", [
+      { numero: 10, palo: "espada" },
+      { numero: 11, palo: "espada" },
+      { numero: 4, palo: "oro" }
+    ]);
+    const apertura = decidirAccionBot(otra, "B");
+    expect([
+      "cantar_envido",
+      "cantar_real_envido",
+      "cantar_falta_envido"
+    ]).not.toContain(apertura.tipo);
+  });
+});
+
+describe("IA — truco con criterio", () => {
+  it("con mano basura rechaza el truco en vez de pagarlo por guapo", () => {
+    let e = estado1v1();
+    setCartas(e, "B", [
+      { numero: 4, palo: "espada" },
+      { numero: 5, palo: "basto" },
+      { numero: 6, palo: "oro" }
+    ]);
+    e = aplicar(e, { tipo: "cantar_truco", jugadorId: "U" });
+    const accion = decidirAccionBot(e, "B");
+    expect(accion.tipo).toBe("responder_no_quiero");
+  });
 });
 
 describe("IA — iniciativa profesional", () => {

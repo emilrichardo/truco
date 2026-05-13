@@ -156,17 +156,22 @@ export function ChatFlotante({
                 className="w-10 h-10 object-contain"
               />
             </div>
-          ) : ultimo.reaccion ? (
-            <span className="text-xl leading-none">{ultimo.reaccion}</span>
           ) : (
-            <>
+            <div className="flex items-center gap-1.5">
               {nombreUltimo && !esYoUltimo && (
                 <span className="text-azul-claro mr-1 font-bold">
                   {nombreUltimo}:
                 </span>
               )}
-              <span className="break-words">{ultimo.texto}</span>
-            </>
+              {ultimo.reaccion && (
+                <span className="text-xl leading-none shrink-0">
+                  {ultimo.reaccion}
+                </span>
+              )}
+              {ultimo.texto && (
+                <span className="min-w-0 break-words">{ultimo.texto}</span>
+              )}
+            </div>
           )}
         </div>
       )}

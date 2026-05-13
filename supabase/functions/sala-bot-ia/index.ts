@@ -51,17 +51,28 @@ const IA_PENSANDO_TTL_MS = 15_000;
 const MIN_PENSAR_MS = 1100;
 const FETCH_TIMEOUT_MS = 6500;
 const REACCIONES = [
-  "😄",
-  "😡",
-  "😤",
   "😂",
-  "🤔",
+  "💪",
   "😎",
+  "😡",
+  "😱",
+  "🎉",
+  "💀",
+  "🤥",
+  "😤",
+  "🤬",
+  "🫣",
+  "🤦🏻‍♂️",
+  "🙈",
+  "👀",
+  "🧉",
+  "🪄",
+  "😄",
+  "🤔",
   "🔥",
   "👏",
   "😬",
   "🙄",
-  "💪",
 ];
 const EMOCIONES = new Set([
   "alegria",
@@ -324,11 +335,11 @@ function construirContexto(
     objetivo:
       "Elegir una acción legal y una reacción breve de bot para Truco Argentino.",
     reglasSalida:
-      'Respondé únicamente JSON válido: {"accion":{"tipo":"","cartaId":""},"chat":{"texto":"","reaccion":"","emocion":"picardia"},"razon":""}.',
+      'Respondé únicamente JSON válido: {"accion":{"tipo":"","cartaId":""},"chat":{"texto":"","reaccion":"","emocion":"picardia"},"razon":""}. Podés mandar texto, emoji en texto, o una reaccion de la lista permitida.',
     tono:
-      "Picante de mesa argentina. Podés chicanear o usar insultos leves como boludo/pecho frío, sin odio, amenazas, sexual explícito ni ataques discriminatorios.",
+      "Picante de mesa argentina. Podés chicanear o usar insultos leves como boludo/pecho frío/fantasma, sin odio, amenazas, sexual explícito ni ataques discriminatorios.",
     estrategia:
-      "Jugá fuerte: cuidá cartas altas, calculá envido, leé marcador, mentí sólo cuando sea creíble y usá truco/envido para presionar.",
+      "Jugá bien: cuidá cartas altas, calculá envido, leé marcador, aceptá o subí sólo con respaldo. No cantes ni aceptes envido con 20/21 salvo presión extrema; mentí sólo cuando sea creíble y usá truco/envido para presionar.",
     bot: {
       id: bot.id,
       nombre: bot.nombre,
@@ -548,32 +559,36 @@ function chatFallback(estado: EstadoJuego, accion: Accion): ChatIA | null {
   if (n >= prob) return null;
   const frases: Record<string, string[]> = {
     jugar_carta: [
-      "Te vi venir, primo.",
+      "Te vi venir, primo 👀",
       "A ver cómo seguís esa.",
-      "Tranqui, esta estaba calculada.",
+      "Tranqui, esta estaba calculada 😎",
     ],
-    cantar_envido: ["Envido, y mirame la cara.", "No arrugues con los tantos."],
+    cantar_envido: [
+      "Envido, y mirame la cara 😇",
+      "No arrugues con los tantos.",
+    ],
     cantar_real_envido: [
-      "Real envido. Ahora contá bien.",
+      "Real envido. Ahora contá bien, boludo.",
       "Te subo la temperatura.",
     ],
     cantar_falta_envido: [
-      "Falta envido. Sin pestañear.",
+      "Falta envido. Sin pestañear 💀",
       "Esta mano pide coraje.",
     ],
-    cantar_truco: ["Truco, pecho frío.", "Te apuro un poquito."],
-    cantar_retruco: ["Retruco. No era gratis.", "Dale, ahora bancatela."],
+    cantar_truco: ["Truco, pecho frío.", "Te apuro un poquito 😎"],
+    cantar_retruco: ["Retruco. No era gratis.", "Dale, ahora bancatela 🤥"],
     cantar_vale4: ["Vale cuatro. Todo o nada.", "Sin llorar después."],
-    responder_quiero: ["Quiero. Me gusta el ruido.", "Dale, quiero."],
+    responder_quiero: ["Quiero. Me gusta el ruido 💪", "Dale, quiero."],
     responder_no_quiero: [
       "No quiero. Ese chamuyo no entra.",
       "Guardá esa actuación.",
     ],
   };
   const opciones = frases[accion.tipo] || ["Estoy leyendo la mesa."];
+  const reacciones = ["😂", "😎", "💪", "🤥", "👀", "😤", "🤬"];
   return {
     texto: opciones[n % opciones.length],
-    reaccion: undefined,
+    reaccion: n % 4 === 0 ? reacciones[n % reacciones.length] : undefined,
     emocion: accion.tipo === "responder_no_quiero" ? "enojo" : "picardia",
   };
 }

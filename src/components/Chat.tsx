@@ -433,10 +433,15 @@ function ItemMensaje({
             alt="sticker"
             className="w-20 h-20 object-contain"
           />
-        ) : m.reaccion ? (
-          <span className="text-2xl">{m.reaccion}</span>
         ) : (
-          <span>{m.texto}</span>
+          <div className="flex items-start gap-1.5">
+            {m.reaccion && (
+              <span className="text-2xl leading-none shrink-0">
+                {m.reaccion}
+              </span>
+            )}
+            {m.texto && <span className="min-w-0 break-words">{m.texto}</span>}
+          </div>
         )}
       </div>
     </div>
