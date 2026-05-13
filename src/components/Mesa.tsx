@@ -129,6 +129,12 @@ export function Mesa({
   if (!me) return null;
   const orden = ordenAlrededorDeMesa(estado.jugadores, me);
   const total = estado.jugadores.length;
+  const ahora = Date.now();
+  const iaPensandoIds = new Set(
+    (estado.iaPensando || [])
+      .filter((p) => ahora - p.desde < 15_000)
+      .map((p) => p.jugadorId)
+  );
 
   // Layout asimétrico pedido por el diseño:
   //   yo (idx 0) → BL
@@ -277,6 +283,7 @@ export function Mesa({
             hablandoReaccion={esQuienHabla ? hablandoReaccion : null}
             turnoTimerKey={turnoActorId === j.id ? turnoTimerKey ?? null : null}
             turnoTimerMs={turnoTimerMs}
+            iaPensando={iaPensandoIds.has(j.id)}
           />
         );
       })}
@@ -332,7 +339,8 @@ function PuestoJugador({
   hablandoSticker,
   hablandoReaccion,
   turnoTimerKey,
-  turnoTimerMs
+  turnoTimerMs,
+  iaPensando
 }: {
   pos: Posicion;
   jugador: Jugador;
@@ -355,6 +363,7 @@ function PuestoJugador({
   hablandoReaccion?: string | null;
   turnoTimerKey?: string | null;
   turnoTimerMs?: number;
+  iaPensando?: boolean;
 }) {
   const cartasOcultas = revelarCartas ? false : !esCompañero || !mostrarCompañero;
   const enLadoIzquierdo =
@@ -425,6 +434,7 @@ function PuestoJugador({
         }
         turnoTimerKey={turnoTimerKey}
         turnoTimerMs={turnoTimerMs}
+        iaPensando={iaPensando}
       />
       {!esYo && cartasEnMano.length > 0 && (
         <ManoOculta

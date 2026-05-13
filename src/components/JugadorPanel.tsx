@@ -27,7 +27,8 @@ export function JugadorPanel({
   onAvatarClick,
   avatarTitle,
   turnoTimerKey,
-  turnoTimerMs
+  turnoTimerMs,
+  iaPensando
 }: {
   jugador: Jugador;
   esTurno: boolean;
@@ -70,6 +71,8 @@ export function JugadorPanel({
    *  remount del SVG así la animación reinicia al cambiar de turno. */
   turnoTimerKey?: string | null;
   turnoTimerMs?: number;
+  /** Muestra el bot encendido mientras la IA está pensando la jugada. */
+  iaPensando?: boolean;
 }) {
   // Avatares rectangulares (aspect 3/4) para usar mejor el espacio en mobile.
   const tam = compacto
@@ -171,6 +174,15 @@ export function JugadorPanel({
         )}
         {esTurno && (
           <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-dorado parpadeo border border-carbon" />
+        )}
+        {jugador.esBot && iaPensando && (
+          <span
+            className="bot-ia-on absolute -bottom-1 -right-1 z-20"
+            title={`${jugador.nombre} está pensando con IA`}
+            aria-label={`${jugador.nombre} está pensando con IA`}
+          >
+            <img src="/brand/iconos/maquina.webp" alt="" aria-hidden />
+          </span>
         )}
         {hablando && (hablandoSticker || hablandoTexto) && (
           <BurbujaCanto

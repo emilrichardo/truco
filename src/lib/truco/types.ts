@@ -138,6 +138,10 @@ export interface MensajeChat {
   audioCantoDataUrl?: string;
   /** Tipo de canto al que acompaña el audio (ej. "envido"). */
   audioCantoTipo?: string;
+  /** Mensaje generado por la IA del bot, visible como burbuja de mesa. */
+  ia?: boolean;
+  /** Estado emocional sugerido por la IA para ajustar futuras reacciones. */
+  emocion?: "alegria" | "enojo" | "picardia" | "sorpresa" | "neutral";
 }
 
 export type AccionTipo =
@@ -190,6 +194,8 @@ export interface EstadoJuego {
   chat: MensajeChat[];
   /** Anuncios efímeros (cantos, quieros, etc.) para mostrar en el tapete. */
   anuncios: { id: string; jugadorId: string; texto: string; ts: number }[];
+  /** Bots que están consultando IA o demorando su jugada. */
+  iaPensando?: { jugadorId: string; desde: number; requestId?: string }[];
   iniciada: boolean;
   /** Para identificar el cliente que envió un mensaje, sin auth. */
   version: number;

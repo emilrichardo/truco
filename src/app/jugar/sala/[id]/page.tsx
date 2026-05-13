@@ -8,6 +8,7 @@ import {
   agregarBotOnline,
   cerrarSalaOnline,
   enviarAccionOnline,
+  enviarBotIAOnline,
   enviarChatOnline,
   guardarSesion,
   iniciarPartidaOnline,
@@ -256,6 +257,11 @@ export default function SalaPage() {
     }
     setConsulta(null);
 
+    const botYaPensando = (estado.iaPensando || []).some(
+      (p) => p.jugadorId === actor.id && Date.now() - p.desde < 15000
+    );
+    if (botYaPensando) return;
+
     // Anti-doble dispatch: si ya despachamos una acción para este bot
     // a esta versión del estado, no la repetimos. Cuando el estado se
     // actualice (post-acción), version subirá y volvemos a evaluar.
@@ -280,7 +286,7 @@ export default function SalaPage() {
     botTimerRef.current = window.setTimeout(() => {
       const accion = decidirAccionBot(estado, actor!.id);
       const versionAlMandar = estado.version;
-      enviarAccionOnline(salaId, miId, accion)
+      enviarBotIAOnline(salaId, miId, actor!.id, accion, versionAlMandar)
         .then((r) => {
           if (r.ok) {
             // Sólo bloqueamos retries si el server aceptó. Antes seteábamos

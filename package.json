@@ -14,7 +14,7 @@
     "avatars:upload": "tsx scripts/subir-jugadores-supabase.ts",
     "avatars:optimize": "SKIP_UPLOAD=1 tsx scripts/subir-jugadores-supabase.ts",
     "voices:generate": "tsx scripts/generar-voces.ts",
-    "deploy:functions": "supabase functions deploy sala-abandonar sala-accion sala-agregar-bot sala-cerrar sala-chat sala-cola-espera sala-crear sala-iniciar sala-listar-publicas sala-marcar-bot sala-reconectar sala-revancha sala-unirse --use-api"
+    "deploy:functions": "supabase functions deploy sala-abandonar sala-accion sala-agregar-bot sala-bot-ia sala-cerrar sala-chat sala-cola-espera sala-crear sala-iniciar sala-listar-publicas sala-marcar-bot sala-reconectar sala-revancha sala-unirse --use-api"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.104.1",

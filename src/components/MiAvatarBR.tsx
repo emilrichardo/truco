@@ -44,6 +44,11 @@ export function MiAvatarBR({
   const esMano = estado.manoActual?.manoJugadorId === me.id;
   const yoHablo = hablandoId === me.id;
   const mostrarTimer = turnoActorId === me.id;
+  const iaPensando =
+    !!me.esBot &&
+    (estado.iaPensando || []).some(
+      (p) => p.jugadorId === me.id && Date.now() - p.desde < 15_000
+    );
   // El avatar y el botón de emojis viven cada uno en su propio
   // contenedor absolute, NO anidados — así el menú flotante de emojis
   // puede crecer fuera del bounding box del avatar sin clipping ni
@@ -67,6 +72,7 @@ export function MiAvatarBR({
           ocultarNombre
           turnoTimerKey={mostrarTimer ? turnoTimerKey : null}
           turnoTimerMs={turnoTimerMs}
+          iaPensando={iaPensando}
         />
       </div>
       {/* Botón de emojis: posicionado al borde inferior derecho del

@@ -29,6 +29,9 @@ export type HablandoData = {
 
 function esBurbuja(m: MensajeChat): boolean {
   if (m.evento && DESTACAR.has(m.evento)) return true;
+  if (!m.evento && m.ia && !m.destinatarioId && (m.texto || m.reaccion)) {
+    return true;
+  }
   if (!m.evento && m.sticker && !m.destinatarioId) return true;
   // Reacciones públicas (emoji enviado vía BarraEmociones) — toast
   // efímero sobre el avatar del que reaccionó.

@@ -313,6 +313,22 @@ export async function enviarAccionOnline(
   });
 }
 
+export async function enviarBotIAOnline(
+  salaId: string,
+  jugadorId: string,
+  botJugadorId: string,
+  accionBase: Accion,
+  versionEsperada: number
+): Promise<SalaResp & { stale?: boolean; pensando?: boolean }> {
+  return invocar("sala-bot-ia", {
+    sala_id: salaId,
+    jugador_id: jugadorId,
+    bot_jugador_id: botJugadorId,
+    accion_base: accionBase,
+    version_esperada: versionEsperada
+  });
+}
+
 export async function revanchaOnline(
   salaId: string,
   jugadorId: string

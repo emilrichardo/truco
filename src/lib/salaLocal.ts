@@ -28,11 +28,90 @@ export type { ConsultaCompañero };
 // y no daba tiempo al humano a leer el último canto o pensar antes de
 // que el bot tirara la siguiente carta. 1500ms se siente más natural.
 const RETARDO_BOT_MS = 1500;
+const IA_PENSANDO_TTL_MS = 15_000;
 // Pausa entre que se cierra una mano (banner de resumen + última burbuja) y
 // el reparto de la siguiente. Sin esto las cartas nuevas aparecen detrás del
 // banner y se pisan con la burbuja del último canto.
 const RETARDO_PROX_MANO_MS = 3500;
 const STORAGE_KEY = "truco_primos_solo_partida";
+
+function limpiarIAPensando(estado: EstadoJuego, now = Date.now()) {
+  if (!estado.iaPensando?.length) return false;
+  const ids = new Set(estado.jugadores.map((j) => j.id));
+  const next = estado.iaPensando.filter(
+    (p) => ids.has(p.jugadorId) && now - p.desde < IA_PENSANDO_TTL_MS
+  );
+  const cambio = next.length !== estado.iaPensando.length;
+  estado.iaPensando = next;
+  return cambio;
+}
+
+function estaPensandoIA(estado: EstadoJuego, jugadorId: string): boolean {
+  limpiarIAPensando(estado);
+  return !!estado.iaPensando?.some((p) => p.jugadorId === jugadorId);
+}
+
+function marcarPensandoIA(
+  estado: EstadoJuego,
+  jugadorId: string,
+  encendido: boolean
+) {
+  limpiarIAPensando(estado);
+  const actual = estado.iaPensando || [];
+  if (encendido) {
+    if (actual.some((p) => p.jugadorId === jugadorId)) return false;
+    estado.iaPensando = [
+      ...actual,
+      {
+        jugadorId,
+        desde: Date.now(),
+        requestId: `local-${Math.random().toString(36).slice(2, 8)}`
+      }
+    ];
+  } else {
+    estado.iaPensando = actual.filter((p) => p.jugadorId !== jugadorId);
+  }
+  estado.version++;
+  return true;
+}
+
+function charlaLocalBot(
+  estado: EstadoJuego,
+  jugador: Jugador,
+  accion: Accion
+) {
+  const chance =
+    accion.tipo === "jugar_carta" ? 0.22 : accion.tipo.startsWith("cantar") ? 0.5 : 0.4;
+  if (Math.random() > chance) return;
+  const textos: Record<string, string[]> = {
+    jugar_carta: [
+      "A ver si la seguís ahora.",
+      "Te vi venir, primo.",
+      "Esta venía pidiendo mesa."
+    ],
+    cantar_envido: ["Te lo digo con cara seria: envido.", "No arrugues ahora."],
+    cantar_real_envido: ["Real envido, que se prenda la mesa.", "Vamos a ver esos tantos."],
+    cantar_falta_envido: ["Falta envido. Ahora sí se juega.", "Te dejo pensando, chango."],
+    cantar_truco: ["Truco, pecho frío.", "Te apuro un poquito."],
+    cantar_retruco: ["Retruco. No era gratis.", "Dale, mostrá carácter."],
+    cantar_vale4: ["Vale cuatro. Todo o nada.", "Ahora sí: sin llorar."],
+    responder_quiero: ["Quiero. Me gusta el lío.", "Dale, quiero."],
+    responder_no_quiero: ["No quiero. Guardá ese chamuyo.", "No compro esa cara."],
+    ir_al_mazo: ["Al mazo, pero te estoy leyendo.", "Me retiro con dignidad dudosa."]
+  };
+  const opciones = textos[accion.tipo] || ["Mirá que estoy pensando."];
+  const texto = opciones[Math.floor(Math.random() * opciones.length)];
+  estado.chat.push({
+    id: nuevoIdLocal().slice(6),
+    jugadorId: jugador.id,
+    texto,
+    ts: Date.now(),
+    ia: true,
+    emocion: accion.tipo.includes("no_quiero") ? "enojo" : "picardia"
+  });
+  if (estado.chat.length > 80) estado.chat.shift();
+  estado.version++;
+}
 
 function elegirPersonajeLibre(jugadores: Jugador[]): string {
   // Elige al azar entre los personajes que todavía no están en uso, así
@@ -268,6 +347,10 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     }
 
     if (consultaFinal) {
+      if (estaPensandoIA(estado, actor.id)) {
+        marcarPensandoIA(estado, actor.id, false);
+        dispatch({ tipo: "set", estado: { ...estado } });
+      }
       setConsulta((prev) => {
         if (
           prev &&
@@ -281,11 +364,19 @@ export function useSalaLocal(config: ConfigSalaLocal | null) {
     }
     setConsulta(null);
 
+    if (!estaPensandoIA(estado, actor.id)) {
+      marcarPensandoIA(estado, actor.id, true);
+      dispatch({ tipo: "set", estado: { ...estado } });
+      return;
+    }
+
     botTimerRef.current = window.setTimeout(() => {
       // Mutamos una copia: aplicarAccion mutará in-place, así que reusamos
       // referencia, pero hacemos shallow para forzar render.
       const accion = decidirAccionBot(estado, actor.id);
-      aplicarAccion(estado, accion);
+      const r = aplicarAccion(estado, accion);
+      marcarPensandoIA(estado, actor.id, false);
+      if (r.ok) charlaLocalBot(estado, actor, accion);
       dispatch({ tipo: "set", estado: { ...estado } });
     }, RETARDO_BOT_MS);
 
