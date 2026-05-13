@@ -97,6 +97,9 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Truco Primos"
+  },
+  other: {
+    "mobile-web-app-capable": "yes"
   }
 };
 
