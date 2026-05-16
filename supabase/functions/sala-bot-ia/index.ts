@@ -1,5 +1,6 @@
-// Decide y aplica una acción de bot usando NVIDIA NIM cuando hay API key.
-// La key vive como secret de Supabase Edge Functions: NVIDIA_API_KEY.
+// Decide y aplica una acción de bot. La heurística local queda como
+// camino principal; la IA remota se reactiva sólo si
+// ENABLE_REMOTE_BOT_IA=1 en Supabase.
 import { admin, fail, ok, preflight, readJson } from "../_shared/lib.ts";
 import { accionesLegales, aplicarAccion } from "../_shared/truco/motor.ts";
 import {
@@ -47,8 +48,9 @@ type ChatIA = {
 
 const NVIDIA_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const NVIDIA_MODEL_DEFAULT = "google/gemma-3n-e4b-it";
+const REMOTE_IA_ENABLED = Deno.env.get("ENABLE_REMOTE_BOT_IA") === "1";
 const IA_PENSANDO_TTL_MS = 15_000;
-const MIN_PENSAR_MS = 1100;
+const MIN_PENSAR_MS = 350;
 const FETCH_TIMEOUT_MS = 6500;
 const REACCIONES = [
   "😂",
@@ -153,10 +155,12 @@ Deno.serve(async (req) => {
     legalesIniciales,
     body.accion_base,
   );
-  const iaPromise = consultarNvidia(contexto).catch((error) => {
-    console.warn("[sala-bot-ia] nvidia", error);
-    return null;
-  });
+  const iaPromise = REMOTE_IA_ENABLED
+    ? consultarNvidia(contexto).catch((error) => {
+      console.warn("[sala-bot-ia] nvidia", error);
+      return null;
+    })
+    : Promise.resolve<BotIARespuesta | null>(null);
   const [respuestaIA] = await Promise.all([
     iaPromise,
     sleep(MIN_PENSAR_MS),
@@ -238,8 +242,10 @@ Deno.serve(async (req) => {
 
   return ok({
     accion: accion.tipo,
-    ia: !!accionIA,
-    modelo: Deno.env.get("NVIDIA_AI_MODEL") || NVIDIA_MODEL_DEFAULT,
+    ia: REMOTE_IA_ENABLED && !!accionIA,
+    modelo: REMOTE_IA_ENABLED
+      ? Deno.env.get("NVIDIA_AI_MODEL") || NVIDIA_MODEL_DEFAULT
+      : "heuristica-local",
     ms: Date.now() - inicio,
   });
 });
@@ -418,6 +424,7 @@ function cartaResumen(c: Carta) {
 async function consultarNvidia(
   contexto: unknown,
 ): Promise<BotIARespuesta | null> {
+  if (!REMOTE_IA_ENABLED) return null;
   const key = Deno.env.get("NVIDIA_API_KEY");
   if (!key) return null;
   const controller = new AbortController();

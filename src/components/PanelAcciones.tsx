@@ -48,13 +48,16 @@ export function PanelAcciones({
   const mano = estado.manoActual;
   const misCartas = mano.cartasPorJugador[miId] || [];
   const legales = accionesLegales(estado, miId);
+  const hayRespuestaPendiente =
+    legales.includes("responder_quiero") ||
+    legales.includes("responder_no_quiero");
 
   const debeResponderEnvido =
-    !!mano.envidoCantoActivo &&
-    me.equipo === mano.envidoCantoActivo.equipoQueDebeResponder;
+    hayRespuestaPendiente && !!mano.envidoCantoActivo;
   const debeResponderTruco =
-    !!mano.trucoCantoActivo &&
-    me.equipo === mano.trucoCantoActivo.equipoQueDebeResponder;
+    hayRespuestaPendiente &&
+    !mano.envidoCantoActivo &&
+    !!mano.trucoCantoActivo;
   const esMiTurno = mano.turnoJugadorId === miId;
   const puedeJugarCarta =
     esMiTurno && !mano.envidoCantoActivo && !mano.trucoCantoActivo;
@@ -395,7 +398,7 @@ export function PanelAcciones({
 
       {(debeResponderEnvido || debeResponderTruco) && (
         <div className="text-center subtitulo-claim text-dorado text-sm mb-2 parpadeo">
-          ⚠ Te cantaron {debeResponderEnvido ? "envido" : "truco"}
+          ⚠ Respuesta pendiente: {debeResponderEnvido ? "envido" : "truco"}
         </div>
       )}
 
@@ -557,9 +560,17 @@ function BotoneraMenu({
   if (puedo("cantar_truco"))
     cantoTruco = { tipo: "cantar_truco", label: "Truco", icono: <IconoCanto /> };
   else if (puedo("cantar_retruco"))
-    cantoTruco = { tipo: "cantar_retruco", label: "Retruco", icono: <IconoCanto /> };
+    cantoTruco = {
+      tipo: "cantar_retruco",
+      label: debeResponderTruco ? "Subir a retruco" : "Retruco",
+      icono: <IconoCanto />
+    };
   else if (puedo("cantar_vale4"))
-    cantoTruco = { tipo: "cantar_vale4", label: "Vale 4", icono: <IconoCanto /> };
+    cantoTruco = {
+      tipo: "cantar_vale4",
+      label: debeResponderTruco ? "Subir a vale 4" : "Vale 4",
+      icono: <IconoCanto />
+    };
 
   const disparar = (tipo: Accion["tipo"]) => {
     if (accionPendiente) return; // bloqueamos doble click
@@ -645,7 +656,7 @@ function BotoneraMenu({
 
       {cantoTruco && (
         <button
-          className="btn btn-primary"
+          className={clsx("btn", !debeResponderTruco && "btn-primary")}
           disabled={accionPendiente}
           onClick={() => disparar(cantoTruco!.tipo)}
         >

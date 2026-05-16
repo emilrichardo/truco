@@ -63,6 +63,15 @@ describe("truco — bloqueos (regresiones)", () => {
     expect(legales).not.toContain("cantar_truco");
   });
 
+  it("si el rival me cantó truco, legales prioriza responder y no re-ofrece truco base", () => {
+    let e = estado1v1();
+    e = aplicar(e, { tipo: "cantar_truco", jugadorId: "U" });
+    const legales = accionesLegales(e, "B");
+    expect(legales).toContain("responder_quiero");
+    expect(legales).toContain("responder_no_quiero");
+    expect(legales).not.toContain("cantar_truco");
+  });
+
   it("si mi compañero ya cantó truco, mi intento stale queda como no-op", () => {
     let e = estado2v2(["human", "bot", "human", "bot"]);
     e = aplicar(e, { tipo: "cantar_truco", jugadorId: "P2" });

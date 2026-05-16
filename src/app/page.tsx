@@ -182,6 +182,23 @@ export default function HomePage() {
         </p>
       </section>
 
+      <section className="mb-6">
+        <Link
+          href="/entrenamiento"
+          className="card p-4 flex items-center gap-3 border-l-4 border-l-azul-criollo hover:border-dorado/60 transition"
+        >
+          <div className="text-2xl">🧪</div>
+          <div className="min-w-0">
+            <div className="font-display text-lg text-crema">
+              Laboratorio de entrenamiento
+            </div>
+            <div className="text-text-dim text-xs leading-snug">
+              Probá manos en texto plano, aprobá o corregí decisiones del bot y usalo también por API.
+            </div>
+          </div>
+        </Link>
+      </section>
+
       {/* Salas públicas: listado de partidas abiertas marcadas como
        *  "públicas" por sus creadores. Cualquiera puede unirse sin
        *  compartirse el link. Sólo mostramos la sección si hay algo
