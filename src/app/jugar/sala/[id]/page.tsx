@@ -913,6 +913,9 @@ export default function SalaPage() {
   const posicionCola = estoyEnCola
     ? (estado.colaEspera ?? []).findIndex((e) => e.id === miId) + 1
     : 0;
+  const colaEspera = estado.colaEspera ?? [];
+  const lugaresParaCola = estado.jugadores.filter((j) => j.esBot).length;
+  const entranDesdeCola = Math.min(colaEspera.length, lugaresParaCola);
 
   return (
     <main className="h-[100dvh] w-screen flex flex-col overflow-hidden bg-bg">
@@ -1181,13 +1184,44 @@ export default function SalaPage() {
               acciones={
                 <>
                   {soyCreador && (
+                    colaEspera.length > 0 && (
+                      <div className="rounded-md border border-dorado/50 bg-dorado/10 p-2 text-left">
+                        <div
+                          className="text-[10px] uppercase tracking-widest font-bold"
+                          style={{ color: "var(--madera-oscura)" }}
+                        >
+                          Cola para jugar
+                        </div>
+                        <div
+                          className="text-sm leading-snug"
+                          style={{ color: "var(--carbon)" }}
+                        >
+                          {colaEspera
+                            .slice(0, 2)
+                            .map((e) => e.nombre)
+                            .join(", ")}
+                          {colaEspera.length > 2
+                            ? ` y ${colaEspera.length - 2} más`
+                            : ""}{" "}
+                          {entranDesdeCola > 0
+                            ? `entran reemplazando ${entranDesdeCola === 1 ? "un bot" : `${entranDesdeCola} bots`}.`
+                            : "están esperando, pero no hay bots para reemplazar."}
+                        </div>
+                      </div>
+                    )
+                  )}
+                  {soyCreador && (
                     <button
                       type="button"
                       onClick={pedirRevancha}
                       disabled={revanchaPedida}
                       className="btn btn-primary disabled:opacity-60"
                     >
-                      {revanchaPedida ? "Repartiendo…" : "Revancha"}
+                      {revanchaPedida
+                        ? "Repartiendo…"
+                        : entranDesdeCola > 0
+                          ? "Aceptar cola y revancha"
+                          : "Revancha"}
                     </button>
                   )}
                   {!soyCreador && (
@@ -1284,22 +1318,22 @@ function PanelEspectador({
   onAnotarse: () => void;
 }) {
   return (
-    <div className="absolute left-1/2 top-3 -translate-x-1/2 z-[680] w-[min(92vw,28rem)] pointer-events-none">
-      <div className="card bg-carbon/90 border-dorado/50 backdrop-blur-sm p-2 shadow-xl pointer-events-auto">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full border border-dorado/60 bg-azul-criollo/30 flex items-center justify-center text-base">
+    <div className="absolute left-3 right-3 bottom-3 z-[680] pointer-events-none flex justify-center">
+      <div className="w-full max-w-md rounded-md border border-dorado/50 bg-carbon/90 backdrop-blur-sm px-2.5 py-2 shadow-xl pointer-events-auto">
+        <div className="flex items-center gap-2 min-h-10">
+          <div className="w-8 h-8 rounded-full border border-dorado/60 bg-azul-criollo/30 flex items-center justify-center text-base shrink-0">
             👀
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[10px] uppercase tracking-widest text-dorado font-bold">
-              Mirando en vivo
+              Mirando
             </div>
-            <div className="text-[11px] text-text-dim leading-snug">
-              Estás viendo las cartas de todos los jugadores.
+            <div className="text-[11px] text-text-dim leading-tight truncate">
+              Cartas visibles
             </div>
           </div>
           {enCola ? (
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <div className="text-[9px] uppercase tracking-widest text-text-dim">
                 En cola
               </div>

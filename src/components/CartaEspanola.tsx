@@ -3,10 +3,11 @@ import clsx from "clsx";
 import type { Carta } from "@/lib/truco/types";
 import { nombreCarta } from "@/lib/truco/cartas";
 
-type Tamanio = "xs" | "sm" | "md" | "lg";
+type Tamanio = "xs" | "mini" | "sm" | "md" | "lg";
 
 const ANCHOS: Record<Tamanio, string> = {
   xs: "w-9 sm:w-10",
+  mini: "w-14 sm:w-16",
   sm: "w-20 sm:w-24",
   // md: en mobile achicado ~20% (5.5rem = 88px vs antes 7rem/112px)
   // para que las cartas tiradas en la mesa no choquen con los

@@ -224,7 +224,12 @@ export function Mesa({
 
       {/* La meta info (Mano · Baza y Vale X) se renderea abajo para no pisar
        *  las cartas tiradas. */}
-      <div className="absolute left-1/2 bottom-1 -translate-x-1/2 z-10 flex items-center gap-2 pointer-events-none">
+      <div
+        className={clsx(
+          "absolute left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 pointer-events-none",
+          espectador ? "bottom-[12rem] sm:bottom-[13rem]" : "bottom-1"
+        )}
+      >
         <div
           className="text-dorado/80 text-[10px] uppercase tracking-widest font-bold"
           style={{ textShadow: "0 1px 2px rgba(0,0,0,0.85), 0 0 6px rgba(0,0,0,0.5)" }}
@@ -245,6 +250,7 @@ export function Mesa({
        *  vive afuera de Mesa, en el wrapper del page, fijo a BR del screen. */}
       {orden.map((j, idx) => {
         if (!espectador && j.id === miId) return null; // no rendero mi puesto acá
+        if (espectador && j.id === me.id) return null; // se muestra como mano inferior
         const pos = posiciones[idx];
         if (!pos) return null;
         const esTurno = estado.manoActual?.turnoJugadorId === j.id;
@@ -267,6 +273,7 @@ export function Mesa({
             esCompañero={esCompañero}
             cartasEnMano={cartasEnMano}
             revelarCartas={revelarTodasLasCartas}
+            compactarManoRevelada={espectador}
             mostrarCompañero={verCompañero}
             yaVioCompañero={yaVioCompañero}
             onToggleCompañero={toggleCompañero}
@@ -287,6 +294,13 @@ export function Mesa({
           />
         );
       })}
+
+      {espectador && (
+        <ManoEspectador
+          jugador={me}
+          cartas={estado.manoActual?.cartasPorJugador[me.id] || []}
+        />
+      )}
 
       {panelCompañero && enviarChat && (
         <PanelMensajeCompañero
@@ -328,6 +342,7 @@ function PuestoJugador({
   esCompañero,
   cartasEnMano,
   revelarCartas,
+  compactarManoRevelada,
   mostrarCompañero,
   yaVioCompañero,
   onToggleCompañero,
@@ -351,6 +366,7 @@ function PuestoJugador({
   esCompañero: boolean;
   cartasEnMano: Carta[];
   revelarCartas?: boolean;
+  compactarManoRevelada?: boolean;
   mostrarCompañero: boolean;
   yaVioCompañero: boolean;
   onToggleCompañero: () => void;
@@ -442,6 +458,7 @@ function PuestoJugador({
           ocultas={cartasOcultas}
           esCompañero={esCompañero}
           yaVioCompañero={yaVioCompañero}
+          compacta={compactarManoRevelada}
           onTap={esCompañero ? onToggleCompañero : undefined}
           posReparto={pos}
         />
@@ -732,6 +749,7 @@ function ManoOculta({
   ocultas,
   esCompañero,
   yaVioCompañero,
+  compacta,
   onTap,
   posReparto
 }: {
@@ -739,6 +757,7 @@ function ManoOculta({
   ocultas: boolean;
   esCompañero: boolean;
   yaVioCompañero?: boolean;
+  compacta?: boolean;
   onTap?: () => void;
   posReparto?: Posicion;
 }) {
@@ -748,7 +767,7 @@ function ManoOculta({
   const invitando = esCompañero && ocultas && !yaVioCompañero;
   // Cuando el usuario las descubrió, las agrandamos a "sm" (antes "xs")
   // para que se lean cómodas; mientras siguen tapadas, "xs" alcanza.
-  const tamañoCarta = !ocultas ? "sm" : "xs";
+  const tamañoCarta = !ocultas ? (compacta ? "mini" : "sm") : "xs";
   return (
     <div
       role={onTap ? "button" : undefined}
@@ -762,7 +781,7 @@ function ManoOculta({
         }
       }}
       className={clsx(
-        "flex -space-x-3 transition-transform",
+        compacta ? "flex -space-x-2 transition-transform" : "flex -space-x-3 transition-transform",
         esCompañero && "cursor-pointer hover:scale-110",
         esCompañero && ocultas && !invitando && "ring-2 ring-dorado/40 rounded p-0.5",
         invitando && "rounded p-0.5 invitar-ver"
@@ -796,6 +815,46 @@ function ManoOculta({
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ManoEspectador({
+  jugador,
+  cartas
+}: {
+  jugador: Jugador;
+  cartas: Carta[];
+}) {
+  if (cartas.length === 0) return null;
+  return (
+    <div className="absolute left-1/2 bottom-14 sm:bottom-16 -translate-x-1/2 z-[620] flex flex-col items-center gap-1.5 pointer-events-none">
+      <div className="flex items-center gap-2 rounded-md border border-dorado/50 bg-carbon/80 px-2 py-1 shadow-lg backdrop-blur-sm max-w-[72vw]">
+        <img
+          src={urlPersonaje(jugador.personaje)}
+          alt=""
+          className="w-7 h-7 rounded object-cover object-top border border-dorado/60 shrink-0"
+        />
+        <div className="min-w-0">
+          <div className="text-[8px] uppercase tracking-widest text-dorado font-bold leading-none">
+            Vista
+          </div>
+          <div className="text-[11px] text-crema font-bold truncate">
+            {jugador.nombre}
+          </div>
+        </div>
+      </div>
+      <div className="flex -space-x-5">
+        {cartas.map((c, i) => (
+          <div
+            key={c.id}
+            className="drop-shadow-xl"
+            style={{ zIndex: i, transform: `rotate(${(i - 1) * 4}deg)` }}
+          >
+            <CartaEspanola carta={c} tamanio="sm" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
