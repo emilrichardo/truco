@@ -11,6 +11,7 @@ export async function POST(req: Request) {
       accionFinal?: Accion | null;
       aprobada?: boolean;
       origen?: string;
+      criterios?: string[];
       notas?: string;
     };
 
@@ -24,6 +25,14 @@ export async function POST(req: Request) {
     const actor =
       body.estado.jugadores.find((j) => j.id === body.actorId) || null;
     const mano = body.estado.manoActual;
+    const notasCompuestas = [
+      body.criterios?.length
+        ? `Criterios: ${body.criterios.join(", ")}`
+        : null,
+      body.notas?.trim() || null
+    ]
+      .filter(Boolean)
+      .join("\n");
 
     try {
       const supabase = getSupabaseAdmin();
@@ -34,7 +43,7 @@ export async function POST(req: Request) {
         actor_nombre: actor?.nombre ?? body.actorId,
         aprobada: body.aprobada ?? false,
         origen: body.origen ?? "web",
-        notas: body.notas ?? null,
+        notas: notasCompuestas || null,
         sugerencia: body.sugerencia ?? null,
         accion_final: body.accionFinal,
         estado_snapshot: body.estado
