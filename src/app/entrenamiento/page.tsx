@@ -239,31 +239,9 @@ export default function EntrenamientoPage() {
           </div>
         </div>
 
-        <div className="grid xl:grid-cols-[1.2fr_0.8fr] gap-0">
+        <div className="grid xl:grid-cols-[0.82fr_1.18fr] gap-0">
           <section className="p-4 md:p-5 border-b xl:border-b-0 xl:border-r border-dorado/15">
-            <div className="rounded-[22px] border border-dorado/20 bg-[#111a21]/90 p-4 shadow-inner">
-              <div className="flex items-center justify-between gap-3 mb-3">
-                <h2 className="font-display text-xl text-dorado">
-                  Texto plano
-                </h2>
-                {guardado && (
-                  <span className="text-[11px] uppercase tracking-[0.25em] text-dorado/75">
-                    {guardado}
-                  </span>
-                )}
-              </div>
-              {loading ? (
-                <div className="text-sm text-crema/70">Preparando mano…</div>
-              ) : (
-                <pre className="whitespace-pre-wrap text-[12px] leading-6 font-mono text-[#efe3c4] max-h-[70dvh] overflow-auto rounded-2xl bg-black/25 p-4 border border-white/5">
-                  {snapshot?.textoPlano}
-                </pre>
-              )}
-            </div>
-          </section>
-
-          <section className="p-4 md:p-5">
-            <div className="space-y-4">
+            <div className="space-y-4 xl:sticky xl:top-4">
               <PanelResumen
                 titulo="Próxima decisión"
                 contenido={
@@ -281,6 +259,107 @@ export default function EntrenamientoPage() {
                 </div>
               )}
 
+              <div className="rounded-[24px] border border-dorado/20 bg-[#171f26] p-4">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h2 className="font-display text-xl text-crema">
+                    Aprobar o corregir
+                  </h2>
+                  {guardado && (
+                    <span className="text-[11px] uppercase tracking-[0.25em] text-dorado/75">
+                      {guardado}
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void aprobar()}
+                    disabled={!snapshot?.sugerencia || enviando || loading}
+                    className="btn btn-primary !py-3"
+                  >
+                    Aprobar sugerencia
+                    {snapshot?.sugerencia
+                      ? `: ${accionComoTexto(snapshot.sugerencia)}`
+                      : ""}
+                  </button>
+
+                  <div className="grid sm:grid-cols-[1fr_auto] gap-2">
+                    <select
+                      value={accionManual}
+                      onChange={(e) => setAccionManual(e.target.value as AccionTipo | "")}
+                      className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-sm text-crema outline-none"
+                    >
+                      <option value="">Elegir corrección manual</option>
+                      {snapshot?.legales.map((tipo) => (
+                        <option key={tipo} value={tipo}>
+                          {ETIQUETAS_ACCION[tipo] || tipo}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => void corregir()}
+                      disabled={!accionManual || enviando || loading}
+                      className="btn !py-3"
+                    >
+                      Aplicar corrección
+                    </button>
+                  </div>
+
+                  {accionManual === "jugar_carta" && (
+                    <div>
+                      <div className="text-[11px] uppercase tracking-[0.25em] text-crema/55 mb-2">
+                        Carta para la corrección
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {cartasActor.map((carta) => (
+                          <button
+                            key={carta.id}
+                            type="button"
+                            onClick={() => setCartaManual(carta.id)}
+                            className={`rounded-xl border px-3 py-2 text-sm ${
+                              cartaManual === carta.id
+                                ? "border-dorado bg-dorado/15 text-dorado"
+                                : "border-white/10 bg-black/20 text-crema"
+                            }`}
+                          >
+                            {cartaComoTexto(carta)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <textarea
+                    value={notas}
+                    onChange={(e) => setNotas(e.target.value)}
+                    placeholder="Notas opcionales"
+                    className="min-h-16 rounded-2xl border border-white/10 bg-black/20 px-3 py-2.5 text-sm text-crema outline-none placeholder:text-crema/35"
+                  />
+                </div>
+              </div>
+
+              <details className="rounded-[24px] border border-dorado/20 bg-black/10 p-4">
+                <summary className="font-display text-lg text-crema cursor-pointer list-none">
+                  API rápida
+                </summary>
+                <pre className="whitespace-pre-wrap text-[12px] leading-6 font-mono text-[#efe3c4] rounded-2xl bg-black/25 p-4 border border-white/5 mt-3">
+{`POST /api/entrenamiento/session
+POST /api/entrenamiento/step
+POST /api/entrenamiento/feedback
+
+Ejemplo:
+curl -X POST /api/entrenamiento/session
+curl -X POST /api/entrenamiento/step -H 'Content-Type: application/json' \\
+  -d '{"estado": {...}, "accion": {"tipo":"responder_quiero","jugadorId":"train-2"}}'`}
+                </pre>
+              </details>
+            </div>
+          </section>
+
+          <section className="p-4 md:p-5">
+            <div className="space-y-4">
               <div className="rounded-[24px] border border-dorado/20 bg-black/15 p-4">
                 <div className="flex items-center justify-between gap-2 mb-3">
                   <h2 className="font-display text-xl text-crema">Mesa visual</h2>
@@ -338,94 +417,19 @@ export default function EntrenamientoPage() {
                 </div>
               </div>
 
-              <div className="rounded-[24px] border border-dorado/20 bg-[#171f26] p-4">
-                <h2 className="font-display text-xl text-crema mb-3">
-                  Aprobar o corregir
-                </h2>
-
-                <div className="grid gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void aprobar()}
-                    disabled={!snapshot?.sugerencia || enviando || loading}
-                    className="btn btn-primary !py-3"
-                  >
-                    Aprobar sugerencia
-                    {snapshot?.sugerencia
-                      ? `: ${accionComoTexto(snapshot.sugerencia)}`
-                      : ""}
-                  </button>
-
-                  <div className="grid sm:grid-cols-[1fr_auto] gap-2">
-                    <select
-                      value={accionManual}
-                      onChange={(e) => setAccionManual(e.target.value as AccionTipo | "")}
-                      className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-3 text-sm text-crema outline-none"
-                    >
-                      <option value="">Elegir corrección manual</option>
-                      {snapshot?.legales.map((tipo) => (
-                        <option key={tipo} value={tipo}>
-                          {ETIQUETAS_ACCION[tipo] || tipo}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() => void corregir()}
-                      disabled={!accionManual || enviando || loading}
-                      className="btn !py-3"
-                    >
-                      Aplicar corrección
-                    </button>
-                  </div>
-
-                  {accionManual === "jugar_carta" && (
-                    <div>
-                      <div className="text-xs uppercase tracking-[0.25em] text-crema/55 mb-2">
-                        Carta para la corrección
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {cartasActor.map((carta) => (
-                          <button
-                            key={carta.id}
-                            type="button"
-                            onClick={() => setCartaManual(carta.id)}
-                            className={`rounded-xl border px-3 py-2 text-sm ${
-                              cartaManual === carta.id
-                                ? "border-dorado bg-dorado/15 text-dorado"
-                                : "border-white/10 bg-black/20 text-crema"
-                            }`}
-                          >
-                            {cartaComoTexto(carta)}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <textarea
-                    value={notas}
-                    onChange={(e) => setNotas(e.target.value)}
-                    placeholder="Notas opcionales sobre por qué corregiste la jugada"
-                    className="min-h-24 rounded-2xl border border-white/10 bg-black/20 px-3 py-3 text-sm text-crema outline-none placeholder:text-crema/35"
-                  />
+              <div className="rounded-[22px] border border-dorado/20 bg-[#111a21]/90 p-4 shadow-inner">
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h2 className="font-display text-xl text-dorado">
+                    Texto plano
+                  </h2>
                 </div>
-              </div>
-
-              <div className="rounded-[24px] border border-dorado/20 bg-black/10 p-4">
-                <h2 className="font-display text-xl text-crema mb-3">
-                  API rápida
-                </h2>
-                <pre className="whitespace-pre-wrap text-[12px] leading-6 font-mono text-[#efe3c4] rounded-2xl bg-black/25 p-4 border border-white/5">
-{`POST /api/entrenamiento/session
-POST /api/entrenamiento/step
-POST /api/entrenamiento/feedback
-
-Ejemplo:
-curl -X POST /api/entrenamiento/session
-curl -X POST /api/entrenamiento/step -H 'Content-Type: application/json' \\
-  -d '{"estado": {...}, "accion": {"tipo":"responder_quiero","jugadorId":"train-2"}}'`}
-                </pre>
+                {loading ? (
+                  <div className="text-sm text-crema/70">Preparando mano…</div>
+                ) : (
+                  <pre className="whitespace-pre-wrap text-[12px] leading-6 font-mono text-[#efe3c4] max-h-[52dvh] overflow-auto rounded-2xl bg-black/25 p-4 border border-white/5">
+                    {snapshot?.textoPlano}
+                  </pre>
+                )}
               </div>
             </div>
           </section>
